@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn semantic tokens mapped to the brand palette (README §10.7) */
+    --background: 40 33% 96%; /* paper/cream */
+    --foreground: 209 67% 12%; /* ink */
+    --card: 0 0% 100%;
+    --card-foreground: 209 67% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 209 67% 12%;
+    --primary: 213 65% 11%; /* navy */
+    --primary-foreground: 40 38% 93%;
+    --secondary: 40 30% 90%;
+    --secondary-foreground: 209 67% 12%;
+    --muted: 40 20% 90%;
+    --muted-foreground: 210 16% 48%;
+    --accent: 34 63% 48%; /* gold */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 209 30% 85%;
+    --input: 209 30% 85%;
+    --ring: 34 63% 48%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+  .label-eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.14em] text-muted;
+  }
+}
