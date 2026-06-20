@@ -16,9 +16,8 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ci-service-key
     steps:
       - uses: actions/checkout@v4
+      # pnpm version comes from package.json "packageManager" — don't duplicate it here.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
