@@ -21,6 +21,7 @@ next-env.d.ts
 /test-results
 /playwright-report
 /playwright/.cache
+/tests/e2e/.state.json
 
 # misc
 .DS_Store
@@ -30,3 +31,6 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 *.tsbuildinfo
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
