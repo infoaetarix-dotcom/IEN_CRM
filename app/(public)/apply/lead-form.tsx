@@ -3,26 +3,18 @@
 import { useActionState, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { submitLead, type SubmitState } from './actions';
-import {
-  EDUCATION_LEVELS,
-  TARGET_COUNTRIES,
-} from '@/lib/validation/lead';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Turnstile } from '@/components/form/turnstile';
-
-const EDUCATION_LABELS: Record<(typeof EDUCATION_LEVELS)[number], string> = {
-  high_school: 'High school',
-  diploma: 'Diploma',
-  bachelors: "Bachelor's",
-  masters: "Master's",
-  doctorate: 'Doctorate',
-  other: 'Other',
-};
+import { EmailField } from '@/components/form/email-field';
+import { PhoneField } from '@/components/form/phone-field';
+import { DobField } from '@/components/form/dob-field';
+import { CountryField } from '@/components/form/country-field';
+import { EducationField } from '@/components/form/education-field';
+import { ProgramField } from '@/components/form/program-field';
 
 const initialState: SubmitState = { ok: false };
 
@@ -51,7 +43,6 @@ export function LeadForm() {
   }, [params]);
 
   const err = state.fieldErrors ?? {};
-  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <form action={formAction} className="space-y-6" noValidate>
@@ -65,12 +56,7 @@ export function LeadForm() {
       <div aria-hidden className="absolute left-[-9999px] top-[-9999px]">
         <label>
           Company
-          <input
-            type="text"
-            name="company"
-            tabIndex={-1}
-            autoComplete="off"
-          />
+          <input type="text" name="company" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
 
@@ -92,40 +78,17 @@ export function LeadForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-            />
-            <FieldError message={err.email} />
+            <EmailField error={err.email} />
           </div>
           <div>
             <Label htmlFor="phone">Phone *</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              inputMode="tel"
-              placeholder="+44 7700 900123"
-              autoComplete="tel"
-              required
-            />
-            <FieldError message={err.phone} />
+            <PhoneField error={err.phone} />
           </div>
         </div>
 
-        <div className="sm:max-w-[50%]">
+        <div className="sm:max-w-[60%]">
           <Label htmlFor="date_of_birth">Date of birth *</Label>
-          <Input
-            id="date_of_birth"
-            name="date_of_birth"
-            type="date"
-            max={today}
-            required
-          />
-          <FieldError message={err.date_of_birth} />
+          <DobField error={err.date_of_birth} />
         </div>
       </section>
 
@@ -135,53 +98,27 @@ export function LeadForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="target_country">Target country</Label>
-            <Select id="target_country" name="target_country" defaultValue="">
-              <option value="">Select a country</option>
-              {TARGET_COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-            <FieldError message={err.target_country} />
+            <CountryField error={err.target_country} />
           </div>
           <div>
             <Label htmlFor="highest_education">Highest education</Label>
-            <Select
-              id="highest_education"
-              name="highest_education"
-              defaultValue=""
-            >
-              <option value="">Select a level</option>
-              {EDUCATION_LEVELS.map((e) => (
-                <option key={e} value={e}>
-                  {EDUCATION_LABELS[e]}
-                </option>
-              ))}
-            </Select>
-            <FieldError message={err.highest_education} />
+            <EducationField error={err.highest_education} />
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="institution">Preferred institution</Label>
-            <Input
-              id="institution"
-              name="institution"
-              placeholder="University or college"
-            />
-            <FieldError message={err.institution} />
-          </div>
-          <div>
-            <Label htmlFor="program">Program / field</Label>
-            <Input
-              id="program"
-              name="program"
-              placeholder="e.g. MSc Computer Science"
-            />
-            <FieldError message={err.program} />
-          </div>
+        <div>
+          <Label htmlFor="institution">Preferred institution</Label>
+          <Input
+            id="institution"
+            name="institution"
+            placeholder="University or college (optional)"
+          />
+          <FieldError message={err.institution} />
+        </div>
+
+        <div>
+          <Label htmlFor="program_degree">Program of interest</Label>
+          <ProgramField error={err.program} />
         </div>
       </section>
 

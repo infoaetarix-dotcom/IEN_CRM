@@ -5,7 +5,7 @@ import { ageFromDob } from '@/lib/utils';
 const base = {
   full_name: 'Asha Khan',
   email: 'Asha@Example.com',
-  phone: '+44 7700 900123',
+  phone: '+923001234567', // valid E.164 (PK mobile)
   date_of_birth: '2000-05-01',
   prior_rejection: false,
   consent_given: true as const,
@@ -16,6 +16,11 @@ describe('leadSchema', () => {
     const r = leadSchema.safeParse(base);
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.email).toBe('asha@example.com');
+  });
+
+  it('rejects an invalid phone number (wrong length for country)', () => {
+    const r = leadSchema.safeParse({ ...base, phone: '+9230012' });
+    expect(r.success).toBe(false);
   });
 
   it('rejects missing consent', () => {

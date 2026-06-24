@@ -2,9 +2,20 @@
 
 // Content-Security-Policy. Turnstile needs its script + frame; Supabase needs
 // connect for auth/REST. Keep this tight and expand only when a real need appears.
+//
+// Next.js dev mode (Fast Refresh / HMR) requires 'unsafe-eval'. We add it ONLY
+// in development so production stays strict (no eval in the built bundle).
+const isDev = process.env.NODE_ENV !== 'production';
+const scriptSrc = [
+  "'self'",
+  "'unsafe-inline'",
+  'https://challenges.cloudflare.com',
+  ...(isDev ? ["'unsafe-eval'"] : []),
+].join(' ');
+
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

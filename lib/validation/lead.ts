@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 
 /**
  * Single source of truth for lead validation — shared by the client form (UX)
@@ -48,8 +49,6 @@ function ageFrom(date: Date): number {
   return age;
 }
 
-const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
-
 export const leadSchema = z
   .object({
     full_name: z
@@ -58,10 +57,15 @@ export const leadSchema = z
       .min(2, 'Please enter your full name')
       .max(120),
     email: z.string().trim().toLowerCase().email('Enter a valid email').max(254),
+    // E.164 from the international phone input; validated per-country length.
     phone: z
       .string()
       .trim()
-      .regex(phoneRegex, 'Enter a valid phone number (international format)'),
+      .min(1, 'Phone number is required')
+      .refine(
+        (v) => isValidPhoneNumber(v),
+        'Enter a valid phone number for the selected country',
+      ),
     // Date of birth (YYYY-MM-DD). Age is derived and range-checked below.
     date_of_birth: z
       .string()
@@ -75,10 +79,8 @@ export const leadSchema = z
     target_country: z.string().trim().max(80).optional().or(z.literal('')),
     institution: z.string().trim().max(160).optional().or(z.literal('')),
     program: z.string().trim().max(160).optional().or(z.literal('')),
-    highest_education: z
-      .enum(EDUCATION_LEVELS)
-      .optional()
-      .or(z.literal('')),
+    // Free text now: the form select includes "Other" with a custom value.
+    highest_education: z.string().trim().max(100).optional().or(z.literal('')),
     prior_rejection: z.boolean().default(false),
     prior_rejection_detail: z.string().trim().max(1000).optional().or(z.literal('')),
     consent_given: z.literal(true, {
