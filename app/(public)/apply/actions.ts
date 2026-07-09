@@ -61,15 +61,36 @@ export async function submitLead(
   }
 
   // 4. Zod validation (the real boundary — never trust the client).
+  const g = (k: string) => formData.get(k) ?? '';
   const raw = {
     full_name: formData.get('full_name'),
     email: formData.get('email'),
     phone: formData.get('phone'),
     date_of_birth: formData.get('date_of_birth'),
-    target_country: formData.get('target_country') ?? '',
-    institution: formData.get('institution') ?? '',
-    program: formData.get('program') ?? '',
-    highest_education: formData.get('highest_education') ?? '',
+    // Location
+    city: g('city'),
+    district: g('district'),
+    // Study goals
+    target_country: g('target_country'),
+    institution: g('institution'),
+    program: g('program'),
+    intake_season: g('intake_season'),
+    intake_year: g('intake_year'),
+    // Prior education
+    highest_education: g('highest_education'),
+    last_qualification: g('last_qualification'),
+    prior_institution: g('prior_institution'),
+    passing_year: g('passing_year'),
+    grading_system: g('grading_system'),
+    grade_value: g('grade_value'),
+    // Experience
+    work_experience_years: g('work_experience_years'),
+    work_experience_detail: g('work_experience_detail'),
+    // English proficiency
+    english_test: g('english_test'),
+    english_score: g('english_score'),
+    // Funding
+    funding_source: g('funding_source'),
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: formData.get('prior_rejection_detail') ?? '',
     consent_given: formData.get('consent_given') === 'on',
@@ -107,10 +128,24 @@ export async function submitLead(
       email: d.email,
       phone: d.phone,
       date_of_birth: d.date_of_birth,
+      city: d.city || null,
+      district: d.district || null,
       target_country: d.target_country || null,
       institution: d.institution || null,
       program: d.program || null,
+      intake_season: d.intake_season || null,
+      intake_year: d.intake_year ?? null,
       highest_education: d.highest_education || null,
+      last_qualification: d.last_qualification || null,
+      prior_institution: d.prior_institution || null,
+      passing_year: d.passing_year ?? null,
+      grading_system: d.grading_system || null,
+      grade_value: d.grade_value ?? null,
+      work_experience_years: d.work_experience_years ?? null,
+      work_experience_detail: d.work_experience_detail || null,
+      english_test: d.english_test || null,
+      english_score: d.english_score ?? null,
+      funding_source: d.funding_source || null,
       prior_rejection: d.prior_rejection,
       prior_rejection_detail: d.prior_rejection ? d.prior_rejection_detail || null : null,
       utm_source: source,

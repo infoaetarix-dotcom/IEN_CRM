@@ -24,6 +24,7 @@ import {
   type LeadStatus,
   type LeadSource,
 } from '@/lib/leads/display';
+import { CODE_LABELS } from '@/lib/form-options';
 
 function fmtDateTime(s: string) {
   return new Date(s).toLocaleString('en-GB', {
@@ -124,7 +125,7 @@ export default async function LeadDetailPage({
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Applicant details</CardTitle>
+              <CardTitle>Contact &amp; location</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Email" value={lead.email} />
@@ -137,20 +138,8 @@ export default async function LeadDetailPage({
                     : null
                 }
               />
-              <Field label="Target country" value={lead.target_country} />
-              <Field label="Institution" value={lead.institution} />
-              <Field label="Program" value={lead.program} />
-              <Field label="Highest education" value={lead.highest_education} />
-              <Field
-                label="Prior rejection"
-                value={lead.prior_rejection ? 'Yes' : 'No'}
-              />
-              {lead.prior_rejection && (
-                <Field
-                  label="Rejection detail"
-                  value={lead.prior_rejection_detail}
-                />
-              )}
+              <Field label="City" value={lead.city} />
+              <Field label="District" value={lead.district} />
               <Field
                 label="Consent"
                 value={
@@ -159,6 +148,79 @@ export default async function LeadDetailPage({
                     : 'Not given'
                 }
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Prior education &amp; experience</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Field label="Highest education" value={lead.highest_education} />
+              <Field label="Qualification" value={lead.last_qualification} />
+              <Field label="Institution attended" value={lead.prior_institution} />
+              <Field label="Passing year" value={lead.passing_year} />
+              <Field
+                label="Result"
+                value={
+                  lead.grade_value != null
+                    ? `${lead.grade_value}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
+                    : null
+                }
+              />
+              <Field
+                label="Work experience"
+                value={
+                  lead.work_experience_years != null
+                    ? `${lead.work_experience_years} yr${lead.work_experience_years === 1 ? '' : 's'}${lead.work_experience_detail ? ` — ${lead.work_experience_detail}` : ''}`
+                    : (lead.work_experience_detail || null)
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Study goals</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Field label="Target country" value={lead.target_country} />
+              <Field label="Preferred institution" value={lead.institution} />
+              <Field label="Program" value={lead.program} />
+              <Field
+                label="Intended intake"
+                value={
+                  lead.intake_season || lead.intake_year
+                    ? `${lead.intake_season ? (CODE_LABELS[lead.intake_season] ?? lead.intake_season) : ''} ${lead.intake_year ?? ''}`.trim()
+                    : null
+                }
+              />
+              <Field
+                label="English test"
+                value={
+                  lead.english_test
+                    ? `${CODE_LABELS[lead.english_test] ?? lead.english_test}${lead.english_score != null ? ` — ${lead.english_score}` : ''}`
+                    : null
+                }
+              />
+              <Field
+                label="Funding"
+                value={
+                  lead.funding_source
+                    ? (CODE_LABELS[lead.funding_source] ?? lead.funding_source)
+                    : null
+                }
+              />
+              <Field
+                label="Prior visa rejection"
+                value={lead.prior_rejection ? 'Yes' : 'No'}
+              />
+              {lead.prior_rejection && (
+                <Field
+                  label="Rejection detail"
+                  value={lead.prior_rejection_detail}
+                />
+              )}
             </CardContent>
           </Card>
 

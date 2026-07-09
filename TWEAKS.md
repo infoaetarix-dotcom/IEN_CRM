@@ -41,6 +41,29 @@ My professional recommendations (need your yes/no):
 | S5 | 🔄 | 🟢 | Inline validation on blur (red borders + messages), not just on submit | Pro UX; building it into the overhaul |
 | S6 | ⬜ | 🟢 | "Is this number on WhatsApp?" toggle | WhatsApp is a key channel for this client |
 
+## Active — Batch 2: Extended intake fields + schema (industry-grade)
+
+⚠️ **REQUIRES DB MIGRATION** — run `supabase/migrations/0002_extended_lead_fields.sql` in the Supabase SQL editor before submitting the form (adds the new columns). One Supabase DB serves both local + prod, so running it once covers both.
+
+| Status | Change | Notes |
+|--------|--------|-------|
+| ✅ | Split "Study goals" → **Prior education & experience** + **Study goals** | as requested |
+| ✅ | About you: **+ City, District** | text |
+| ✅ | Highest education: **+ Matric/O-Levels, Intermediate/A-Levels** | |
+| ✅ | Prior education: qualification, institution attended, passing year, **grading system (CGPA/4, CGPA/5, %) + result** | solves GPA-scale ambiguity |
+| ✅ | **Work experience** (years + role) | |
+| ✅ | **English proficiency** (IELTS/TOEFL/PTE/Duolingo/planned/none + score) | score field shows only for real tests |
+| ✅ | **Intended intake** (season + year) | |
+| ✅ | **Funding source** (self/family/loan/scholarship/employer/other) | |
+| ✅ | All categorical fields = dropdowns w/ fixed codes + **DB CHECK constraints** | standardized for analytics; DB-enforced |
+| ✅ | Lead detail page shows all new fields (3 cards: Contact&location / Prior education / Study goals) | |
+
+Security: new fields are columns on `leads` → inherit existing RLS (agents see only assigned), server-side Zod validation + DB CHECK constraints (defense in depth), plain-text escaped rendering. No new sensitive identifiers (no passport #, no bank details). typecheck ✓ · 22 tests ✓ · compiles ✓. Not pushed.
+
+| ✅ | **Required fields** (round 1): name, email, phone, DOB, consent + Target country + Highest education | |
+| ✅ | **Required fields** (round 2): + City, Last qualification, Institution attended, Passing year, Grading system, Result | About-you complete except District; Prior-education complete except work experience |
+| — | Work experience kept OPTIONAL (flagged): most applicants are fresh students; forcing it blocks them / creates junk. Client to confirm. | |
+
 ## Done
 
 | # | Change | Commit |

@@ -7,6 +7,14 @@ const base = {
   email: 'Asha@Example.com',
   phone: '+923001234567', // valid E.164 (PK mobile)
   date_of_birth: '2000-05-01',
+  city: 'Lahore', // required
+  target_country: 'United Kingdom', // required
+  highest_education: "Bachelor's degree", // required
+  last_qualification: 'BSc Computer Science', // required
+  prior_institution: 'University of the Punjab', // required
+  passing_year: '2021', // required (form sends string)
+  grading_system: 'cgpa_4', // required
+  grade_value: '3.5', // required
   prior_rejection: false,
   consent_given: true as const,
 };
@@ -26,6 +34,15 @@ describe('leadSchema', () => {
   it('rejects missing consent', () => {
     const r = leadSchema.safeParse({ ...base, consent_given: false });
     expect(r.success).toBe(false);
+  });
+
+  it('requires target country and highest education', () => {
+    expect(leadSchema.safeParse({ ...base, target_country: '' }).success).toBe(
+      false,
+    );
+    expect(
+      leadSchema.safeParse({ ...base, highest_education: '' }).success,
+    ).toBe(false);
   });
 
   it('rejects a future date of birth', () => {
