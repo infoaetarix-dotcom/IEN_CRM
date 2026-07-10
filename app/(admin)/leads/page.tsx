@@ -48,6 +48,7 @@ export default async function LeadsPage({
   const status = str(sp.status);
   const source = str(sp.source);
   const agent = str(sp.agent);
+  const completeness = str(sp.completeness); // '', 'complete', 'incomplete'
   const from = str(sp.from);
   const to = str(sp.to);
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
@@ -62,7 +63,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, full_name, email, phone, utm_source, status, assigned_to, created_at',
+      'id, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete',
       { count: 'exact' },
     );
 
@@ -71,6 +72,8 @@ export default async function LeadsPage({
   if (source) query = query.eq('utm_source', source);
   if (agent === 'unassigned') query = query.is('assigned_to', null);
   else if (agent) query = query.eq('assigned_to', agent);
+  if (completeness === 'incomplete') query = query.eq('is_complete', false);
+  else if (completeness === 'complete') query = query.eq('is_complete', true);
   if (from) query = query.gte('created_at', from);
   if (to) query = query.lte('created_at', `${to}T23:59:59`);
 
@@ -97,6 +100,7 @@ export default async function LeadsPage({
     if (status) next.set('status', status);
     if (source) next.set('source', source);
     if (agent) next.set('agent', agent);
+    if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
     if (sort !== 'created_at') next.set('sort', sort);
@@ -148,8 +152,11 @@ export default async function LeadsPage({
             {(leads ?? []).map((l) => (
               <TableRow key={l.id} className="cursor-pointer">
                 <TableCell className="font-medium">
-                  <Link href={`/leads/${l.id}`} className="block hover:underline">
+                  <Link href={`/leads/${l.id}`} className="flex items-center gap-2 hover:underline">
                     {l.full_name}
+                    {l.is_complete === false && (
+                      <Badge variant="warning">Incomplete</Badge>
+                    )}
                   </Link>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">

@@ -86,8 +86,9 @@ function ageFrom(date: Date): number {
   return age;
 }
 
-export const leadSchema = z
-  .object({
+// Field definitions live in one object so the full schema AND the per-step
+// wizard schemas can share them (single source of truth).
+const leadFields = {
     full_name: z
       .string()
       .trim()
@@ -180,27 +181,80 @@ export const leadSchema = z
     utm_campaign: z.string().optional(),
     // Honeypot — must stay empty. Bots fill it.
     company: z.string().max(0).optional(),
+} as const;
+
+const priorRejectionOk = (d: {
+  prior_rejection?: boolean;
+  prior_rejection_detail?: string;
+}) => !d.prior_rejection || (d.prior_rejection_detail ?? '').length > 0;
+const PRIOR_REJECTION_MSG = {
+  message: 'Please add a brief detail about the prior rejection',
+  path: ['prior_rejection_detail'] as (string | number)[],
+};
+
+const gradeInRange = (d: { grade_value?: number; grading_system?: string }) => {
+  if (d.grade_value == null || !d.grading_system) return true;
+  if (d.grading_system === 'cgpa_4') return d.grade_value <= 4.0;
+  if (d.grading_system === 'cgpa_5') return d.grade_value <= 5.0;
+  if (d.grading_system === 'percentage') return d.grade_value <= 100;
+  return true;
+};
+const GRADE_MSG = {
+  message: 'Result is out of range for the selected grading system',
+  path: ['grade_value'] as (string | number)[],
+};
+
+const leadObject = z.object(leadFields);
+
+export const leadSchema = leadObject
+  .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
+  .refine(gradeInRange, GRADE_MSG);
+
+// ---- Per-step schemas for the 3-step wizard (progressive capture) ----
+// Step 1: contact + target country + consent (saved first — the "hook").
+export const step1Schema = leadObject.pick({
+  full_name: true,
+  email: true,
+  phone: true,
+  target_country: true,
+  consent_given: true,
+  company: true,
+  utm_source: true,
+  utm_medium: true,
+  utm_campaign: true,
+});
+
+// Step 2: background — DOB, location, prior education.
+export const step2Schema = leadObject
+  .pick({
+    date_of_birth: true,
+    city: true,
+    district: true,
+    highest_education: true,
+    last_qualification: true,
+    prior_institution: true,
+    passing_year: true,
+    grading_system: true,
+    grade_value: true,
+    work_experience_years: true,
+    work_experience_detail: true,
   })
-  .refine(
-    (d) => !d.prior_rejection || (d.prior_rejection_detail ?? '').length > 0,
-    {
-      message: 'Please add a brief detail about the prior rejection',
-      path: ['prior_rejection_detail'],
-    },
-  )
-  .refine(
-    (d) => {
-      if (d.grade_value == null || !d.grading_system) return true;
-      if (d.grading_system === 'cgpa_4') return d.grade_value <= 4.0;
-      if (d.grading_system === 'cgpa_5') return d.grade_value <= 5.0;
-      if (d.grading_system === 'percentage') return d.grade_value <= 100;
-      return true;
-    },
-    {
-      message: 'Result is out of range for the selected grading system',
-      path: ['grade_value'],
-    },
-  );
+  .refine(gradeInRange, GRADE_MSG);
+
+// Step 3: study goals — all optional (never blocks completion).
+export const step3Schema = leadObject
+  .pick({
+    institution: true,
+    program: true,
+    intake_season: true,
+    intake_year: true,
+    english_test: true,
+    english_score: true,
+    funding_source: true,
+    prior_rejection: true,
+    prior_rejection_detail: true,
+  })
+  .refine(priorRejectionOk, PRIOR_REJECTION_MSG);
 
 export type LeadInput = z.infer<typeof leadSchema>;
 

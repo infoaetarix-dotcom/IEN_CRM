@@ -109,6 +109,9 @@ export default async function LeadDetailPage({
             <Badge variant={STATUS_BADGE[lead.status as LeadStatus]}>
               {STATUS_LABELS[lead.status as LeadStatus]}
             </Badge>
+            {lead.is_complete === false && (
+              <Badge variant="warning">Incomplete application</Badge>
+            )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Received {fmtDateTime(lead.created_at)} ·{' '}
@@ -119,6 +122,14 @@ export default async function LeadDetailPage({
           </p>
         </div>
       </div>
+
+      {lead.is_complete === false && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <strong>Incomplete application.</strong> This applicant started but
+          didn&apos;t finish the form — their contact details are captured.
+          Follow up to help them complete it.
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left: profile + notes */}

@@ -77,6 +77,16 @@ export function LeadsFilters({
         ))}
       </Select>
 
+      <Select
+        defaultValue={params.get('completeness') ?? ''}
+        className="w-[160px]"
+        onChange={(e) => setParam('completeness', e.target.value)}
+      >
+        <option value="">All applications</option>
+        <option value="complete">Completed</option>
+        <option value="incomplete">Incomplete only</option>
+      </Select>
+
       {showAgentFilter && (
         <Select
           defaultValue={params.get('agent') ?? ''}
