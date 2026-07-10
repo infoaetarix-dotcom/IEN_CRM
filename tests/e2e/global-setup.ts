@@ -16,9 +16,32 @@ async function findUserByEmail(svc: ReturnType<typeof serviceClient>, email: str
   return data.users.find((u) => u.email === email);
 }
 
+const TEST_ORG_SLUG = 'e2e-test-org';
+
 export default async function globalSetup() {
   const svc = serviceClient();
   const ids: Record<string, string> = {};
+
+  // Dedicated test organization (isolated from real tenants).
+  await svc.from('organizations').delete().eq('slug', TEST_ORG_SLUG);
+  const { data: org, error: orgErr } = await svc
+    .from('organizations')
+    .insert({ name: 'E2E Test Org', slug: TEST_ORG_SLUG })
+    .select('id')
+    .single();
+  if (orgErr || !org) throw new Error(`create org: ${orgErr?.message}`);
+  const orgId = org.id as string;
+
+  // Enable every module for the test org.
+  const { data: modules } = await svc.from('modules').select('key');
+  if (modules?.length) {
+    await svc.from('organization_modules').insert(
+      modules.map((m: { key: string }) => ({
+        organization_id: orgId,
+        module_key: m.key,
+      })),
+    );
+  }
 
   for (const [key, u] of Object.entries(TEST_USERS)) {
     const existing = await findUserByEmail(svc, u.email);
@@ -33,7 +56,7 @@ export default async function globalSetup() {
     ids[key] = data.user.id;
     await svc
       .from('profiles')
-      .update({ role: u.role, full_name: u.name })
+      .update({ role: u.role, full_name: u.name, organization_id: orgId })
       .eq('id', data.user.id);
   }
 
@@ -41,6 +64,7 @@ export default async function globalSetup() {
   const { data: leadA } = await svc
     .from('leads')
     .insert({
+      organization_id: orgId,
       full_name: 'E2E Lead A',
       email: 'e2e_lead_a@example.com',
       phone: '+10000000001',
@@ -53,6 +77,7 @@ export default async function globalSetup() {
   const { data: leadB } = await svc
     .from('leads')
     .insert({
+      organization_id: orgId,
       full_name: 'E2E Lead B',
       email: 'e2e_lead_b@example.com',
       phone: '+10000000002',
@@ -65,6 +90,10 @@ export default async function globalSetup() {
 
   writeFileSync(
     STATE_FILE,
-    JSON.stringify({ users: ids, leadA: leadA?.id, leadB: leadB?.id }, null, 2),
+    JSON.stringify(
+      { org: orgId, users: ids, leadA: leadA?.id, leadB: leadB?.id },
+      null,
+      2,
+    ),
   );
 }

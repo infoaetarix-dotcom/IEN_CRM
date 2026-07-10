@@ -31,7 +31,7 @@ export async function updateLeadStatus(
   // Read current status under RLS — null means no access / not found.
   const { data: existing } = await supabase
     .from('leads')
-    .select('status')
+    .select('status, organization_id')
     .eq('id', leadId)
     .single();
   if (!existing) return { ok: false, error: 'Lead not found or access denied.' };
@@ -47,12 +47,14 @@ export async function updateLeadStatus(
   const service = createServiceClient();
   await service.from('lead_status_history').insert({
     lead_id: leadId,
+    organization_id: existing.organization_id,
     from_status: existing.status,
     to_status: toStatus,
     changed_by: user.id,
   });
   await writeAuditLog({
     actorId: user.id,
+    organizationId: existing.organization_id,
     action: 'status_change',
     entity: 'lead',
     entityId: leadId,
@@ -78,6 +80,7 @@ export async function addNote(
   const supabase = await createClient();
   const { error } = await supabase.from('lead_notes').insert({
     lead_id: leadId,
+    organization_id: user.organization_id,
     author_id: user.id,
     body: parsed.data,
   });
@@ -85,6 +88,7 @@ export async function addNote(
 
   await writeAuditLog({
     actorId: user.id,
+    organizationId: user.organization_id,
     action: 'note_added',
     entity: 'lead',
     entityId: leadId,
@@ -110,6 +114,7 @@ export async function assignLead(
 
   await writeAuditLog({
     actorId: admin.id,
+    organizationId: admin.organization_id,
     action: 'lead_assigned',
     entity: 'lead',
     entityId: leadId,
@@ -134,7 +139,7 @@ export async function sendLeadEmail(
 
   const { data: lead } = await supabase
     .from('leads')
-    .select('id, full_name, email, target_country, program, institution')
+    .select('id, organization_id, full_name, email, target_country, program, institution')
     .eq('id', leadId)
     .single();
   if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
@@ -142,6 +147,7 @@ export async function sendLeadEmail(
   const { data: tpl } = await supabase
     .from('email_templates')
     .select('subject, body')
+    .eq('organization_id', lead.organization_id)
     .eq('key', templateKey)
     .single();
   if (!tpl) return { ok: false, error: 'Template not found.' };
@@ -155,6 +161,7 @@ export async function sendLeadEmail(
 
   const res = await sendEmail({
     leadId: lead.id,
+    organizationId: lead.organization_id,
     to: lead.email,
     toName: lead.full_name,
     subject: renderTemplate(tpl.subject, vars),
@@ -165,6 +172,7 @@ export async function sendLeadEmail(
 
   await writeAuditLog({
     actorId: user.id,
+    organizationId: lead.organization_id,
     action: res.ok ? 'message_sent' : 'message_failed',
     entity: 'message',
     entityId: res.messageId || null,

@@ -42,6 +42,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/leads') ||
     pathname.startsWith('/agents') ||
     pathname.startsWith('/templates') ||
+    pathname.startsWith('/super') ||
     (pathname.startsWith('/api') && pathname !== '/api/health');
 
   if (isProtected && !user) {

@@ -4,7 +4,12 @@ import { serviceClient, STATE_FILE } from './helpers';
 /** Removes all ephemeral test users and leads created in global-setup. */
 export default async function globalTeardown() {
   const svc = serviceClient();
-  let state: { users: Record<string, string>; leadA?: string; leadB?: string };
+  let state: {
+    org?: string;
+    users: Record<string, string>;
+    leadA?: string;
+    leadB?: string;
+  };
   try {
     state = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
   } catch {
@@ -23,6 +28,8 @@ export default async function globalTeardown() {
     await svc.from('messages').update({ sent_by: null }).eq('sent_by', id);
     await svc.auth.admin.deleteUser(id).catch(() => {});
   }
+  // Remove the test org (cascades to organization_modules).
+  if (state.org) await svc.from('organizations').delete().eq('id', state.org);
   try {
     rmSync(STATE_FILE);
   } catch {

@@ -114,10 +114,24 @@ export async function startLead(
     return { ok: true, leadId: existingId, submissionToken: existingToken };
   }
 
+  // Which consultancy (organization) owns this form? Slug defaults to 'ien';
+  // Phase D routes it via /{slug}/apply. Suspended/unknown orgs get no leads.
+  const orgSlug = g(formData, 'org_slug') || 'ien';
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id, status')
+    .eq('slug', orgSlug)
+    .single();
+  if (!org || org.status !== 'active') {
+    return { ok: false, error: 'This application form is not available right now.' };
+  }
+  const organizationId = org.id as string;
+
   const { data: lead, error } = await supabase
     .from('leads')
     .insert({
       ...fields,
+      organization_id: organizationId,
       is_complete: false,
       utm_source: normalizeSource(d.utm_source),
       utm_medium: d.utm_medium || 'direct',
@@ -132,6 +146,7 @@ export async function startLead(
 
   await writeAuditLog({
     actorId: null,
+    organizationId,
     action: 'lead_created',
     entity: 'lead',
     entityId: lead.id,
@@ -247,7 +262,7 @@ export async function completeLead(
     .eq('id', leadId)
     .eq('submission_token', token)
     .eq('is_complete', false)
-    .select('id, full_name, email, target_country, program')
+    .select('id, organization_id, full_name, email, target_country, program')
     .single();
   if (error || !lead) {
     return { ok: false, error: 'Could not submit. Please try again.' };
@@ -258,6 +273,7 @@ export async function completeLead(
     const { data: tpl } = await supabase
       .from('email_templates')
       .select('subject, body')
+      .eq('organization_id', lead.organization_id)
       .eq('key', 'welcome')
       .single();
     if (tpl) {
@@ -268,6 +284,7 @@ export async function completeLead(
       };
       await sendEmail({
         leadId: lead.id,
+        organizationId: lead.organization_id,
         to: lead.email,
         toName: lead.full_name,
         subject: renderTemplate(tpl.subject, vars),
@@ -282,6 +299,7 @@ export async function completeLead(
 
   await writeAuditLog({
     actorId: null,
+    organizationId: lead.organization_id,
     action: 'lead_created',
     entity: 'lead',
     entityId: lead.id,

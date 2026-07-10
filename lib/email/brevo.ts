@@ -32,6 +32,7 @@ export function renderTemplate(
 
 interface SendParams {
   leadId: string;
+  organizationId: string;
   to: string;
   toName?: string | null;
   subject: string;
@@ -60,6 +61,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
     .from('messages')
     .insert({
       lead_id: params.leadId,
+      organization_id: params.organizationId,
       channel: 'email',
       template_key: params.templateKey ?? null,
       subject: params.subject,

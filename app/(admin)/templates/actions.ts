@@ -43,14 +43,16 @@ export async function updateTemplate(
       body: parsed.data.body,
       updated_at: new Date().toISOString(),
     })
+    .eq('organization_id', admin.organization_id)
     .eq('key', parsed.data.key);
   if (error) return { ok: false, error: 'Could not save template.' };
 
   await writeAuditLog({
     actorId: admin.id,
-    action: 'profile_change',
-    entity: 'profile',
-    entityId: null,
+    organizationId: admin.organization_id,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: admin.organization_id,
     metadata: { template: parsed.data.key, updated: true },
   });
 

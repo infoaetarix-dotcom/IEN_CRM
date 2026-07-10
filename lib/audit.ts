@@ -10,9 +10,11 @@ export type AuditAction =
   | 'lead_assigned'
   | 'note_added'
   | 'profile_change'
+  | 'org_change'
+  | 'module_change'
   | 'login';
 
-export type AuditEntity = 'lead' | 'message' | 'profile';
+export type AuditEntity = 'lead' | 'message' | 'profile' | 'organization';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action
@@ -21,6 +23,7 @@ export type AuditEntity = 'lead' | 'message' | 'profile';
  */
 export async function writeAuditLog(params: {
   actorId: string | null;
+  organizationId?: string | null;
   action: AuditAction;
   entity: AuditEntity;
   entityId?: string | null;
@@ -30,6 +33,7 @@ export async function writeAuditLog(params: {
     const supabase = createServiceClient();
     await supabase.from('audit_log').insert({
       actor_id: params.actorId,
+      organization_id: params.organizationId ?? null,
       action: params.action,
       entity: params.entity,
       entity_id: params.entityId ?? null,

@@ -40,7 +40,7 @@ export async function signIn(
   // Confirm the profile is active before letting them in.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_active')
+    .select('is_active, organization_id, is_super_admin')
     .eq('id', data.user.id)
     .single();
 
@@ -51,12 +51,14 @@ export async function signIn(
 
   await writeAuditLog({
     actorId: data.user.id,
+    organizationId: profile.organization_id,
     action: 'login',
     entity: 'profile',
     entityId: data.user.id,
   });
 
-  redirect('/dashboard');
+  // Super admins land on the platform console; org staff on their dashboard.
+  redirect(profile.is_super_admin ? '/super' : '/dashboard');
 }
 
 export async function signOut(): Promise<void> {

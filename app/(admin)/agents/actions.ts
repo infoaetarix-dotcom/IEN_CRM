@@ -46,14 +46,20 @@ export async function createAgent(
     return { ok: false, error: error?.message ?? 'Could not create user.' };
   }
 
-  // The trigger inserts the profile as 'agent'; set the chosen role + name.
+  // The trigger inserts the profile as 'agent'; set role + name + org. New
+  // staff belong to the creating admin's organization.
   await service
     .from('profiles')
-    .update({ role: parsed.data.role, full_name: parsed.data.full_name })
+    .update({
+      role: parsed.data.role,
+      full_name: parsed.data.full_name,
+      organization_id: admin.organization_id,
+    })
     .eq('id', data.user.id);
 
   await writeAuditLog({
     actorId: admin.id,
+    organizationId: admin.organization_id,
     action: 'profile_change',
     entity: 'profile',
     entityId: data.user.id,
@@ -81,6 +87,7 @@ export async function setAgentActive(
 
   await writeAuditLog({
     actorId: admin.id,
+    organizationId: admin.organization_id,
     action: 'profile_change',
     entity: 'profile',
     entityId: id,
@@ -107,6 +114,7 @@ export async function setAgentRole(
 
   await writeAuditLog({
     actorId: admin.id,
+    organizationId: admin.organization_id,
     action: 'profile_change',
     entity: 'profile',
     entityId: id,
