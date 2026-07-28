@@ -21,7 +21,8 @@ This is an entitlement/packaging concern for a billing-backed SaaS, so enforceme
 
 - **Blocked-access UX:** friendly upsell/"not included in your plan" page (doubles as an upsell surface), reached via server redirect. Nav link is simply absent.
 - **Granularity:** feature-level. Two modules are not standalone routes — `analytics` = the metric cards/charts on the dashboard; `email` = the send-email feature inside lead detail. Both gate at their real feature boundary.
-- **Dashboard is the always-available home shell** — never gated, guaranteeing a valid post-login landing regardless of package.
+- **`leads` is a core module — always available to every client.** It is never entitlement-gated: Dashboard + Leads are guaranteed so no package can leave a client with an empty CRM. (The `/super` leads toggle is therefore effectively a no-op for now; can be shown as locked-on in the console later — out of scope here.)
+- **Dashboard is the always-available home shell** — never gated, guaranteeing a valid post-login landing regardless of package. It always shows the leads summary view; analytics cards/charts are the gated extra layered on top.
 - **RLS is not the mechanism.** RLS enforces *org data isolation* (a lead belongs to org X). Module gating is *entitlement* (org X paid for the leads module). Enforced in app code.
 
 ## Architecture
@@ -39,19 +40,20 @@ interface ModuleDef {
   icon: LucideIcon;       // nav icon (lucide-react)
   route?: string;         // route prefix if it's a standalone page, e.g. '/templates'
   adminOnly?: boolean;    // role gate (admins only), independent of entitlement
+  core?: boolean;         // always available regardless of entitlement (e.g. leads)
   status: 'live' | 'future';
 }
 ```
 
 Live entries and their surfaces:
 
-| key | label | route | adminOnly | notes |
-|---|---|---|---|---|
-| `leads` | Leads | `/leads` | no | core lead table + detail |
-| `analytics` | Analytics | — | no | dashboard metric cards/charts (feature-level) |
-| `email` | Email outreach | — | no | send-email feature in lead detail (feature-level) |
-| `templates` | Templates | `/templates` | yes | email templates |
-| `agents` | Team management | `/agents` | yes | staff/agents |
+| key | label | route | adminOnly | core | notes |
+|---|---|---|---|---|---|
+| `leads` | Leads | `/leads` | no | **yes** | core lead table + detail — always available |
+| `analytics` | Analytics | — | no | no | dashboard metric cards/charts (feature-level) |
+| `email` | Email outreach | — | no | no | send-email feature in lead detail (feature-level) |
+| `templates` | Templates | `/templates` | yes | no | email templates |
+| `agents` | Team management | `/agents` | yes | no | staff/agents |
 
 `whatsapp`, `chatbot`, `bulk_messaging` → `status:'future'`, no `route`, no nav. Never render until they have real surfaces; still toggleable in `/super`.
 
@@ -62,8 +64,8 @@ Only entries with a `route` become nav links; `analytics`/`email` have no `route
 Wraps `organization_modules`:
 
 - `getEnabledModules(orgId: string): Promise<Set<string>>` — selects `module_key` where `enabled = true` for the org. Wrapped in React `cache()` so one render performs at most one query.
-- `hasModule(orgId: string, key: string): Promise<boolean>` — convenience for feature-level checks inside pages.
-- `requireModule(key: string): Promise<SessionProfile>` — guard: calls `requireUser()`, resolves the user's `organization_id`, and if the module isn't enabled, `redirect('/locked?module=<key>')`. Returns the profile on success. Works in both server components and server actions (Next handles the redirect throw in both).
+- `hasModule(orgId: string, key: string): Promise<boolean>` — convenience for feature-level checks inside pages. Returns `true` immediately for `core` modules (per the registry) without a query.
+- `requireModule(key: string): Promise<SessionProfile>` — guard: calls `requireUser()`; if the registry marks the module `core`, passes immediately. Otherwise resolves the user's `organization_id`, and if the module isn't enabled, `redirect('/locked?module=<key>')`. Returns the profile on success. Works in both server components and server actions (Next handles the redirect throw in both).
 
 Edge cases:
 - A user with `organization_id = null` inside the org app (should not happen — super admins are routed to `/super`): treated as having no modules; `requireModule` redirects to locked. Non-fatal.
@@ -73,7 +75,7 @@ Edge cases:
 
 | Layer | Where | Mechanism |
 |---|---|---|
-| **Nav** | `components/dashboard/sidebar.tsx` | Client component imports the registry; filters items by `role` **and** the `enabledModules: string[]` prop passed from `app/(admin)/layout.tsx`. Disabled module → link absent. Icons stay client-side (never serialized across the server/client boundary — only the string[] of keys crosses it). |
+| **Nav** | `components/dashboard/sidebar.tsx` | Client component imports the registry; filters items by `role` **and** the `enabledModules: string[]` prop passed from `app/(admin)/layout.tsx` (a `core` item always shows). Disabled module → link absent. Icons stay client-side (never serialized across the server/client boundary — only the string[] of keys crosses it). |
 | **Route** | each gated page | `await requireModule('<key>')` at the top of `leads/page.tsx`, `templates/page.tsx`, `agents/page.tsx`. Server-side redirect on miss → blocks direct URL access even if nav is bypassed. |
 | **Action** | each gated server action | `await requireModule('<key>')` at the top of `templates/actions.ts` (template CRUD → `templates`), `agents/actions.ts` (agent CRUD → `agents`), and the send-email action in `leads/actions.ts` (→ `email`). Blocks direct POST even with nav hidden. |
 
@@ -83,7 +85,7 @@ Edge cases:
 
 ## Feature-level gating
 
-- **`app/(admin)/dashboard/page.tsx`** — never calls `requireModule` (home shell). Wraps the analytics section (metric cards + charts) in `hasModule(org, 'analytics')`. When off, renders a lean view (welcome + basic leads count / quick links to enabled modules) instead of charts.
+- **`app/(admin)/dashboard/page.tsx`** — never calls `requireModule` (home shell). Always renders the leads summary view (leads is core). Wraps the analytics section (metric cards + charts) in `hasModule(org, 'analytics')`; when off, the leads summary stands alone without the charts.
 - **`app/(admin)/leads/[id]/page.tsx`** — renders the Send-Email panel only when `hasModule(org, 'email')`.
 - **`leads/actions.ts` send-email action** — `await requireModule('email')` before sending.
 
@@ -99,7 +101,7 @@ Edge cases:
 - **Registry↔DB integrity:** every `registry` key exists in the `0004` `modules` seed, and every non-future concern is covered — no orphan keys in either direction (guards against drift between code and DB).
 
 **E2E (Playwright):**
-- Seed a **limited-package org** (leads-only) + its admin. Assert: Templates and Agents nav links absent; direct GET `/templates` lands on the locked page; dashboard shows no analytics charts; lead detail shows no Send-Email button.
+- Seed a **limited-package org** (leads only — no analytics/email/templates/agents) + its admin. Assert: Dashboard and Leads nav links present (leads is core); Templates and Agents nav links absent; direct GET `/templates` lands on the locked page; dashboard shows the leads summary but no analytics charts; lead detail shows no Send-Email button.
 - Existing full-package org (IEN) still sees all nav + surfaces — **no regression**.
 
 ## Files
