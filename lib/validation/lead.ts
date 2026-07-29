@@ -256,6 +256,41 @@ export const step3Schema = leadObject
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG);
 
+// Dashboard lead editor — the applicant-provided fields staff may correct.
+// Excludes consent, UTM/tracking, and the honeypot (system/audit fields that
+// must never be hand-edited). Reuses the same field rules + cross-field checks.
+export const leadEditSchema = leadObject
+  .pick({
+    full_name: true,
+    email: true,
+    phone: true,
+    date_of_birth: true,
+    city: true,
+    district: true,
+    target_country: true,
+    institution: true,
+    program: true,
+    intake_season: true,
+    intake_year: true,
+    highest_education: true,
+    last_qualification: true,
+    prior_institution: true,
+    passing_year: true,
+    grading_system: true,
+    grade_value: true,
+    work_experience_years: true,
+    work_experience_detail: true,
+    english_test: true,
+    english_score: true,
+    funding_source: true,
+    prior_rejection: true,
+    prior_rejection_detail: true,
+  })
+  .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
+  .refine(gradeInRange, GRADE_MSG);
+
+export type LeadEditInput = z.infer<typeof leadEditSchema>;
+
 export type LeadInput = z.infer<typeof leadSchema>;
 
 /** Map an arbitrary utm_source string to the lead_source enum. */
