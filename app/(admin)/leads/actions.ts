@@ -203,10 +203,12 @@ export async function updateLead(
     return { ok: false, error: parsed.error.issues[0]!.message };
   }
 
-  // Cleared optional fields (undefined) must persist as NULL, not be skipped.
+  // Cleared optional fields must persist as NULL. Empty strings are treated as
+  // "cleared" too — the DB CHECK constraints on coded columns (english_test,
+  // intake_season, funding_source, …) allow NULL or an enum value, never ''.
   const update: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
-    update[k] = v === undefined ? null : v;
+    update[k] = v === undefined || v === '' ? null : v;
   }
 
   const supabase = await createClient();

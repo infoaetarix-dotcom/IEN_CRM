@@ -18,7 +18,7 @@ create table if not exists organizations (
   created_at timestamptz not null default now()
 );
 
-create table if not exists modules (
+create table if not exists modules ( 
   key         text primary key,              -- 'leads','analytics','email',...
   name        text not null,
   description text

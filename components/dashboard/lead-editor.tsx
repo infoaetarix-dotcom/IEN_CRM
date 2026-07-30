@@ -1,6 +1,13 @@
 'use client';
 
-import { useState, useTransition, type ReactNode } from 'react';
+import {
+  useState,
+  useTransition,
+  useId,
+  cloneElement,
+  type ReactNode,
+  type ReactElement,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { updateLead } from '@/app/(admin)/leads/actions';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   EDUCATION_OPTIONS,
@@ -55,11 +61,16 @@ function withCurrent(options: readonly string[], current: string): string[] {
   return current && !options.includes(current) ? [current, ...options] : [...options];
 }
 
-function LField({ label, children }: { label: string; children: ReactNode }) {
+function LField({ label, children }: { label: string; children: ReactElement }) {
+  // Explicit htmlFor/id association — accessible for staff and reliably
+  // targetable by label in tests. The id is injected into the single control.
+  const id = useId();
   return (
     <div className="space-y-1">
-      <Label className="label-eyebrow">{label}</Label>
-      {children}
+      <label htmlFor={id} className="label-eyebrow block">
+        {label}
+      </label>
+      {cloneElement(children, { id } as { id: string })}
     </div>
   );
 }
