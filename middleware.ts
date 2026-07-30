@@ -6,7 +6,7 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 /**
  * Refreshes the Supabase session on every request and guards the admin area.
  * Unauthenticated traffic to /dashboard, /leads, /agents, /templates, and /api
- * (except /api/health) is redirected to /login.
+ * (except /api/health and /api/keep-warm) is redirected to /login.
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -43,7 +43,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/agents') ||
     pathname.startsWith('/templates') ||
     pathname.startsWith('/super') ||
-    (pathname.startsWith('/api') && pathname !== '/api/health');
+    (pathname.startsWith('/api') &&
+      pathname !== '/api/health' &&
+      pathname !== '/api/keep-warm');
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
