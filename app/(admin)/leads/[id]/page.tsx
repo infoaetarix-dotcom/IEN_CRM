@@ -18,6 +18,10 @@ import {
   EmailPanel,
 } from '@/components/dashboard/lead-controls';
 import {
+  LeadDetailsEditor,
+  type LeadEditState,
+} from '@/components/dashboard/lead-editor';
+import {
   STATUS_LABELS,
   STATUS_BADGE,
   SOURCE_LABELS,
@@ -93,6 +97,38 @@ export default async function LeadDetailPage({
     .map((p) => ({ id: p.id, full_name: p.full_name }));
   const age = ageFromDob(lead.date_of_birth);
 
+  // Editing is gated by RLS (admin or assigned agent); mirror it here so the
+  // Edit button only shows to those who can actually save.
+  const canEdit = profile.role === 'admin' || lead.assigned_to === profile.id;
+
+  const s = (v: unknown) => (v == null ? '' : String(v));
+  const initial: LeadEditState = {
+    full_name: s(lead.full_name),
+    email: s(lead.email),
+    phone: s(lead.phone),
+    date_of_birth: lead.date_of_birth ? s(lead.date_of_birth).slice(0, 10) : '',
+    city: s(lead.city),
+    district: s(lead.district),
+    target_country: s(lead.target_country),
+    institution: s(lead.institution),
+    program: s(lead.program),
+    intake_season: s(lead.intake_season),
+    intake_year: s(lead.intake_year),
+    highest_education: s(lead.highest_education),
+    last_qualification: s(lead.last_qualification),
+    prior_institution: s(lead.prior_institution),
+    passing_year: s(lead.passing_year),
+    grading_system: s(lead.grading_system),
+    grade_value: s(lead.grade_value),
+    work_experience_years: s(lead.work_experience_years),
+    work_experience_detail: s(lead.work_experience_detail),
+    english_test: s(lead.english_test),
+    english_score: s(lead.english_score),
+    funding_source: s(lead.funding_source),
+    prior_rejection: lead.prior_rejection === true,
+    prior_rejection_detail: s(lead.prior_rejection_detail),
+  };
+
   return (
     <div className="space-y-6">
       <Link
@@ -134,6 +170,11 @@ export default async function LeadDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left: profile + notes */}
         <div className="space-y-6 lg:col-span-2">
+          <LeadDetailsEditor
+            leadId={lead.id}
+            canEdit={canEdit}
+            initial={initial}
+          >
           <Card>
             <CardHeader>
               <CardTitle>Contact &amp; location</CardTitle>
@@ -234,6 +275,8 @@ export default async function LeadDetailPage({
               )}
             </CardContent>
           </Card>
+
+          </LeadDetailsEditor>
 
           <Card>
             <CardHeader>

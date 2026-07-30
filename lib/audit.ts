@@ -8,6 +8,7 @@ export type AuditAction =
   | 'message_sent'
   | 'message_failed'
   | 'lead_assigned'
+  | 'lead_updated'
   | 'note_added'
   | 'profile_change'
   | 'org_change'

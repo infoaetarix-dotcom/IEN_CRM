@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser, requireRole } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus } from '@/lib/leads/display';
+import { leadEditSchema } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 
 export interface ActionResult {
@@ -181,5 +182,53 @@ export async function sendLeadEmail(
 
   revalidatePath(`/leads/${leadId}`);
   if (!res.ok) return { ok: false, error: res.error ?? 'Send failed.' };
+  return { ok: true };
+}
+
+/**
+ * Update a lead's applicant-provided fields from the dashboard editor.
+ * Access is enforced by RLS (leads_update: admin OR the assigned agent, within
+ * org) — the update runs on the user-session client, so a non-permitted edit
+ * touches zero rows and is reported as access denied. Re-validates every field
+ * with the same rules the public form uses.
+ */
+export async function updateLead(
+  leadId: string,
+  values: unknown,
+): Promise<ActionResult> {
+  const user = await requireUser();
+
+  const parsed = leadEditSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]!.message };
+  }
+
+  // Cleared optional fields (undefined) must persist as NULL, not be skipped.
+  const update: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed.data)) {
+    update[k] = v === undefined ? null : v;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('leads')
+    .update(update)
+    .eq('id', leadId)
+    .select('id')
+    .maybeSingle();
+  if (error) return { ok: false, error: 'Could not save changes.' };
+  if (!data) return { ok: false, error: 'Lead not found or access denied.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: user.organization_id,
+    action: 'lead_updated',
+    entity: 'lead',
+    entityId: leadId,
+    metadata: { fields: Object.keys(parsed.data) },
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath('/leads');
   return { ok: true };
 }
