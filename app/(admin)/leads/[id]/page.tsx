@@ -21,6 +21,7 @@ import {
   LeadDetailsEditor,
   type LeadEditState,
 } from '@/components/dashboard/lead-editor';
+import { LeadActions } from '@/components/dashboard/lead-archive-controls';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
@@ -100,6 +101,11 @@ export default async function LeadDetailPage({
   // Editing is gated by RLS (admin or assigned agent); mirror it here so the
   // Edit button only shows to those who can actually save.
   const canEdit = profile.role === 'admin' || lead.assigned_to === profile.id;
+  const isArchived = lead.archived_at != null;
+  const canDelete = profile.role === 'admin';
+  const archivedByName = lead.archived_by
+    ? (nameById.get(lead.archived_by) ?? 'Unknown')
+    : null;
 
   const s = (v: unknown) => (v == null ? '' : String(v));
   const initial: LeadEditState = {
@@ -148,6 +154,7 @@ export default async function LeadDetailPage({
             {lead.is_complete === false && (
               <Badge variant="warning">Incomplete application</Badge>
             )}
+            {isArchived && <Badge variant="neutral">Archived</Badge>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Received {fmtDateTime(lead.created_at)} ·{' '}
@@ -407,6 +414,26 @@ export default async function LeadDetailPage({
                   </p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lead actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isArchived && (
+                <p className="text-xs text-muted-foreground">
+                  Archived{archivedByName ? ` by ${archivedByName}` : ''}
+                  {lead.archived_at ? ` · ${fmtDateTime(lead.archived_at)}` : ''}
+                </p>
+              )}
+              <LeadActions
+                leadId={lead.id}
+                isArchived={isArchived}
+                canArchive={canEdit}
+                canDelete={canDelete}
+              />
             </CardContent>
           </Card>
         </div>

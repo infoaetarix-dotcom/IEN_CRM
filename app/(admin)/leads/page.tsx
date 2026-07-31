@@ -12,6 +12,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
+import { RestoreLeadButton } from '@/components/dashboard/lead-archive-controls';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
@@ -51,6 +52,7 @@ export default async function LeadsPage({
   const completeness = str(sp.completeness); // '', 'complete', 'incomplete'
   const from = str(sp.from);
   const to = str(sp.to);
+  const showArchived = str(sp.archived) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
   const sort = str(sp.sort) || 'created_at';
   const dir = str(sp.dir) === 'asc' ? 'asc' : 'desc';
@@ -63,7 +65,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete',
+      'id, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete, archived_at, archived_by',
       { count: 'exact' },
     );
 
@@ -76,6 +78,9 @@ export default async function LeadsPage({
   else if (completeness === 'complete') query = query.eq('is_complete', true);
   if (from) query = query.gte('created_at', from);
   if (to) query = query.lte('created_at', `${to}T23:59:59`);
+  // Split active vs archived — the default list hides archived leads.
+  if (showArchived) query = query.not('archived_at', 'is', null);
+  else query = query.is('archived_at', null);
 
   const offset = (page - 1) * PAGE_SIZE;
   const { data: leads, count } = await query
@@ -105,6 +110,7 @@ export default async function LeadsPage({
     if (to) next.set('to', to);
     if (sort !== 'created_at') next.set('sort', sort);
     if (dir !== 'desc') next.set('dir', dir);
+    if (showArchived) next.set('archived', '1');
     next.set('page', String(p));
     return `/leads?${next.toString()}`;
   };
@@ -114,9 +120,19 @@ export default async function LeadsPage({
       <div className="flex items-center justify-between">
         <div>
           <p className="label-eyebrow">Leads</p>
-          <h1 className="font-serif text-2xl">All leads</h1>
+          <h1 className="font-serif text-2xl">
+            {showArchived ? 'Archived leads' : 'All leads'}
+          </h1>
         </div>
-        <p className="text-sm text-muted-foreground">{total} total</p>
+        <div className="flex items-center gap-4">
+          <Link
+            href={showArchived ? '/leads' : '/leads?archived=1'}
+            className="text-sm text-accent hover:underline"
+          >
+            {showArchived ? '← Back to active' : 'View archived'}
+          </Link>
+          <p className="text-sm text-muted-foreground">{total} total</p>
+        </div>
       </div>
 
       <LeadsFilters
@@ -136,6 +152,7 @@ export default async function LeadsPage({
                 <TableHead className="hidden lg:table-cell">Assigned</TableHead>
               )}
               <TableHead className="hidden sm:table-cell">Received</TableHead>
+              {showArchived && <TableHead>Archived</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -187,6 +204,24 @@ export default async function LeadsPage({
                     year: 'numeric',
                   })}
                 </TableCell>
+                {showArchived && (
+                  <TableCell>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div>
+                        {l.archived_by
+                          ? (nameById.get(l.archived_by) ?? 'Unknown')
+                          : '—'}
+                        {l.archived_at
+                          ? ` · ${new Date(l.archived_at).toLocaleDateString(
+                              'en-GB',
+                              { day: '2-digit', month: 'short', year: 'numeric' },
+                            )}`
+                          : ''}
+                      </div>
+                      <RestoreLeadButton leadId={l.id} />
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

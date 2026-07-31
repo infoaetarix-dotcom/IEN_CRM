@@ -53,6 +53,7 @@ export default async function DashboardPage() {
   const { data: leads } = await supabase
     .from('leads')
     .select('id, full_name, status, utm_source, created_at')
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
 
   const all = leads ?? [];

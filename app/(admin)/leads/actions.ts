@@ -234,3 +234,95 @@ export async function updateLead(
   revalidatePath('/leads');
   return { ok: true };
 }
+
+/**
+ * Archive a lead (soft delete). RLS (leads_update) allows admin OR the assigned
+ * agent; `archived_by` records who did it for the admin's accountability trail.
+ * Only acts on currently-active leads.
+ */
+export async function archiveLead(leadId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('leads')
+    .update({ archived_at: new Date().toISOString(), archived_by: user.id })
+    .eq('id', leadId)
+    .is('archived_at', null)
+    .select('id, organization_id')
+    .maybeSingle();
+  if (error) return { ok: false, error: 'Could not archive lead.' };
+  if (!data) return { ok: false, error: 'Lead not found or access denied.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: data.organization_id,
+    action: 'lead_archived',
+    entity: 'lead',
+    entityId: leadId,
+  });
+
+  revalidatePath('/leads');
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+/** Restore an archived lead. RLS allows admin OR the assigned agent. */
+export async function unarchiveLead(leadId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('leads')
+    .update({ archived_at: null, archived_by: null })
+    .eq('id', leadId)
+    .select('id, organization_id')
+    .maybeSingle();
+  if (error) return { ok: false, error: 'Could not restore lead.' };
+  if (!data) return { ok: false, error: 'Lead not found or access denied.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: data.organization_id,
+    action: 'lead_unarchived',
+    entity: 'lead',
+    entityId: leadId,
+  });
+
+  revalidatePath('/leads');
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+/**
+ * Permanently delete a lead (admin only). Notes / status history / messages
+ * cascade automatically (FK ON DELETE CASCADE). The audit row is written FIRST,
+ * before the lead is gone, so the deletion trail survives (audit_log does not
+ * cascade). Unrecoverable — the UI must confirm before calling this.
+ */
+export async function deleteLead(leadId: string): Promise<ActionResult> {
+  const admin = await requireRole('admin');
+  const supabase = await createClient();
+
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, organization_id, full_name, email')
+    .eq('id', leadId)
+    .single();
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    organizationId: lead.organization_id,
+    action: 'lead_deleted',
+    entity: 'lead',
+    entityId: leadId,
+    metadata: { full_name: lead.full_name, email: lead.email },
+  });
+
+  const { error } = await supabase.from('leads').delete().eq('id', leadId);
+  if (error) return { ok: false, error: 'Could not delete lead.' };
+
+  revalidatePath('/leads');
+  return { ok: true };
+}
