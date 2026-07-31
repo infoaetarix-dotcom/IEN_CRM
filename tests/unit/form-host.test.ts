@@ -13,9 +13,11 @@ describe('normalizeHost', () => {
 
 describe('isFormPath', () => {
   it('allows the public form pages', () => {
-    expect(isFormPath('/')).toBe(true);
     expect(isFormPath('/apply')).toBe(true);
     expect(isFormPath('/thank-you')).toBe(true);
+  });
+  it('does NOT allow the marketing root (it redirects to /apply on the form host)', () => {
+    expect(isFormPath('/')).toBe(false);
   });
   it('blocks every CRM path', () => {
     for (const p of ['/login', '/dashboard', '/leads', '/leads/123', '/agents', '/templates', '/super', '/api/health']) {
@@ -44,11 +46,10 @@ describe('formHostAction', () => {
   it('allows the public form pages on the form host (case/port-insensitive)', () => {
     expect(formHostAction('apply.ien.com', FH, '/apply')).toBe('allow');
     expect(formHostAction('APPLY.IEN.COM:443', FH, '/thank-you')).toBe('allow');
-    expect(formHostAction('apply.ien.com', FH, '/')).toBe('allow');
   });
 
-  it('redirects any CRM path to /apply on the form host', () => {
-    for (const p of ['/login', '/dashboard', '/leads', '/super', '/api/health']) {
+  it('redirects the marketing root and any CRM path to /apply on the form host', () => {
+    for (const p of ['/', '/login', '/dashboard', '/leads', '/super', '/api/health']) {
       expect(formHostAction('apply.ien.com', FH, p)).toBe('redirect-apply');
     }
   });
