@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/guards';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { SignOutButton } from '@/components/dashboard/sign-out-button';
@@ -11,6 +12,10 @@ export default async function AdminLayout({
 }) {
   // Guard: redirects to /login if unauthenticated/inactive. RLS is the backstop.
   const profile = await requireUser();
+
+  // New staff must set their own password before using the CRM. The
+  // /change-password page lives outside this layout, so there's no redirect loop.
+  if (profile.must_change_password) redirect('/change-password');
 
   return (
     <div className="flex min-h-screen bg-cream">
@@ -43,6 +48,12 @@ export default async function AdminLayout({
             <Badge variant={profile.role === 'admin' ? 'accent' : 'neutral'}>
               {profile.role}
             </Badge>
+            <Link
+              href="/change-password"
+              className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Password
+            </Link>
             <SignOutButton />
           </div>
         </header>

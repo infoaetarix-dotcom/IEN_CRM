@@ -12,6 +12,7 @@ export interface SessionProfile {
   is_active: boolean;
   is_super_admin: boolean;
   organization_id: string | null;
+  must_change_password: boolean;
   email: string | null;
 }
 
@@ -30,7 +31,9 @@ export async function requireUser(): Promise<SessionProfile> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, role, is_active, is_super_admin, organization_id')
+    .select(
+      'id, full_name, role, is_active, is_super_admin, organization_id, must_change_password',
+    )
     .eq('id', user.id)
     .single();
 

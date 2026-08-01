@@ -47,13 +47,15 @@ export async function createAgent(
   }
 
   // The trigger inserts the profile as 'agent'; set role + name + org. New
-  // staff belong to the creating admin's organization.
+  // staff belong to the creating admin's organization and must change the
+  // temporary password on first login.
   await service
     .from('profiles')
     .update({
       role: parsed.data.role,
       full_name: parsed.data.full_name,
       organization_id: admin.organization_id,
+      must_change_password: true,
     })
     .eq('id', data.user.id);
 
