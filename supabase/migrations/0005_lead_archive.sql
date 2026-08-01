@@ -22,3 +22,8 @@ alter table leads
 
 -- Speeds up the "active vs archived" split on the leads list + dashboard.
 create index if not exists idx_leads_archived_at on leads(archived_at);
+
+-- Permanent delete: the authenticated role had UPDATE but not DELETE, so the
+-- existing leads_delete RLS policy could never take effect (base privilege was
+-- missing). Grant it — RLS still restricts the actual rows to admins in-org.
+grant delete on leads to authenticated;
