@@ -16,6 +16,12 @@ export default async function AdminLayout({
   // Guard: redirects to /login if unauthenticated/inactive. RLS is the backstop.
   const profile = await requireUser();
 
+  // The org CRM belongs to tenant staff. Super admins have cross-org RLS access,
+  // so without this they'd land here and see every consultancy's leads merged
+  // into one dashboard — their console is /super. (Covers direct navigation and
+  // the middleware bounce from /login, which can't read the flag itself.)
+  if (profile.is_super_admin) redirect('/super');
+
   // New staff must set their own password before using the CRM. The
   // /change-password page lives outside this layout, so there's no redirect loop.
   if (profile.must_change_password) redirect('/change-password');
