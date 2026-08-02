@@ -14,7 +14,7 @@ import {
   AgentRowControls,
 } from '@/components/dashboard/agent-controls';
 
-export const metadata = { title: 'Agents — IEN CRM' };
+export const metadata = { title: 'Agents — CRM' };
 
 export default async function AgentsPage() {
   // Admin-only (defense in depth: layout guard + this + RLS).

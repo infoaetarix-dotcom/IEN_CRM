@@ -2,7 +2,7 @@ import { requireUser } from '@/lib/auth/guards';
 import { ChangePasswordForm } from './change-password-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata = { title: 'Change password — IEN CRM' };
+export const metadata = { title: 'Change password — CRM' };
 
 export default async function ChangePasswordPage() {
   const profile = await requireUser();

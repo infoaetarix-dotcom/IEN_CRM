@@ -136,6 +136,93 @@ export async function setOrgStatus(
   return { ok: true };
 }
 
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+const LOGO_MAX_BYTES = 1024 * 1024; // 1 MB — logos are small; caps abuse.
+
+/**
+ * Upload a consultancy's logo to the public `org-logos` bucket and point the
+ * org row at it. Super-admin only (Aetarix onboards each client), so uploads
+ * run through the service role and a tenant can never touch another's asset.
+ */
+export async function uploadOrgLogo(
+  orgId: string,
+  formData: FormData,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const file = formData.get('logo');
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: 'Choose a logo file to upload.' };
+  }
+  if (!LOGO_TYPES.includes(file.type)) {
+    return { ok: false, error: 'Use a PNG, JPEG, WEBP or SVG image.' };
+  }
+  if (file.size > LOGO_MAX_BYTES) {
+    return { ok: false, error: 'Logo must be under 1 MB.' };
+  }
+
+  const service = createServiceClient();
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
+  // Unique path per upload so a CDN can't keep serving the previous logo.
+  const path = `${orgId}/${Date.now()}.${ext}`;
+
+  const { error: upErr } = await service.storage
+    .from('org-logos')
+    .upload(path, file, { contentType: file.type, upsert: true });
+  if (upErr) return { ok: false, error: 'Upload failed. Please try again.' };
+
+  const {
+    data: { publicUrl },
+  } = service.storage.from('org-logos').getPublicUrl(path);
+
+  const { error } = await service
+    .from('organizations')
+    .update({ logo_url: publicUrl })
+    .eq('id', orgId);
+  if (error) return { ok: false, error: 'Could not save the logo.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { logo_uploaded: path },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  revalidatePath('/super');
+  return { ok: true };
+}
+
+/** Set a consultancy's full public-facing name (consent text, emails). */
+export async function updateOrgLegalName(
+  orgId: string,
+  legalName: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const parsed = z.string().trim().min(2).max(160).safeParse(legalName);
+  if (!parsed.success) return { ok: false, error: 'Enter a valid name.' };
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from('organizations')
+    .update({ legal_name: parsed.data })
+    .eq('id', orgId);
+  if (error) return { ok: false, error: 'Could not save the name.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { legal_name: parsed.data },
+  });
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
 /** Enable or disable a module for a consultancy (packaging). */
 export async function toggleModule(
   orgId: string,

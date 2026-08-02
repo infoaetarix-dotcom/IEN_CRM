@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Application received — IEN Visa Consultancy',
+  title: 'Application received',
 };
 
 export default function ThankYouPage() {

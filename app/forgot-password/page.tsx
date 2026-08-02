@@ -1,7 +1,7 @@
 import { ForgotPasswordForm } from './forgot-password-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata = { title: 'Reset password — IEN CRM' };
+export const metadata = { title: 'Reset password — CRM' };
 
 export default function ForgotPasswordPage() {
   return (

@@ -22,7 +22,7 @@ import {
   type LeadSource,
 } from '@/lib/leads/display';
 
-export const metadata = { title: 'Leads — IEN CRM' };
+export const metadata = { title: 'Leads — CRM' };
 
 const PAGE_SIZE = 20;
 

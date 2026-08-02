@@ -18,7 +18,7 @@ import {
   type LeadSource,
 } from '@/lib/leads/display';
 
-export const metadata = { title: 'Dashboard — IEN CRM' };
+export const metadata = { title: 'Dashboard — CRM' };
 
 function MetricCard({
   label,

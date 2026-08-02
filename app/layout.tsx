@@ -15,7 +15,7 @@ const serif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: 'IEN Visa Consultancy',
+  title: 'Aetarix CRM',
   description: 'Study-abroad and student-visa consultancy.',
   robots: { index: false, follow: false },
 };

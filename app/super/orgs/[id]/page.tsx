@@ -18,6 +18,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { SuspendToggle, ModuleToggle } from '@/components/super/org-controls';
+import { OrgBranding } from '@/components/super/org-branding';
+import { brandFromOrg } from '@/lib/branding';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
@@ -31,10 +33,11 @@ export default async function OrgDetail({
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, slug, status, created_at')
+    .select('id, name, slug, status, created_at, legal_name, logo_url')
     .eq('id', id)
     .single();
   if (!org) notFound();
+  const brand = brandFromOrg(org);
 
   const [{ data: modules }, { data: orgModules }, { data: staff }, leadsRes] =
     await Promise.all([
@@ -84,6 +87,15 @@ export default async function OrgDetail({
         </div>
         <SuspendToggle orgId={org.id} status={org.status} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Branding</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrgBranding orgId={org.id} brand={brand} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

@@ -1,9 +1,17 @@
 import Link from 'next/link';
+import { getPublicOrgBrand } from '@/lib/branding/org';
+import { Brandmark } from '@/components/branding/brandmark';
 
-export default function Home() {
+// The bare root serves the default consultancy; per-tenant roots arrive with
+// the slug routes in Phase D.
+const DEFAULT_ORG_SLUG = 'ien';
+
+export default async function Home() {
+  const brand = await getPublicOrgBrand(DEFAULT_ORG_SLUG);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-navy px-6 text-center text-paper">
-      <p className="label-eyebrow text-accent">IEN Visa Consultancy</p>
+      <Brandmark brand={brand} size="h-12" onDark />
       <h1 className="max-w-2xl font-serif text-4xl leading-tight sm:text-5xl">
         Your journey to studying abroad starts here.
       </h1>

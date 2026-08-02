@@ -39,7 +39,12 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-destructive">{message}</p>;
 }
 
-export function LeadForm() {
+export function LeadForm({
+  /** Consultancy named in the consent line — never hardcode one client here. */
+  consentName = 'this consultancy',
+}: {
+  consentName?: string;
+}) {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
   const [lead, setLead] = useState({ id: '', token: '' });
@@ -151,8 +156,8 @@ export function LeadForm() {
             <label className="flex items-start gap-3 text-sm">
               <Checkbox name="consent_given" className="mt-0.5" />
               <span>
-                I consent to IEN Visa Consultancy storing and processing these
-                details to contact me about my application. *
+                I consent to {consentName} storing and processing these details
+                to contact me about my application. *
               </span>
             </label>
             <FieldError message={err1.consent_given} />

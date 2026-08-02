@@ -2,7 +2,7 @@ import { requireUser } from '@/lib/auth/guards';
 import { ChangePasswordForm } from '../change-password/change-password-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata = { title: 'Set a new password — IEN CRM' };
+export const metadata = { title: 'Set a new password — CRM' };
 
 // Reached from a reset email via /auth/callback, which establishes a recovery
 // session. requireUser ensures that session exists (else → /login).

@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/guards';
+import { getOrgBrand } from '@/lib/branding/org';
+import { Brandmark } from '@/components/branding/brandmark';
+import { PoweredByAetarix } from '@/components/branding/powered-by';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { SignOutButton } from '@/components/dashboard/sign-out-button';
 import { Badge } from '@/components/ui/badge';
@@ -17,29 +20,43 @@ export default async function AdminLayout({
   // /change-password page lives outside this layout, so there's no redirect loop.
   if (profile.must_change_password) redirect('/change-password');
 
+  // Tenant brand — never hardcode a client here; consultancy #2 uses this too.
+  const brand = await getOrgBrand(profile.organization_id);
+
   return (
     <div className="flex min-h-screen bg-cream">
-      {/* Sidebar */}
+      {/* Sidebar — the consultancy's own brand leads on navy */}
       <aside className="hidden w-60 shrink-0 flex-col bg-navy md:flex">
         <div className="px-5 py-6">
-          <p className="label-eyebrow text-accent">IEN</p>
-          <p className="mt-1 font-serif text-lg text-paper">Visa CRM</p>
+          <Link href="/dashboard" className="block">
+            <Brandmark brand={brand} size="h-9" onDark />
+          </Link>
+          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-paper/50">
+            Client CRM
+          </p>
         </div>
         <Sidebar role={profile.role} />
+
+        {/* Platform attribution sits at the foot of the tenant's own chrome */}
+        <div className="mt-auto border-t border-paper/10 px-5 py-4">
+          <PoweredByAetarix onDark />
+        </div>
       </aside>
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-line bg-white px-6 py-3">
-          {/* Mobile nav fallback */}
-          <div className="flex items-center gap-3 md:hidden">
-            <Link href="/dashboard" className="font-serif text-lg">
-              IEN CRM
-            </Link>
+        <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-6 py-3">
+          {/* Mobile: tenant brand, since the sidebar is hidden */}
+          <Link href="/dashboard" className="md:hidden">
+            <Brandmark brand={brand} size="h-7" />
+          </Link>
+          {/* Desktop: Aetarix reads on white, where the blue mark belongs */}
+          <div className="hidden md:block">
+            <PoweredByAetarix />
           </div>
-          <div className="hidden md:block" />
+
           <div className="flex items-center gap-4">
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <p className="text-sm font-medium leading-tight">
                 {profile.full_name}
               </p>
