@@ -15,13 +15,16 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-navy px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={AETARIX.mark}
-              alt={AETARIX.name}
-              className="h-10 w-auto object-contain"
-            />
+          <div className="mb-5 flex justify-center">
+            {/* The wordmark is dark blue; a light plate keeps it legible on navy. */}
+            <span className="inline-flex items-center rounded-lg bg-paper px-5 py-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={AETARIX.wordmark}
+                alt={AETARIX.name}
+                className="h-8 w-auto object-contain"
+              />
+            </span>
           </div>
           <h1 className="font-serif text-2xl text-paper">Staff sign in</h1>
           <p className="mt-1 text-sm text-paper/60">

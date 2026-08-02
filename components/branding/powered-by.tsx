@@ -32,12 +32,18 @@ export function PoweredByAetarix({
       >
         Powered by
       </span>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={onDark ? AETARIX.mark : AETARIX.wordmark}
-        alt={AETARIX.name}
-        className={cn('w-auto object-contain', onDark ? 'h-5' : 'h-4')}
-      />
+      {/* The wordmark is dark blue, so it disappears on navy — on dark surfaces
+          the name is set in type instead of forcing an unreadable image. */}
+      {onDark ? (
+        <span className="font-serif text-sm text-paper/85">{AETARIX.name}</span>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={AETARIX.wordmark}
+          alt={AETARIX.name}
+          className="h-5 w-auto object-contain"
+        />
+      )}
     </a>
   );
 }

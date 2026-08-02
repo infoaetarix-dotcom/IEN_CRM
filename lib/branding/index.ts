@@ -16,8 +16,9 @@
  */
 export const AETARIX = {
   name: 'Aetarix',
-  wordmark: '/aetarix-logo.svg',
-  mark: '/aetarix-mark.svg',
+  wordmark: '/aetarix-logo.png',
+  // No separate square mark yet — the wordmark stands in.
+  mark: '/aetarix-logo.png',
   url: 'https://aetarix.com',
 } as const;
 
