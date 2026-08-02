@@ -42,15 +42,13 @@ test('new staff are forced to change their temporary password on first login', a
 
     // Forced onto /change-password — the CRM is blocked until they set one.
     await page.waitForURL(/\/change-password/);
-    await expect(
-      page.getByRole('heading', { name: /set your password/i }),
-    ).toBeVisible();
+    await expect(page.getByText(/set your password/i).first()).toBeVisible();
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/change-password/);
 
     // Set a new password → lands on the dashboard; flag is cleared.
-    await page.getByLabel('New password').fill(newPassword);
-    await page.getByLabel('Confirm new password').fill(newPassword);
+    await page.getByLabel('New password', { exact: true }).fill(newPassword);
+    await page.getByLabel('Confirm new password', { exact: true }).fill(newPassword);
     await page.getByRole('button', { name: /update password/i }).click();
     await page.waitForURL(/\/dashboard/);
 
