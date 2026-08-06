@@ -24,8 +24,11 @@ production at all times.
 5. Merge, then **verify production** (load the form and the CRM, check the
    relevant surface actually works).
 
-> Recommended: turn on **GitHub branch protection** for `main` (require a PR,
-> block force-push). It isn't enabled yet — worth doing on day one.
+> A GitHub **ruleset protects `main`** — direct pushes are rejected, so step 1
+> is enforced rather than just convention. A push failing with "repository rule
+> violations" is working as intended; move the commit to a branch:
+> `git checkout -b feat/my-change && git push -u origin feat/my-change`, then
+> `git checkout main && git reset --hard origin/main`.
 
 **Environments today:** production only. There is no staging database; e2e tests
 run against the real Supabase project (they create and clean up their own data).
