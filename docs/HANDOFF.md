@@ -15,16 +15,20 @@ production at all times.
 1. **Never commit to `main` directly.** Branch: `feat/…`, `fix/…`, `docs/…`.
 2. Push the branch — Vercel builds a **preview URL** for it automatically.
    Test there.
-3. Open a PR into `main`. Ensure `pnpm typecheck && pnpm lint && pnpm test &&
-   pnpm build` all pass, plus `pnpm test:e2e` for anything touching auth, leads
-   or tenancy.
+3. Open a PR into `main`. **GitHub Actions CI** (`.github/workflows/ci.yml`) runs
+   `lint → typecheck → test → build` on every PR and on pushes to `main`; it must
+   be green. Run `pnpm test:e2e` locally too for anything touching auth, leads or
+   tenancy (CI does not run e2e — it needs live Supabase credentials).
 4. If the change needs a migration, the owner runs it in Supabase **before** the
    merge.
 5. Merge, then **verify production** (load the form and the CRM, check the
    relevant surface actually works).
 
-> Recommended: turn on **GitHub branch protection** for `main` (require a PR,
-> block force-push). It isn't enabled yet — worth doing on day one.
+> A GitHub **ruleset protects `main`** — direct pushes are rejected, so step 1
+> is enforced rather than just convention. A push failing with "repository rule
+> violations" is working as intended; move the commit to a branch:
+> `git checkout -b feat/my-change && git push -u origin feat/my-change`, then
+> `git checkout main && git reset --hard origin/main`.
 
 **Environments today:** production only. There is no staging database; e2e tests
 run against the real Supabase project (they create and clean up their own data).
