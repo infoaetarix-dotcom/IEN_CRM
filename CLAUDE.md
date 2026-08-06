@@ -31,6 +31,9 @@ Two audiences, two surfaces:
    and org-scoped RLS. Writes must stamp it.
 6. **Verify before claiming done**: `pnpm typecheck && pnpm lint && pnpm test`,
    plus `pnpm build`. E2E (`pnpm test:e2e`) hits the real Supabase project.
+   GitHub Actions runs the same four steps on every PR (`.github/workflows/ci.yml`)
+   with dummy env vars and no `.env.local` — so never rely on a real credential
+   being present at build time.
 
 ## Stack
 

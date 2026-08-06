@@ -15,9 +15,10 @@ production at all times.
 1. **Never commit to `main` directly.** Branch: `feat/…`, `fix/…`, `docs/…`.
 2. Push the branch — Vercel builds a **preview URL** for it automatically.
    Test there.
-3. Open a PR into `main`. Ensure `pnpm typecheck && pnpm lint && pnpm test &&
-   pnpm build` all pass, plus `pnpm test:e2e` for anything touching auth, leads
-   or tenancy.
+3. Open a PR into `main`. **GitHub Actions CI** (`.github/workflows/ci.yml`) runs
+   `lint → typecheck → test → build` on every PR and on pushes to `main`; it must
+   be green. Run `pnpm test:e2e` locally too for anything touching auth, leads or
+   tenancy (CI does not run e2e — it needs live Supabase credentials).
 4. If the change needs a migration, the owner runs it in Supabase **before** the
    merge.
 5. Merge, then **verify production** (load the form and the CRM, check the
