@@ -19,7 +19,8 @@ export function SuspendToggle({
   return (
     <Button
       size="sm"
-      variant={suspended ? 'accent' : 'outline'}
+      variant={suspended ? undefined : 'outline'}
+      className={suspended ? 'bg-marketing-blue text-white hover:bg-marketing-blue/90' : undefined}
       disabled={pending}
       onClick={() =>
         start(async () => {
@@ -48,11 +49,12 @@ export function ModuleToggle({
   const [pending, start] = useTransition();
   const [on, setOn] = useState(enabled);
   return (
-    <label className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2 text-sm">
+    <label className="flex items-center justify-between gap-3 rounded-md border border-marketing-ink/10 px-3 py-2 text-sm">
       <span>{moduleName}</span>
       <Checkbox
         checked={on}
         disabled={pending}
+        className="accent-marketing-blue text-marketing-blue"
         onChange={(e) => {
           const next = e.target.checked;
           setOn(next);

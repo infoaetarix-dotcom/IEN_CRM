@@ -58,10 +58,10 @@ export function OrgBranding({
     <div className="space-y-5">
       {/* Preview on both surfaces the logo actually appears on */}
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex h-16 items-center rounded-md bg-navy px-4">
+        <div className="flex h-16 items-center rounded-md bg-marketing-navy px-4">
           <Brandmark brand={brand} size="h-8" onDark />
         </div>
-        <div className="flex h-16 items-center rounded-md border border-line bg-white px-4">
+        <div className="flex h-16 items-center rounded-md border border-marketing-ink/10 bg-white px-4">
           <Brandmark brand={brand} size="h-8" />
         </div>
         <p className="text-xs text-muted-foreground">
@@ -83,7 +83,12 @@ export function OrgBranding({
             disabled={pending}
             className="max-w-xs"
           />
-          <Button type="submit" size="sm" variant="accent" disabled={pending}>
+          <Button
+            type="submit"
+            size="sm"
+            className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+            disabled={pending}
+          >
             {pending ? 'Uploading…' : 'Upload logo'}
           </Button>
         </div>

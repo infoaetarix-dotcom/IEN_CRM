@@ -64,7 +64,7 @@ export default async function OrgDetail({
     <div className="space-y-6">
       <Link
         href="/super"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-marketing-blue"
       >
         <ArrowLeft className="h-4 w-4" /> All consultancies
       </Link>
@@ -72,7 +72,9 @@ export default async function OrgDetail({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-serif text-2xl">{org.name}</h1>
+            <h1 className="font-display text-2xl font-semibold text-marketing-ink">
+              {org.name}
+            </h1>
             <Badge variant={org.status === 'active' ? 'success' : 'danger'}>
               {org.status}
             </Badge>
@@ -88,9 +90,9 @@ export default async function OrgDetail({
         <SuspendToggle orgId={org.id} status={org.status} />
       </div>
 
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Branding</CardTitle>
+          <CardTitle className="font-display">Branding</CardTitle>
         </CardHeader>
         <CardContent>
           <OrgBranding orgId={org.id} brand={brand} />
@@ -98,9 +100,9 @@ export default async function OrgDetail({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardHeader>
-            <CardTitle>Package — modules</CardTitle>
+            <CardTitle className="font-display">Package — modules</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {(modules ?? []).map((m) => (
@@ -115,9 +117,9 @@ export default async function OrgDetail({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardHeader>
-            <CardTitle>Team</CardTitle>
+            <CardTitle className="font-display">Team</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -133,7 +135,14 @@ export default async function OrgDetail({
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.full_name}</TableCell>
                     <TableCell>
-                      <Badge variant={s.role === 'admin' ? 'accent' : 'neutral'}>
+                      <Badge
+                        variant={s.role === 'admin' ? 'accent' : 'neutral'}
+                        className={
+                          s.role === 'admin'
+                            ? 'border-transparent bg-marketing-blue/15 text-marketing-blue'
+                            : undefined
+                        }
+                      >
                         {s.role}
                       </Badge>
                     </TableCell>

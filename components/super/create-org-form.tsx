@@ -33,7 +33,10 @@ export function CreateOrgForm({
 
   if (!open) {
     return (
-      <Button variant="accent" onClick={() => setOpen(true)}>
+      <Button
+        className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+        onClick={() => setOpen(true)}
+      >
         + New consultancy
       </Button>
     );
@@ -42,7 +45,7 @@ export function CreateOrgForm({
   return (
     <form
       action={action}
-      className="space-y-5 rounded-lg border border-line bg-white p-6"
+      className="space-y-5 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm"
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -58,8 +61,10 @@ export function CreateOrgForm({
         </div>
       </div>
 
-      <div className="rounded-md border border-line bg-secondary/20 p-4">
-        <p className="label-eyebrow mb-3">First admin (their login)</p>
+      <div className="rounded-md border border-marketing-ink/10 bg-marketing-gray p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          First admin (their login)
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <Label htmlFor="admin_name">Name *</Label>
@@ -77,7 +82,9 @@ export function CreateOrgForm({
       </div>
 
       <div>
-        <p className="label-eyebrow mb-2">Package — enabled modules</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          Package — enabled modules
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {modules.map((m) => (
             <label key={m.key} className="flex items-center gap-2 text-sm">
@@ -85,6 +92,7 @@ export function CreateOrgForm({
                 name="modules"
                 value={m.key}
                 defaultChecked={defaultModules.includes(m.key)}
+                className="accent-marketing-blue text-marketing-blue"
               />
               {m.name}
             </label>
@@ -95,7 +103,11 @@ export function CreateOrgForm({
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button
+          type="submit"
+          className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+          disabled={pending}
+        >
           {pending ? 'Creating…' : 'Create consultancy'}
         </Button>
         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
