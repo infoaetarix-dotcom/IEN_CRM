@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { LeadForm } from './lead-form';
+import { LeadForm } from '@/components/form/lead-form';
 import { getPublicOrgBrand } from '@/lib/branding/org';
 import { Brandmark } from '@/components/branding/brandmark';
 import { PoweredByAetarix } from '@/components/branding/powered-by';

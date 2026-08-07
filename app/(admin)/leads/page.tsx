@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +63,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, lead_number, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete, archived_at, archived_by',
+      'id, lead_number, full_name, email, phone, utm_source, status, assigned_to, created_by, created_at, is_complete, archived_at, archived_by',
       { count: 'exact' },
     );
 
@@ -134,15 +134,21 @@ export default async function LeadsPage({
           </h1>
         </div>
         <div className="flex items-center gap-4">
+          <Link
+            href="/leads/new"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-3 text-sm text-white hover:bg-accent/90"
+          >
+            <Plus className="h-4 w-4" /> Create query
+          </Link>
           <a
             href={exportHref}
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-sm hover:bg-secondary"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent text-white px-3 text-sm hover:bg-accent/90"
           >
             <Download className="h-4 w-4" /> Export
           </a>
           <Link
             href={showArchived ? '/leads' : '/leads?archived=1'}
-            className="text-sm text-accent hover:underline"
+            className="inline-flex items-center gap-2 rounded-md text-sm text-white bg-accent hover:bg-accent/90 h-9 px-3"
           >
             {showArchived ? '← Back to active' : 'View archived'}
           </Link>
@@ -167,6 +173,7 @@ export default async function LeadsPage({
               {profile.role === 'admin' && (
                 <TableHead className="hidden lg:table-cell">Assigned</TableHead>
               )}
+              <TableHead className="hidden lg:table-cell">Created By</TableHead>
               <TableHead className="hidden sm:table-cell">Received</TableHead>
               {showArchived && <TableHead>Archived</TableHead>}
               {!showArchived && <TableHead className="text-right">Actions</TableHead>}
@@ -176,7 +183,7 @@ export default async function LeadsPage({
             {(leads ?? []).length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -192,15 +199,15 @@ export default async function LeadsPage({
                 </TableCell>
                 <TableCell className="font-medium">
                   <Link href={`/leads/${l.id}`} className="flex items-center gap-2 hover:underline">
-                    {l.full_name}
+                    {l.full_name || '(no name)'}
                     {l.is_complete === false && (
                       <Badge variant="warning">Incomplete</Badge>
                     )}
                   </Link>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
-                  <div>{l.email}</div>
-                  <div className="text-xs">{l.phone}</div>
+                  <div>{l.email || '—'}</div>
+                  <div className="text-xs">{l.phone || '—'}</div>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
@@ -219,6 +226,9 @@ export default async function LeadsPage({
                       : '—'}
                   </TableCell>
                 )}
+                <TableCell className="hidden text-muted-foreground lg:table-cell">
+                  {l.created_by ? (nameById.get(l.created_by) ?? '—') : '—'}
+                </TableCell>
                 <TableCell className="hidden text-muted-foreground sm:table-cell">
                   {new Date(l.created_at).toLocaleDateString('en-GB', {
                     day: '2-digit',

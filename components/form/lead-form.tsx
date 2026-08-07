@@ -7,7 +7,7 @@ import {
   saveStep2,
   completeLead,
   type StepState,
-} from './actions';
+} from '@/app/(public)/apply/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -34,6 +34,8 @@ const init: StepState = { ok: false };
 const SCORED_TESTS = ['ielts', 'toefl', 'pte', 'duolingo'];
 const STEP_LABELS = ['Let’s start', 'Your background', 'Your goals'];
 
+type StepAction = (prev: StepState, formData: FormData) => Promise<StepState>;
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-xs text-destructive">{message}</p>;
@@ -42,8 +44,21 @@ function FieldError({ message }: { message?: string }) {
 export function LeadForm({
   /** Consultancy named in the consent line — never hardcode one client here. */
   consentName = 'this consultancy',
+  /** Defaults to the public apply-wizard actions; the staff "Create Query"
+   *  flow (app/(admin)/leads/new) passes its own session-scoped versions. */
+  actions = { step1: startLead, step2: saveStep2, step3: completeLead },
+  /** Public flow completes via a server-side redirect to /thank-you, so this
+   *  never fires there. The staff flow's step 3 returns normally instead of
+   *  redirecting (it's rendered inside the CRM, not a standalone page), and
+   *  uses this to navigate to the new lead once it's done. */
+  onComplete,
+  /** Staff are already authenticated — skip the bot-verification widget. */
+  showTurnstile = true,
 }: {
   consentName?: string;
+  actions?: { step1: StepAction; step2: StepAction; step3: StepAction };
+  onComplete?: (leadId: string) => void;
+  showTurnstile?: boolean;
 }) {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
@@ -52,9 +67,9 @@ export function LeadForm({
   const [englishTest, setEnglishTest] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
 
-  const [s1, action1, p1] = useActionState(startLead, init);
-  const [s2, action2, p2] = useActionState(saveStep2, init);
-  const [s3, action3, p3] = useActionState(completeLead, init);
+  const [s1, action1, p1] = useActionState(actions.step1, init);
+  const [s2, action2, p2] = useActionState(actions.step2, init);
+  const [s3, action3, p3] = useActionState(actions.step3, init);
 
   const [utm, setUtm] = useState({ source: '', medium: '', campaign: '' });
   useEffect(() => {
@@ -75,6 +90,10 @@ export function LeadForm({
   useEffect(() => {
     if (s2.ok) setStep((s) => (s < 3 ? 3 : s));
   }, [s2]);
+  useEffect(() => {
+    if (s3.ok && lead.id) onComplete?.(lead.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s3]);
 
   const err1 = s1.fieldErrors ?? {};
   const err2 = s2.fieldErrors ?? {};
@@ -161,7 +180,7 @@ export function LeadForm({
               </span>
             </label>
             <FieldError message={err1.consent_given} />
-            <Turnstile onVerify={setTurnstileToken} />
+            {showTurnstile && <Turnstile onVerify={setTurnstileToken} />}
           </section>
 
           <Button

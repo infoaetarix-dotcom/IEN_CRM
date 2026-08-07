@@ -161,7 +161,7 @@ export default async function DashboardPage() {
               href={`/leads/${l.id}`}
               className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-secondary/40"
             >
-              <span className="font-medium">{l.full_name}</span>
+              <span className="font-medium">{l.full_name || '(no name)'}</span>
               <span className="flex items-center gap-2">
                 <Badge variant="outline">
                   {SOURCE_LABELS[l.utm_source as LeadSource] ?? l.utm_source}
