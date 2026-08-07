@@ -34,7 +34,7 @@ export function LoginForm() {
           <Label htmlFor="password">Password</Label>
           <Link
             href="/forgot-password"
-            className="text-xs text-muted-foreground hover:text-accent hover:underline"
+            className="text-xs text-muted-foreground hover:text-marketing-blue hover:underline"
           >
             Forgot password?
           </Link>
@@ -49,8 +49,7 @@ export function LoginForm() {
       </div>
       <Button
         type="submit"
-        variant="accent"
-        className="w-full"
+        className="w-full bg-marketing-blue text-white hover:bg-marketing-blue/90"
         disabled={isPending}
       >
         {isPending ? 'Signing in…' : 'Sign in'}

@@ -223,7 +223,7 @@ export default function Home() {
       </a>
 
       <div className="min-h-screen">
-        <header className="sticky top-0 z-40 border-b border-marketing-ink/10 bg-marketing-offwhite/90 backdrop-blur supports-[backdrop-filter]:bg-marketing-offwhite/75">
+        <header className="sticky top-0 z-40 border-b border-marketing-ink/10 bg-white ">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
             <Link href="/" className="flex items-center gap-2">
               <Image
@@ -231,7 +231,7 @@ export default function Home() {
                 alt={AETARIX.name}
                 width={295}
                 height={96}
-                className="h-7 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
             </Link>
             <nav aria-label="Primary" className="hidden items-center gap-8 sm:flex">
