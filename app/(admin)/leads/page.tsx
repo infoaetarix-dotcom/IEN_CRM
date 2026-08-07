@@ -65,7 +65,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete, archived_at, archived_by',
+      'id, lead_number, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete, archived_at, archived_by',
       { count: 'exact' },
     );
 
@@ -144,6 +144,7 @@ export default async function LeadsPage({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">Contact</TableHead>
               <TableHead>Source</TableHead>
@@ -159,7 +160,7 @@ export default async function LeadsPage({
             {(leads ?? []).length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -168,6 +169,11 @@ export default async function LeadsPage({
             )}
             {(leads ?? []).map((l) => (
               <TableRow key={l.id} className="cursor-pointer">
+                <TableCell className="text-muted-foreground">
+                  <Link href={`/leads/${l.id}`} className="hover:underline">
+                    #{l.lead_number}
+                  </Link>
+                </TableCell>
                 <TableCell className="font-medium">
                   <Link href={`/leads/${l.id}`} className="flex items-center gap-2 hover:underline">
                     {l.full_name}
