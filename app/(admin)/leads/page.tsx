@@ -40,13 +40,12 @@ export default async function LeadsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const profile = await requireUser();
+  await requireUser();
   const sp = await searchParams;
 
   const q = str(sp.q);
   const status = str(sp.status);
   const source = str(sp.source);
-  const agent = str(sp.agent);
   const completeness = str(sp.completeness); // '', 'complete', 'incomplete'
   const from = str(sp.from);
   const to = str(sp.to);
@@ -63,7 +62,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, lead_number, full_name, email, phone, utm_source, status, assigned_to, created_by, created_at, is_complete, archived_at, archived_by',
+      'id, lead_number, full_name, email, phone, utm_source, status, created_by, created_at, is_complete, archived_at, archived_by',
       { count: 'exact' },
     );
 
@@ -71,7 +70,6 @@ export default async function LeadsPage({
     q,
     status,
     source,
-    agent,
     completeness,
     from,
     to,
@@ -83,14 +81,11 @@ export default async function LeadsPage({
     .order(sortCol, { ascending: dir === 'asc' })
     .range(offset, offset + PAGE_SIZE - 1);
 
-  // Agent name map + filter options (admin sees all profiles; agent sees self).
+  // Name map for Created By / Archived by lookups.
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, role, is_active');
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
-  const agentOptions = (profiles ?? [])
-    .filter((p) => p.is_active)
-    .map((p) => ({ id: p.id, full_name: p.full_name }));
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -100,7 +95,6 @@ export default async function LeadsPage({
     if (q) next.set('q', q);
     if (status) next.set('status', status);
     if (source) next.set('source', source);
-    if (agent) next.set('agent', agent);
     if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
@@ -116,7 +110,6 @@ export default async function LeadsPage({
     if (q) next.set('q', q);
     if (status) next.set('status', status);
     if (source) next.set('source', source);
-    if (agent) next.set('agent', agent);
     if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
@@ -156,10 +149,7 @@ export default async function LeadsPage({
         </div>
       </div>
 
-      <LeadsFilters
-        agents={agentOptions}
-        showAgentFilter={profile.role === 'admin'}
-      />
+      <LeadsFilters />
 
       <div className="rounded-lg border border-line bg-white">
         <Table>
@@ -170,9 +160,6 @@ export default async function LeadsPage({
               <TableHead className="hidden md:table-cell">Contact</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Status</TableHead>
-              {profile.role === 'admin' && (
-                <TableHead className="hidden lg:table-cell">Assigned</TableHead>
-              )}
               <TableHead className="hidden lg:table-cell">Created By</TableHead>
               <TableHead className="hidden sm:table-cell">Received</TableHead>
               {showArchived && <TableHead>Archived</TableHead>}
@@ -183,7 +170,7 @@ export default async function LeadsPage({
             {(leads ?? []).length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={8}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -219,14 +206,7 @@ export default async function LeadsPage({
                     {STATUS_LABELS[l.status as LeadStatus] ?? l.status}
                   </Badge>
                 </TableCell>
-                {profile.role === 'admin' && (
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {l.assigned_to
-                      ? (nameById.get(l.assigned_to) ?? '—')
-                      : '—'}
-                  </TableCell>
-                )}
-                <TableCell className="hidden text-muted-foreground lg:table-cell">
+                <TableCell className="hidden text-blue-500 font-semibold lg:table-cell">
                   {l.created_by ? (nameById.get(l.created_by) ?? '—') : '—'}
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground sm:table-cell">

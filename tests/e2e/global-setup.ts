@@ -7,9 +7,9 @@ import {
 } from './helpers';
 
 /**
- * Creates ephemeral test users + two leads (assigned to agent A and agent B)
- * directly via the service role. Idempotent: removes any prior test users
- * first. IDs are written to .state.json for the specs and the teardown.
+ * Creates ephemeral test users + two leads directly via the service role.
+ * Idempotent: removes any prior test users first. IDs are written to
+ * .state.json for the specs and the teardown.
  */
 async function findUserByEmail(svc: ReturnType<typeof serviceClient>, email: string) {
   const { data } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -60,7 +60,7 @@ export default async function globalSetup() {
       .eq('id', data.user.id);
   }
 
-  // Two leads for the RLS isolation spec.
+  // Two leads for the RLS/shared-visibility spec.
   const { data: leadA } = await svc
     .from('leads')
     .insert({
@@ -69,7 +69,6 @@ export default async function globalSetup() {
       email: 'e2e_lead_a@example.com',
       phone: '+10000000001',
       consent_given: true,
-      assigned_to: ids.agentA,
       utm_source: 'instagram',
     })
     .select('id')
@@ -82,7 +81,6 @@ export default async function globalSetup() {
       email: 'e2e_lead_b@example.com',
       phone: '+10000000002',
       consent_given: true,
-      assigned_to: ids.agentB,
       utm_source: 'facebook',
     })
     .select('id')

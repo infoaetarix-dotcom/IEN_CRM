@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   updateLeadStatus,
   addNote,
-  assignLead,
   sendLeadEmail,
 } from '@/app/(admin)/leads/actions';
 import { Select } from '@/components/ui/select';
@@ -46,37 +45,6 @@ export function StatusChanger({
         {LEAD_STATUSES.map((s) => (
           <option key={s} value={s}>
             {STATUS_LABELS[s]}
-          </option>
-        ))}
-      </Select>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-export function AssignControl({
-  leadId,
-  current,
-  agents,
-}: {
-  leadId: string;
-  current: string | null;
-  agents: { id: string; full_name: string }[];
-}) {
-  const { pending, error, run } = useAction();
-  return (
-    <div className="space-y-1">
-      <Select
-        defaultValue={current ?? ''}
-        disabled={pending}
-        onChange={(e) =>
-          run(() => assignLead(leadId, e.target.value || null))
-        }
-      >
-        <option value="">Unassigned</option>
-        {agents.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.full_name}
           </option>
         ))}
       </Select>

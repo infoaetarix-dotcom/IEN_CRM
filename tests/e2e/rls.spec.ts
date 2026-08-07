@@ -26,8 +26,8 @@ test('agents share visibility into every lead in their organization', async ({
   await expect(page.getByText('E2E Lead A')).toBeVisible();
   await expect(page.getByText('E2E Lead B')).toBeVisible();
 
-  // Direct navigation to a same-org lead assigned to another agent now works
-  // — assigned_to is no longer a visibility boundary, only organization_id is.
+  // Direct navigation to any same-org lead works — organization_id is the
+  // only visibility boundary; there's no per-agent assignment anymore.
   const res = await page.goto(`/leads/${state().leadB}`);
   expect(res?.status()).toBe(200);
   await expect(page.getByRole('heading', { name: /E2E Lead B/ })).toBeVisible();

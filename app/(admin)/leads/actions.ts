@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUser, requireRole } from '@/lib/auth/guards';
+import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus } from '@/lib/leads/display';
 import { leadEditSchema } from '@/lib/validation/lead';
@@ -96,34 +96,6 @@ export async function addNote(
   });
 
   revalidatePath(`/leads/${leadId}`);
-  return { ok: true };
-}
-
-/** Assign a lead to an agent (admin only). */
-export async function assignLead(
-  leadId: string,
-  agentId: string | null,
-): Promise<ActionResult> {
-  const admin = await requireRole('admin');
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from('leads')
-    .update({ assigned_to: agentId })
-    .eq('id', leadId);
-  if (error) return { ok: false, error: 'Could not assign lead.' };
-
-  await writeAuditLog({
-    actorId: admin.id,
-    organizationId: admin.organization_id,
-    action: 'lead_assigned',
-    entity: 'lead',
-    entityId: leadId,
-    metadata: { assigned_to: agentId },
-  });
-
-  revalidatePath(`/leads/${leadId}`);
-  revalidatePath('/leads');
   return { ok: true };
 }
 

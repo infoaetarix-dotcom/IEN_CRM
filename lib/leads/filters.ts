@@ -7,7 +7,6 @@ export interface LeadFilterParams {
   q: string;
   status: string;
   source: string;
-  agent: string;
   completeness: string;
   from: string;
   to: string;
@@ -34,8 +33,6 @@ export function applyLeadFilters<Q extends { [k: string]: any }>(
     query = query.eq('status', params.status);
   }
   if (params.source) query = query.eq('utm_source', params.source);
-  if (params.agent === 'unassigned') query = query.is('assigned_to', null);
-  else if (params.agent) query = query.eq('assigned_to', params.agent);
   if (params.completeness === 'incomplete') query = query.eq('is_complete', false);
   else if (params.completeness === 'complete') query = query.eq('is_complete', true);
   if (params.from) query = query.gte('created_at', params.from);

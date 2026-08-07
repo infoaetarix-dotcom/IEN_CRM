@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import {
   StatusChanger,
-  AssignControl,
   NoteComposer,
   EmailPanel,
 } from '@/components/dashboard/lead-controls';
@@ -56,7 +55,7 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await requireUser();
+  await requireUser();
   const supabase = await createClient();
 
   const { data: lead } = await supabase
@@ -96,9 +95,6 @@ export default async function LeadDetailPage({
   const emailById = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.email]),
   );
-  const agents = (profilesRes.data ?? [])
-    .filter((p) => p.is_active)
-    .map((p) => ({ id: p.id, full_name: p.full_name }));
   const age = ageFromDob(lead.date_of_birth);
 
   // Shared-data model: RLS (leads_update / leads_delete) allows any active
@@ -330,16 +326,6 @@ export default async function LeadDetailPage({
                 <p className="label-eyebrow mb-1">Status</p>
                 <StatusChanger leadId={lead.id} current={lead.status} />
               </div>
-              {profile.role === 'admin' && (
-                <div>
-                  <p className="label-eyebrow mb-1">Assigned agent</p>
-                  <AssignControl
-                    leadId={lead.id}
-                    current={lead.assigned_to}
-                    agents={agents}
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
 

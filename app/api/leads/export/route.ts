@@ -40,7 +40,7 @@ const COLUMNS = [
   { header: 'Intake Season', key: 'intake_season', width: 14 },
   { header: 'Intake Year', key: 'intake_year', width: 12 },
   { header: 'Funding Source', key: 'funding_source', width: 16 },
-  { header: 'Assigned To', key: 'assigned_to', width: 20 },
+  { header: 'Created By', key: 'created_by', width: 20 },
   { header: 'Consent Given', key: 'consent_given', width: 14 },
   { header: 'Created At', key: 'created_at', width: 20 },
   { header: 'Archived', key: 'archived_at', width: 12 },
@@ -63,14 +63,13 @@ export async function GET(request: NextRequest) {
      target_country, institution, program, highest_education, last_qualification,
      prior_institution, passing_year, grading_system, grade_value,
      work_experience_years, english_test, english_score, intake_season, intake_year,
-     funding_source, assigned_to, consent_given, created_at, archived_at`,
+     funding_source, created_by, consent_given, created_at, archived_at`,
   );
 
   query = applyLeadFilters(query, {
     q: str('q'),
     status: str('status'),
     source: str('source'),
-    agent: str('agent'),
     completeness: str('completeness'),
     from: str('from'),
     to: str('to'),
@@ -107,7 +106,7 @@ export async function GET(request: NextRequest) {
       funding_source: l.funding_source
         ? (CODE_LABELS[l.funding_source] ?? l.funding_source)
         : '',
-      assigned_to: l.assigned_to ? (nameById.get(l.assigned_to) ?? '') : '',
+      created_by: l.created_by ? (nameById.get(l.created_by) ?? '') : '',
       consent_given: l.consent_given ? 'Yes' : 'No',
       created_at: new Date(l.created_at).toLocaleString('en-GB'),
       archived_at: l.archived_at ? 'Archived' : '',
