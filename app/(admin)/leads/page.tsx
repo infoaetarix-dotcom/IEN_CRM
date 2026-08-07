@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
@@ -20,10 +20,10 @@ import {
   STATUS_LABELS,
   STATUS_BADGE,
   SOURCE_LABELS,
-  isLeadStatus,
   type LeadStatus,
   type LeadSource,
 } from '@/lib/leads/display';
+import { applyLeadFilters } from '@/lib/leads/filters';
 
 export const metadata = { title: 'Leads — CRM' };
 
@@ -35,11 +35,6 @@ function str(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? '';
 }
 
-// Strip characters that would break a PostgREST or() filter.
-function sanitize(q: string): string {
-  return q.replace(/[,()*]/g, ' ').trim().slice(0, 80);
-}
-
 export default async function LeadsPage({
   searchParams,
 }: {
@@ -48,7 +43,7 @@ export default async function LeadsPage({
   const profile = await requireUser();
   const sp = await searchParams;
 
-  const q = sanitize(str(sp.q));
+  const q = str(sp.q);
   const status = str(sp.status);
   const source = str(sp.source);
   const agent = str(sp.agent);
@@ -72,18 +67,16 @@ export default async function LeadsPage({
       { count: 'exact' },
     );
 
-  if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
-  if (status && isLeadStatus(status)) query = query.eq('status', status);
-  if (source) query = query.eq('utm_source', source);
-  if (agent === 'unassigned') query = query.is('assigned_to', null);
-  else if (agent) query = query.eq('assigned_to', agent);
-  if (completeness === 'incomplete') query = query.eq('is_complete', false);
-  else if (completeness === 'complete') query = query.eq('is_complete', true);
-  if (from) query = query.gte('created_at', from);
-  if (to) query = query.lte('created_at', `${to}T23:59:59`);
-  // Split active vs archived — the default list hides archived leads.
-  if (showArchived) query = query.not('archived_at', 'is', null);
-  else query = query.is('archived_at', null);
+  query = applyLeadFilters(query, {
+    q,
+    status,
+    source,
+    agent,
+    completeness,
+    from,
+    to,
+    archived: showArchived,
+  });
 
   const offset = (page - 1) * PAGE_SIZE;
   const { data: leads, count } = await query
@@ -118,6 +111,19 @@ export default async function LeadsPage({
     return `/leads?${next.toString()}`;
   };
 
+  const exportHref = (() => {
+    const next = new URLSearchParams();
+    if (q) next.set('q', q);
+    if (status) next.set('status', status);
+    if (source) next.set('source', source);
+    if (agent) next.set('agent', agent);
+    if (completeness) next.set('completeness', completeness);
+    if (from) next.set('from', from);
+    if (to) next.set('to', to);
+    if (showArchived) next.set('archived', '1');
+    return `/api/leads/export?${next.toString()}`;
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -128,6 +134,12 @@ export default async function LeadsPage({
           </h1>
         </div>
         <div className="flex items-center gap-4">
+          <a
+            href={exportHref}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-sm hover:bg-secondary"
+          >
+            <Download className="h-4 w-4" /> Export
+          </a>
           <Link
             href={showArchived ? '/leads' : '/leads?archived=1'}
             className="text-sm text-accent hover:underline"
