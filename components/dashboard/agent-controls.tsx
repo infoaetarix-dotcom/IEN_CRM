@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   createAgent,
   setAgentActive,
-  setAgentRole,
   type AgentActionResult,
 } from '@/app/(admin)/agents/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
 const initial: AgentActionResult = { ok: false };
@@ -52,13 +50,6 @@ export function CreateAgentForm() {
         <Label htmlFor="password">Temporary password</Label>
         <Input id="password" name="password" type="text" minLength={8} required />
       </div>
-      <div>
-        <Label htmlFor="role">Role</Label>
-        <Select id="role" name="role" defaultValue="agent">
-          <option value="agent">Agent</option>
-          <option value="admin">Admin</option>
-        </Select>
-      </div>
       {state.error && (
         <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>
       )}
@@ -81,12 +72,10 @@ export function CreateAgentForm() {
 
 export function AgentRowControls({
   id,
-  role,
   isActive,
   isSelf,
 }: {
   id: string;
-  role: 'admin' | 'agent';
   isActive: boolean;
   isSelf: boolean;
 }) {
@@ -109,17 +98,6 @@ export function AgentRowControls({
 
   return (
     <div className="flex items-center gap-2">
-      <Select
-        defaultValue={role}
-        disabled={pending}
-        className="h-8 w-[110px]"
-        onChange={(e) =>
-          run(() => setAgentRole(id, e.target.value as 'admin' | 'agent'))
-        }
-      >
-        <option value="agent">Agent</option>
-        <option value="admin">Admin</option>
-      </Select>
       <Button
         size="sm"
         variant={isActive ? 'outline' : 'accent'}

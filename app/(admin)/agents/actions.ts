@@ -16,10 +16,13 @@ const createSchema = z.object({
   full_name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  role: z.enum(['admin', 'agent']),
 });
 
-/** Create a staff user (service role). Trigger auto-creates the profile. */
+/**
+ * Create a staff user (service role). Trigger auto-creates the profile.
+ * Always creates an agent — an org admin can never create or promote another
+ * admin; admins are provisioned exclusively by the super admin at org signup.
+ */
 export async function createAgent(
   _prev: AgentActionResult,
   formData: FormData,
@@ -29,7 +32,6 @@ export async function createAgent(
     full_name: formData.get('full_name'),
     email: formData.get('email'),
     password: formData.get('password'),
-    role: formData.get('role'),
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]!.message };
@@ -46,13 +48,13 @@ export async function createAgent(
     return { ok: false, error: error?.message ?? 'Could not create user.' };
   }
 
-  // The trigger inserts the profile as 'agent'; set role + name + org. New
-  // staff belong to the creating admin's organization and must change the
+  // The trigger inserts the profile as 'agent'; set name + org. New staff
+  // belong to the creating admin's organization and must change the
   // temporary password on first login.
   await service
     .from('profiles')
     .update({
-      role: parsed.data.role,
+      role: 'agent',
       full_name: parsed.data.full_name,
       organization_id: admin.organization_id,
       must_change_password: true,
@@ -65,7 +67,7 @@ export async function createAgent(
     action: 'profile_change',
     entity: 'profile',
     entityId: data.user.id,
-    metadata: { created: true, role: parsed.data.role },
+    metadata: { created: true, role: 'agent' },
   });
 
   revalidatePath('/agents');
@@ -99,29 +101,3 @@ export async function setAgentActive(
   return { ok: true };
 }
 
-export async function setAgentRole(
-  id: string,
-  role: 'admin' | 'agent',
-): Promise<AgentActionResult> {
-  const admin = await requireRole('admin');
-  if (id === admin.id) {
-    return { ok: false, error: 'You cannot change your own role.' };
-  }
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('profiles')
-    .update({ role })
-    .eq('id', id);
-  if (error) return { ok: false, error: 'Could not update role.' };
-
-  await writeAuditLog({
-    actorId: admin.id,
-    organizationId: admin.organization_id,
-    action: 'profile_change',
-    entity: 'profile',
-    entityId: id,
-    metadata: { role },
-  });
-  revalidatePath('/agents');
-  return { ok: true };
-}

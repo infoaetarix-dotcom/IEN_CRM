@@ -64,7 +64,6 @@ export default async function AgentsPage() {
                   <div className="flex justify-end">
                     <AgentRowControls
                       id={s.id}
-                      role={s.role}
                       isActive={s.is_active}
                       isSelf={s.id === admin.id}
                     />

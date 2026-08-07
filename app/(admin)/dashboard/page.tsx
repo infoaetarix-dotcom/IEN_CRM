@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const last30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  // RLS scopes these to what the user may see (admin: all; agent: assigned).
+  // RLS scopes these to the caller's organization (shared across admin + agents).
   const { data: leads } = await supabase
     .from('leads')
     .select('id, full_name, status, utm_source, created_at')

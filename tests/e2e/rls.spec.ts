@@ -14,7 +14,7 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await page.waitForURL(/\/dashboard/);
 }
 
-test('agent sees only their assigned lead, never another agent\'s', async ({
+test('agents share visibility into every lead in their organization', async ({
   page,
 }) => {
   await login(page, TEST_USERS.agentA.email);
@@ -24,11 +24,11 @@ test('agent sees only their assigned lead, never another agent\'s', async ({
 
   await page.goto('/leads');
   await expect(page.getByText('E2E Lead A')).toBeVisible();
-  await expect(page.getByText('E2E Lead B')).toHaveCount(0);
+  await expect(page.getByText('E2E Lead B')).toBeVisible();
 
-  // Direct navigation to the other agent's lead must 404 / not render it.
+  // Direct navigation to a same-org lead assigned to another agent now works
+  // — assigned_to is no longer a visibility boundary, only organization_id is.
   const res = await page.goto(`/leads/${state().leadB}`);
-  // notFound() returns 404; the lead's name must not be visible regardless.
-  expect(res?.status()).toBe(404);
-  await expect(page.getByRole('heading', { name: /E2E Lead B/ })).toHaveCount(0);
+  expect(res?.status()).toBe(200);
+  await expect(page.getByRole('heading', { name: /E2E Lead B/ })).toBeVisible();
 });
