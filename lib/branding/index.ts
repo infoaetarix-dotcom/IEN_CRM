@@ -11,14 +11,14 @@
 
 /**
  * The platform brand. Assets ship with the app in /public — to swap in final
- * artwork, replace those two files (keep the names) or point these at the new
- * ones. SVG is preferred so the mark stays crisp at every size.
+ * artwork, replace those files (keep the names) or point these at the new
+ * ones.
  */
 export const AETARIX = {
   name: 'Aetarix',
-  wordmark: '/aetarix-logo.png',
-  // No separate square mark yet — the wordmark stands in.
-  mark: '/aetarix-logo.png',
+  wordmark: '/aetarixcopy.webp',
+  // Square icon-only mark (512×512) — also used as app/icon.png, the site favicon.
+  mark: '/icon-512.png',
   url: 'https://aetarix.com',
 } as const;
 

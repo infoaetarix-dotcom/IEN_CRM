@@ -43,6 +43,14 @@
   }
 }
 
+/* Native <details> disclosure marker — replaced with our own icon. */
+.disclosure-summary {
+  list-style: none;
+}
+.disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
 /* International phone input — match the design system's input look. */
 .ien-phone {
   display: flex;

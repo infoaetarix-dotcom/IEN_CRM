@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-test('home page loads with primary CTAs', async ({ page }) => {
+test('platform landing page loads with nav sign-in and section anchors', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: /start your application/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^sign in$/i }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /staff sign in/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^pricing$/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /let.s build the right crm for your consultancy/i }),
+  ).toBeVisible();
 });
 
 test('apply wizard step 1 renders', async ({ page }) => {
