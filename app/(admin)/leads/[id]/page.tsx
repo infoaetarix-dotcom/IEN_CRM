@@ -83,7 +83,7 @@ export default async function LeadDetailPage({
         .select('id, subject, status, template_key, sent_by, created_at, error_detail')
         .eq('lead_id', id)
         .order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, full_name, is_active'),
+      supabase.from('profiles').select('id, full_name, email, is_active'),
       supabase
         .from('email_templates')
         .select('key, name, subject, body')
@@ -92,6 +92,9 @@ export default async function LeadDetailPage({
 
   const nameById = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name]),
+  );
+  const emailById = new Map(
+    (profilesRes.data ?? []).map((p) => [p.id, p.email]),
   );
   const agents = (profilesRes.data ?? [])
     .filter((p) => p.is_active)
@@ -303,8 +306,11 @@ export default async function LeadDetailPage({
                   >
                     <p className="whitespace-pre-wrap text-sm">{n.body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {nameById.get(n.author_id) ?? 'Unknown'} ·{' '}
-                      {fmtDateTime(n.created_at)}
+                      {nameById.get(n.author_id) ?? 'Unknown'}
+                      {emailById.get(n.author_id)
+                        ? ` (${emailById.get(n.author_id)})`
+                        : ''}{' '}
+                      · {fmtDateTime(n.created_at)}
                     </p>
                   </div>
                 ))}
