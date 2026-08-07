@@ -19,7 +19,7 @@ export function ForgotPasswordForm() {
           If an account exists for that email, we&rsquo;ve sent a link to reset
           your password. Check your inbox (and spam folder).
         </p>
-        <Link href="/login" className="text-sm text-accent hover:underline">
+        <Link href="/login" className="text-sm text-marketing-blue hover:underline">
           &larr; Back to sign in
         </Link>
       </div>
@@ -32,7 +32,11 @@ export function ForgotPasswordForm() {
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" required autoFocus />
       </div>
-      <Button type="submit" variant="accent" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="w-full bg-marketing-blue text-white hover:bg-marketing-blue/90"
+        disabled={pending}
+      >
         {pending ? 'Sending…' : 'Send reset link'}
       </Button>
       <Link
