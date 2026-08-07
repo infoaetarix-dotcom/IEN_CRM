@@ -98,11 +98,12 @@ export default async function LeadDetailPage({
     .map((p) => ({ id: p.id, full_name: p.full_name }));
   const age = ageFromDob(lead.date_of_birth);
 
-  // Editing is gated by RLS (admin or assigned agent); mirror it here so the
-  // Edit button only shows to those who can actually save.
-  const canEdit = profile.role === 'admin' || lead.assigned_to === profile.id;
+  // Shared-data model: RLS (leads_update / leads_delete) allows any active
+  // org member to edit or delete any lead in their org, not just admins or
+  // the assigned agent.
+  const canEdit = true;
   const isArchived = lead.archived_at != null;
-  const canDelete = profile.role === 'admin';
+  const canDelete = true;
   const archivedByName = lead.archived_by
     ? (nameById.get(lead.archived_by) ?? 'Unknown')
     : null;

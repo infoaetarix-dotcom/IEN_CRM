@@ -12,7 +12,10 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
-import { RestoreLeadButton } from '@/components/dashboard/lead-archive-controls';
+import {
+  RestoreLeadButton,
+  LeadRowActions,
+} from '@/components/dashboard/lead-archive-controls';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
@@ -154,13 +157,14 @@ export default async function LeadsPage({
               )}
               <TableHead className="hidden sm:table-cell">Received</TableHead>
               {showArchived && <TableHead>Archived</TableHead>}
+              {!showArchived && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {(leads ?? []).length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -226,6 +230,11 @@ export default async function LeadsPage({
                       </div>
                       <RestoreLeadButton leadId={l.id} />
                     </div>
+                  </TableCell>
+                )}
+                {!showArchived && (
+                  <TableCell>
+                    <LeadRowActions leadId={l.id} />
                   </TableCell>
                 )}
               </TableRow>
