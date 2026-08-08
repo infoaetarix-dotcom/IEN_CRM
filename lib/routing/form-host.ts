@@ -15,8 +15,15 @@
  * Public pages the form-only subdomain is allowed to serve. The marketing root
  * (`/`) is deliberately NOT here — it shows a "Staff sign in" link, so on the
  * form domain it redirects to /apply instead (students only ever see the form).
+ *
+ * `/apply` itself now just redirects to the marketing site (see
+ * app/(public)/apply/page.tsx) — the real per-consultancy form lives at
+ * `/{slug}/apply`, matched below by pattern rather than listed by name.
  */
 export const FORM_ALLOWED_PATHS = ['/apply', '/thank-you'] as const;
+
+/** Matches /{slug}/apply and /{slug}/apply/anything, e.g. /ien/apply. */
+const SLUG_APPLY_PATTERN = /^\/[a-z0-9-]{2,40}\/apply(?:\/.*)?$/;
 
 export type FormHostAction = 'not-form-host' | 'allow' | 'redirect-apply';
 
@@ -27,6 +34,7 @@ export function normalizeHost(host: string | null | undefined): string {
 
 /** Is this path one the form-only subdomain may serve? */
 export function isFormPath(pathname: string): boolean {
+  if (SLUG_APPLY_PATTERN.test(pathname)) return true;
   return FORM_ALLOWED_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + '/'),
   );

@@ -107,9 +107,15 @@ analytics and email. `leads` is a core module and always on.
 → Spec and task-by-task plan in `docs/superpowers/`. Branch:
 `phase-c-module-gating`.
 
-**Phase D — per-consultancy form links** *(not started)*
-`/{slug}/apply` so each consultancy gets its own public intake URL. Today
-`/apply` defaults to the `ien` slug (see `DEFAULT_ORG_SLUG`).
+**Phase D — per-consultancy form links** *(Stage 1 done)*
+`/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.
+`/ien/apply`), resolved from the slug already collected at org creation. Bare
+`/apply` now redirects to the marketing site instead of defaulting to `ien`.
+Stage 2 (custom domains — `form.ieneducation.com`, `portal.ieneducation.com`
+per org, fully Super-Admin-configured) is planned but not started: needs
+`form_domain`/`portal_domain` columns on `organizations` and middleware that
+resolves an org by incoming Host header instead of the single hardcoded
+`FORM_HOST`.
 
 **UI/UX polish** *(in progress)*
 Branding landed. Remaining: screen-by-screen design pass (dashboard, leads

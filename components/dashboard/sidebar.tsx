@@ -7,6 +7,7 @@ import {
   Users,
   UserCog,
   Mail,
+  Link2,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const NAV: NavItem[] = [
   { href: '/leads', label: 'Leads', icon: Users },
   { href: '/agents', label: 'Agents', icon: UserCog, adminOnly: true },
   { href: '/templates', label: 'Templates', icon: Mail, adminOnly: true },
+  { href: '/form', label: 'Form', icon: Link2 },
 ];
 
 export function Sidebar({

@@ -43,8 +43,8 @@ export function Brandmark({
         size,
         'aspect-square',
         onDark
-          ? 'bg-accent/20 text-accent'
-          : 'bg-navy/10 text-navy',
+          ? 'bg-tenant-accent/20 text-tenant-accent'
+          : 'bg-tenant-navy/10 text-tenant-navy',
         className,
       )}
     >

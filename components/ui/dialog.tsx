@@ -4,6 +4,7 @@ import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useThemeRootContainer } from './theme-root';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -26,25 +27,6 @@ const DialogOverlay = React.forwardRef<
   />
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
-
-/**
- * Radix portals Dialog.Content straight to document.body by default — which
- * escapes any DOM subtree that sets the --tenant-* theme CSS variables
- * (see app/(admin)/layout.tsx), since those variables only cascade to real
- * DOM descendants and a portaled node is a sibling of body, not one.
- * Auto-detecting the themed wrapper (#tenant-theme-root) and portaling into
- * *that* instead keeps every dialog inside the tenant admin panel correctly
- * themed, with zero per-caller wiring. Dialogs outside that subtree (e.g.
- * the fixed Aetarix /super console) find no such element and fall back to
- * Radix's normal document.body behavior, unaffected.
- */
-function useThemeRootContainer() {
-  const [container, setContainer] = React.useState<HTMLElement | undefined>(undefined);
-  React.useEffect(() => {
-    setContainer(document.getElementById('tenant-theme-root') ?? undefined);
-  }, []);
-  return container;
-}
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,

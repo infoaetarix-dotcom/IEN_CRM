@@ -26,8 +26,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
   if (formAction === 'redirect-apply') {
+    // FORM_HOST doesn't yet know which org it belongs to (that mapping is
+    // Stage 2 — a real form_domain column per org); it was built for IEN's
+    // dedicated subdomain specifically, so that's the hardcoded target for
+    // now. Bare /apply itself just redirects to the marketing site since
+    // there's no more single "default" org for it to guess at.
     const url = request.nextUrl.clone();
-    url.pathname = '/apply';
+    url.pathname = '/ien/apply';
     url.search = '';
     return NextResponse.redirect(url);
   }

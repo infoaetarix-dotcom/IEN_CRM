@@ -16,6 +16,16 @@ describe('isFormPath', () => {
     expect(isFormPath('/apply')).toBe(true);
     expect(isFormPath('/thank-you')).toBe(true);
   });
+  it('allows the per-consultancy /{slug}/apply route', () => {
+    expect(isFormPath('/ien/apply')).toBe(true);
+    expect(isFormPath('/acme-study/apply')).toBe(true);
+    expect(isFormPath('/ien/apply/anything')).toBe(true);
+  });
+  it('does not treat a bare slug or a non-apply subpath as a form path', () => {
+    expect(isFormPath('/ien')).toBe(false);
+    expect(isFormPath('/ien/dashboard')).toBe(false);
+    expect(isFormPath('/Ien/apply')).toBe(false); // slugs are lowercase-only
+  });
   it('does NOT allow the marketing root (it redirects to /apply on the form host)', () => {
     expect(isFormPath('/')).toBe(false);
   });

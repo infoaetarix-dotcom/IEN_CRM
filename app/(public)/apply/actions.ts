@@ -224,6 +224,8 @@ export async function completeLead(
     return { ok: false, error: 'Your session expired. Please start again.' };
   }
 
+  const orgSlug = g(formData, 'org_slug');
+
   const parsed = step3Schema.safeParse({
     institution: g(formData, 'institution'),
     program: g(formData, 'program'),
@@ -306,5 +308,5 @@ export async function completeLead(
     metadata: { completed: true },
   });
 
-  redirect('/thank-you');
+  redirect(orgSlug ? `/thank-you?org=${encodeURIComponent(orgSlug)}` : '/thank-you');
 }

@@ -8,12 +8,18 @@ Vercel deployment; the middleware decides what each host may serve.
 
 - `lib/routing/form-host.ts` + `middleware.ts` gate requests by the `Host`
   header, driven by one env var: **`FORM_HOST`**.
-- On the host equal to `FORM_HOST`: only `/`, `/apply`, `/thank-you` (and their
-  assets) are served; **every other path — the whole CRM, including `/login` —
-  redirects to `/apply`.** The CRM is unreachable there.
+- On the host equal to `FORM_HOST`: only `/{slug}/apply` and `/thank-you` (and
+  their assets) are served — the marketing root (`/`) is deliberately
+  excluded, since it shows a "Staff sign in" link; **every other path — the
+  whole CRM, including `/login` — redirects to `/ien/apply`.** The CRM is
+  unreachable there.
 - On any other host (the CRM domain): unchanged — full CRM with auth.
 - **`FORM_HOST` unset = no-op.** That's the current production state, so nothing
   changes until you deliberately turn it on.
+- `FORM_HOST` doesn't yet know which consultancy it belongs to — it's still
+  hardcoded to `ien` (see the comment in `middleware.ts`). A per-org
+  `form_domain` column (letting each consultancy have its own subdomain, not
+  just one shared one) is a planned follow-up, not built yet.
 
 ## Turning it on (the only remaining step — do this when ready)
 
@@ -40,5 +46,5 @@ using the CRM on `ien-crm.vercel.app` (or whatever the main domain becomes).
   add that domain in Vercel too; no code change needed — only `FORM_HOST` is
   special-cased.
 - Verified behaviour (local, `FORM_HOST=apply.test.local`): form host serves
-  `/apply`,`/thank-you`,`/` and redirects `/login`,`/dashboard`,`/leads`,`/super`
-  to `/apply`; CRM host unchanged.
+  `/ien/apply`, `/thank-you` and redirects `/`, `/login`, `/dashboard`,
+  `/leads`, `/super` to `/ien/apply`; CRM host unchanged.
