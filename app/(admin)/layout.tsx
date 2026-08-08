@@ -33,7 +33,7 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen flex-col bg-marketing-gray">
       {/* Top navbar — full width: tenant logo left, account controls right */}
-      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-marketing-navy px-4 sm:px-6">
+      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-marketing-navy px-4 py-10 sm:px-6">
         <Link
           href="/dashboard"
           className="flex items-center rounded-lg  px-3 py-2 shadow-sm"
@@ -93,12 +93,12 @@ export default async function AdminLayout({
 
       <div className="flex min-w-0 flex-1 flex-col md:flex-row">
         {/* Icon-only sidebar */}
-        <aside className="hidden w-16 flex-none flex-col items-center bg-marketing-navy py-4 md:flex">
+        <aside className="hidden w-16 px-10 flex-none flex-col items-center bg-marketing-navy py-4 md:flex">
           <Sidebar role={profile.role} />
         </aside>
 
         {/* Mobile nav row — icon-only, horizontal */}
-        <div className="flex items-center border-b border-white/10 bg-marketing-navy md:hidden">
+        <div className="flex py-3 items-center border-b border-white/10 bg-marketing-navy md:hidden">
           <Sidebar role={profile.role} orientation="horizontal" />
         </div>
 

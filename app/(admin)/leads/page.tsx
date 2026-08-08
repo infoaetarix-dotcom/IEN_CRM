@@ -156,15 +156,15 @@ export default async function LeadsPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden md:table-cell">Contact</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Created By</TableHead>
-              <TableHead className="hidden sm:table-cell">Received</TableHead>
-              {showArchived && <TableHead>Archived</TableHead>}
-              {!showArchived && <TableHead className="text-right">Actions</TableHead>}
+              <TableHead className='border'>ID</TableHead>
+              <TableHead className='border'>Name</TableHead>
+              <TableHead className="hidden md:table-cell border">Contact</TableHead>
+              <TableHead className='border'>Source</TableHead>
+              <TableHead className='border'>Status</TableHead>
+              <TableHead className="hidden lg:table-cell border">Created By</TableHead>
+              <TableHead className="hidden sm:table-cell border">Received</TableHead>
+              {showArchived && <TableHead className='border'>Archived</TableHead>}
+              {!showArchived && <TableHead className="text-right border">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,12 +180,12 @@ export default async function LeadsPage({
             )}
             {(leads ?? []).map((l) => (
               <TableRow key={l.id} className="cursor-pointer">
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground border">
                   <Link href={`/leads/${l.id}`} className="hover:underline">
                     #{l.lead_number}
                   </Link>
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium border">
                   <Link href={`/leads/${l.id}`} className="flex items-center gap-2 hover:underline">
                     {l.full_name || '(no name)'}
                     {l.is_complete === false && (
@@ -193,24 +193,24 @@ export default async function LeadsPage({
                     )}
                   </Link>
                 </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
+                <TableCell className="hidden text-muted-foreground md:table-cell border">
                   <div>{l.email || '—'}</div>
                   <div className="text-xs">{l.phone || '—'}</div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="border">
                   <Badge variant="outline">
                     {SOURCE_LABELS[l.utm_source as LeadSource] ?? l.utm_source}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="border">
                   <Badge variant={STATUS_BADGE[l.status as LeadStatus]}>
                     {STATUS_LABELS[l.status as LeadStatus] ?? l.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden text-blue-500 font-semibold lg:table-cell">
+                <TableCell className="hidden text-blue-500 font-semibold lg:table-cell border">
                   {l.created_by ? (nameById.get(l.created_by) ?? '—') : '—'}
                 </TableCell>
-                <TableCell className="hidden text-muted-foreground sm:table-cell">
+                <TableCell className="hidden text-muted-foreground sm:table-cell border">
                   {new Date(l.created_at).toLocaleDateString('en-GB', {
                     day: '2-digit',
                     month: 'short',
@@ -218,7 +218,7 @@ export default async function LeadsPage({
                   })}
                 </TableCell>
                 {showArchived && (
-                  <TableCell>
+                  <TableCell className="border">
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <div>
                         {l.archived_by
@@ -236,7 +236,7 @@ export default async function LeadsPage({
                   </TableCell>
                 )}
                 {!showArchived && (
-                  <TableCell>
+                  <TableCell className="text-right border">
                     <LeadRowActions leadId={l.id} />
                   </TableCell>
                 )}
