@@ -5,12 +5,18 @@
  *
  * Adding a theme here is not enough by itself — also extend the
  * `organizations_theme_key_check` constraint in a new migration (see
- * 0016_org_theme.sql) so the database accepts the new key.
+ * 0016_org_theme.sql, 0017_more_org_themes.sql) so the database accepts the
+ * new key.
  *
  * Client-safe: no DB, no `server-only` — this is pure data.
  */
 
-export type ThemeKey = 'aetarix-default' | 'classic-editorial';
+export type ThemeKey =
+  | 'aetarix-default'
+  | 'classic-editorial'
+  | 'emerald-growth'
+  | 'crimson-scholar'
+  | 'slate-indigo';
 
 export interface ThemeTokens {
   /** Deep dark chrome background — sidebar, hero, auth-page backdrop. */
@@ -62,6 +68,45 @@ export const THEMES: Record<ThemeKey, Theme> = {
       gray: '#F2EBDD',
       ink: '#0B1F33',
       fontDisplay: 'source-serif',
+    },
+  },
+  'emerald-growth': {
+    key: 'emerald-growth',
+    label: 'Emerald Growth — Navy & Green',
+    tokens: {
+      navy: '#0B1F1A',
+      accent: '#059669',
+      accent2: '#14B8A6',
+      offwhite: '#F6FAF8',
+      gray: '#EFF5F2',
+      ink: '#0F2A22',
+      fontDisplay: 'playfair',
+    },
+  },
+  'crimson-scholar': {
+    key: 'crimson-scholar',
+    label: 'Crimson Scholar — Maroon & Red',
+    tokens: {
+      navy: '#1F1113',
+      accent: '#B91C3C',
+      accent2: '#D97706',
+      offwhite: '#FBF7F5',
+      gray: '#F5ECEA',
+      ink: '#2A1316',
+      fontDisplay: 'source-serif',
+    },
+  },
+  'slate-indigo': {
+    key: 'slate-indigo',
+    label: 'Slate Indigo — Charcoal & Indigo',
+    tokens: {
+      navy: '#11131A',
+      accent: '#4F46E5',
+      accent2: '#818CF8',
+      offwhite: '#F8FAFC',
+      gray: '#F1F3F9',
+      ink: '#12141C',
+      fontDisplay: 'playfair',
     },
   },
 };
