@@ -5,9 +5,7 @@ test('platform landing page loads with nav sign-in and section anchors', async (
   await expect(page.getByRole('link', { name: /^sign in$/i }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /staff sign in/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /^pricing$/i })).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: /let.s build the right crm for your consultancy/i }),
-  ).toBeVisible();
+  await expect(page.getByRole('link', { name: /book demo/i }).first()).toBeVisible();
 });
 
 test('apply wizard step 1 renders', async ({ page }) => {

@@ -10,15 +10,20 @@ import {
   ChevronDown,
   Check,
   CheckCircle2,
+  ExternalLink,
   LayoutDashboard,
   Users,
   UserCog,
   FileText,
 } from 'lucide-react';
 import { AETARIX } from '@/lib/branding';
-import { ContactForm } from '@/components/marketing/contact-form';
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+// Google Form link for every "Book Demo" CTA — set NEXT_PUBLIC_BOOK_DEMO_URL
+// once the form exists (see .env.example). Falls back to Google Forms' own
+// site rather than a broken link if it hasn't been configured yet.
+const BOOK_DEMO_URL =
+  process.env.NEXT_PUBLIC_BOOK_DEMO_URL || 'https://forms.google.com/';
 
 const TITLE = 'Study Abroad CRM Software for Consultancies | Aetarix';
 const DESCRIPTION =
@@ -46,7 +51,9 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     locale: 'en_US',
-    images: [{ url: '/icon-512.png', width: 512, height: 512, alt: AETARIX.name }],
+    images: [
+      { url: '/icon-512.png', width: 512, height: 512, alt: AETARIX.name },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -95,10 +102,30 @@ const BOARD_COLUMNS = [
 ] as const;
 
 const HERO_ROWS = [
-  { initials: 'AR', name: 'A. Rahman', meta: 'Masters · United Kingdom', status: 'New' },
-  { initials: 'SK', name: 'S. Karim', meta: 'Undergrad · Canada', status: 'Contacted' },
-  { initials: 'MI', name: 'M. Iqbal', meta: 'Foundation · Australia', status: 'Applied' },
-  { initials: 'FN', name: 'F. Noor', meta: 'Masters · United States', status: 'Converted' },
+  {
+    initials: 'AR',
+    name: 'A. Rahman',
+    meta: 'Masters · United Kingdom',
+    status: 'New',
+  },
+  {
+    initials: 'SK',
+    name: 'S. Karim',
+    meta: 'Undergrad · Canada',
+    status: 'Contacted',
+  },
+  {
+    initials: 'MI',
+    name: 'M. Iqbal',
+    meta: 'Foundation · Australia',
+    status: 'Applied',
+  },
+  {
+    initials: 'FN',
+    name: 'F. Noor',
+    meta: 'Masters · United States',
+    status: 'Converted',
+  },
 ] as const;
 
 const STATUS_STYLES: Record<string, string> = {
@@ -119,25 +146,41 @@ const TIERS: Tier[] = [
   {
     name: 'Starter',
     blurb: 'Everything a consultancy needs to run leads day to day.',
-    items: ['Lead pipeline & CRM', 'Email templates & sending', 'Agent accounts', 'White-label branding'],
+    items: [
+      'Lead pipeline & CRM',
+      'Email templates & sending',
+      'Agent accounts',
+      'White-label branding',
+    ],
   },
   {
     name: 'Growth',
-    blurb: 'Starter, plus deeper insight and another channel to reach applicants.',
-    items: ['Everything in Starter', 'Analytics dashboard', 'WhatsApp integration'],
+    blurb:
+      'Starter, plus deeper insight and another channel to reach applicants.',
+    items: [
+      'Everything in Starter',
+      'Analytics dashboard',
+      'WhatsApp integration',
+    ],
     highlighted: true,
   },
   {
     name: 'Enterprise',
-    blurb: 'For consultancies that want the full platform, on their own domain.',
-    items: ['Everything in Growth', 'AI chatbot', 'Bulk messaging', 'Custom domain', 'Priority support'],
+    blurb:
+      'For consultancies that want the full platform, on their own domain.',
+    items: [
+      'Everything in Growth',
+      'AI chatbot',
+      'Bulk messaging',
+      'Custom domain',
+      'Priority support',
+    ],
   },
 ];
 
 const NAV_LINKS = [
   { href: '#features', label: 'Features' },
   { href: '#pricing', label: 'Pricing' },
-  { href: '#contact', label: 'Contact' },
 ] as const;
 
 const FAQS = [
@@ -207,7 +250,9 @@ export default function Home() {
       {/* eslint-disable-next-line react/no-danger */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationJsonLd),
+        }}
       />
       {/* eslint-disable-next-line react/no-danger */}
       <script
@@ -223,7 +268,7 @@ export default function Home() {
       </a>
 
       <div className="min-h-screen">
-        <header className="sticky top-0 z-40 border-b border-marketing-ink/10 bg-white ">
+        <header className="sticky top-0 z-40 border-b border-marketing-ink/10 bg-white">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
             <Link href="/" className="flex items-center gap-2">
               <Image
@@ -234,40 +279,19 @@ export default function Home() {
                 className="h-10 w-auto object-contain"
               />
             </Link>
-            <nav aria-label="Primary" className="hidden items-center gap-8 sm:flex">
-              {NAV_LINKS.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  className="text-sm font-medium text-marketing-ink/70 transition hover:text-marketing-ink"
-                >
-                  {l.label}
-                </a>
-              ))}
-            </nav>
+
             <div className="flex items-center gap-2">
-              <details className="relative sm:hidden">
-                <summary className="disclosure-summary flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-marketing-ink/15 text-marketing-ink">
-                  <Menu className="h-5 w-5" aria-hidden="true" />
-                  <span className="sr-only">Open menu</span>
-                </summary>
-                <div className="absolute right-0 top-12 w-52 rounded-lg border border-marketing-ink/10 bg-white p-4 shadow-lg">
-                  <nav aria-label="Mobile" className="flex flex-col gap-3">
-                    {NAV_LINKS.map((l) => (
-                      <a
-                        key={l.href}
-                        href={l.href}
-                        className="text-sm font-medium text-marketing-ink/80 hover:text-marketing-ink"
-                      >
-                        {l.label}
-                      </a>
-                    ))}
-                  </nav>
-                </div>
-              </details>
+              <a
+                href={BOOK_DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="items-center gap-1.5 rounded-md bg-marketing-blue px-4 py-2 text-sm font-medium text-white transition hover:bg-marketing-blue/90 sm:inline-flex"
+              >
+                Book Demo
+              </a>
               <Link
                 href="/login"
-                className="rounded-md bg-marketing-blue px-4 py-2 text-sm font-medium text-white transition hover:bg-marketing-blue/90"
+                className="rounded-md border border-marketing-ink/15 px-4 py-2 text-sm font-medium text-marketing-ink transition hover:bg-marketing-ink/5"
               >
                 Sign in
               </Link>
@@ -301,16 +325,19 @@ export default function Home() {
                 The CRM behind your consultancy&rsquo;s brand
               </h1>
               <p className="max-w-2xl text-lg leading-relaxed text-marketing-offwhite/75">
-                A fully white-label CRM built for study-abroad consultancies. Capture
-                applicants, manage your lead pipeline, coordinate your team, and
-                communicate with every student under your own brand.
+                A fully white-label CRM built for study-abroad consultancies.
+                Capture applicants, manage your lead pipeline, coordinate your
+                team, and communicate with every student under your own brand.
               </p>
               <div className="mt-2 flex flex-wrap justify-center gap-4">
                 <a
-                  href="#contact"
-                  className="rounded-md bg-marketing-blue px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-marketing-blue/90 sm:text-base"
+                  href={BOOK_DEMO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-md bg-marketing-blue px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-marketing-blue/90 sm:text-base"
                 >
-                  Get in touch
+                  Book Demo
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
                 <Link
                   href="/login"
@@ -347,14 +374,21 @@ export default function Home() {
               </div>
               <div className="divide-y divide-marketing-ink/5">
                 {HERO_ROWS.map((row) => (
-                  <div key={row.name} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div
+                    key={row.name}
+                    className="flex items-center justify-between gap-4 px-4 py-3"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-marketing-blue/10 text-xs font-semibold text-marketing-blue">
                         {row.initials}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-marketing-ink">{row.name}</p>
-                        <p className="text-xs text-marketing-ink/50">{row.meta}</p>
+                        <p className="text-sm font-medium text-marketing-ink">
+                          {row.name}
+                        </p>
+                        <p className="text-xs text-marketing-ink/50">
+                          {row.meta}
+                        </p>
                       </div>
                     </div>
                     <span
@@ -385,8 +419,8 @@ export default function Home() {
                 What you get
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-center text-base text-marketing-ink/60">
-                A CRM built specifically for study-abroad consultancies — from first
-                enquiry to enrolment, under your own brand.
+                A CRM built specifically for study-abroad consultancies — from
+                first enquiry to enrolment, under your own brand.
               </p>
               <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {FEATURES.map((f) => (
@@ -400,7 +434,9 @@ export default function Home() {
                     <h3 className="mt-4 font-display text-lg font-semibold text-marketing-ink">
                       {f.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-marketing-ink/65">{f.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-marketing-ink/65">
+                      {f.body}
+                    </p>
                   </article>
                 ))}
               </div>
@@ -426,12 +462,15 @@ export default function Home() {
                   </h2>
                   <p className="mt-4 text-base leading-relaxed text-marketing-ink/70">
                     From the moment a student submits an enquiry to the day they
-                    enrol, Aetarix keeps your consultancy&rsquo;s pipeline, team, and
-                    communication in one white-label CRM.
+                    enrol, Aetarix keeps your consultancy&rsquo;s pipeline,
+                    team, and communication in one white-label CRM.
                   </p>
                   <ul className="mt-6 space-y-3">
                     {SHOWCASE_POINTS.map((p) => (
-                      <li key={p} className="flex items-start gap-3 text-sm text-marketing-ink/80">
+                      <li
+                        key={p}
+                        className="flex items-start gap-3 text-sm text-marketing-ink/80"
+                      >
                         <CheckCircle2
                           className="mt-0.5 h-5 w-5 flex-none text-marketing-blue"
                           aria-hidden="true"
@@ -448,18 +487,20 @@ export default function Home() {
                 >
                   <div className="flex">
                     <div className="hidden w-14 flex-none flex-col items-center gap-4 border-r border-marketing-ink/10 py-5 sm:flex">
-                      {[LayoutDashboard, Users, UserCog, FileText].map((Icon, i) => (
-                        <span
-                          key={i}
-                          className={`flex h-8 w-8 items-center justify-center rounded-md ${
-                            i === 0
-                              ? 'bg-marketing-blue/10 text-marketing-blue'
-                              : 'text-marketing-ink/30'
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </span>
-                      ))}
+                      {[LayoutDashboard, Users, UserCog, FileText].map(
+                        (Icon, i) => (
+                          <span
+                            key={i}
+                            className={`flex h-8 w-8 items-center justify-center rounded-md ${
+                              i === 0
+                                ? 'bg-marketing-blue/10 text-marketing-blue'
+                                : 'text-marketing-ink/30'
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </span>
+                        ),
+                      )}
                     </div>
                     <div className="min-w-0 flex-1 p-5">
                       <div className="flex items-center justify-between gap-2">
@@ -472,7 +513,10 @@ export default function Home() {
                       </div>
                       <div className="mt-4 grid grid-cols-3 gap-3">
                         {BOARD_COLUMNS.map((col) => (
-                          <div key={col.label} className="rounded-lg bg-marketing-gray p-2">
+                          <div
+                            key={col.label}
+                            className="rounded-lg bg-marketing-gray p-2"
+                          >
                             <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-marketing-ink/40 sm:text-[11px]">
                               {col.label}
                             </p>
@@ -513,8 +557,9 @@ export default function Home() {
                 Pricing
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-center text-base text-marketing-ink/60">
-                Packaged by what your team needs. Every tier is fully white-labeled
-                — reach out for pricing tailored to your consultancy&rsquo;s size.
+                Packaged by what your team needs. Every tier is fully
+                white-labeled — reach out for pricing tailored to your
+                consultancy&rsquo;s size.
               </p>
               <div className="mt-12 grid gap-6 sm:grid-cols-3">
                 {TIERS.map((t) => (
@@ -534,20 +579,31 @@ export default function Home() {
                     <h3 className="font-display text-xl font-semibold text-marketing-ink">
                       {t.name}
                     </h3>
-                    <p className="mt-1 text-xs text-marketing-ink/60">{t.blurb}</p>
+                    <p className="mt-1 text-xs text-marketing-ink/60">
+                      {t.blurb}
+                    </p>
                     <ul className="mt-5 space-y-2.5 text-sm text-marketing-ink/75">
                       {t.items.map((item) => (
                         <li key={item} className="flex items-start gap-2">
-                          <Check className="mt-0.5 h-4 w-4 flex-none text-marketing-blue" aria-hidden="true" />
+                          <Check
+                            className="mt-0.5 h-4 w-4 flex-none text-marketing-blue"
+                            aria-hidden="true"
+                          />
                           <span>{item}</span>
                         </li>
                       ))}
                     </ul>
                     <a
-                      href="#contact"
-                      className="mt-6 inline-block rounded-md border border-marketing-ink/15 px-4 py-2 text-sm font-medium text-marketing-ink transition hover:bg-marketing-ink/5"
+                      href={BOOK_DEMO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 inline-flex items-center gap-1.5 rounded-md border border-marketing-ink/15 px-4 py-2 text-sm font-medium text-marketing-ink transition hover:bg-marketing-ink/5"
                     >
-                      Contact us
+                      Book Demo
+                      <ExternalLink
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
                     </a>
                   </div>
                 ))}
@@ -575,40 +631,19 @@ export default function Home() {
                 {FAQS.map((f) => (
                   <details key={f.q} className="group px-6 py-5">
                     <summary className="disclosure-summary flex cursor-pointer items-center justify-between gap-4">
-                      <h3 className="text-base font-medium text-marketing-ink">{f.q}</h3>
+                      <h3 className="text-base font-medium text-marketing-ink">
+                        {f.q}
+                      </h3>
                       <ChevronDown
                         className="h-5 w-5 flex-none text-marketing-ink/40 transition-transform duration-200 group-open:rotate-180"
                         aria-hidden="true"
                       />
                     </summary>
-                    <p className="mt-3 text-sm leading-relaxed text-marketing-ink/70">{f.a}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-marketing-ink/70">
+                      {f.a}
+                    </p>
                   </details>
                 ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Contact */}
-          <section
-            id="contact"
-            aria-labelledby="contact-heading"
-            className="border-t border-white/5 bg-marketing-navy"
-          >
-            <div className="mx-auto max-w-lg px-6 py-20 sm:py-24">
-              <p className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-marketing-cyan">
-                Contact
-              </p>
-              <h2
-                id="contact-heading"
-                className="mt-3 text-center font-display text-3xl font-semibold text-marketing-offwhite sm:text-4xl"
-              >
-                Let&rsquo;s build the right CRM for your consultancy.
-              </h2>
-              <p className="mx-auto mt-3 max-w-sm text-center text-sm text-marketing-offwhite/60">
-                Tell us a bit about what you need and we&rsquo;ll get back to you.
-              </p>
-              <div className="mt-8">
-                <ContactForm />
               </div>
             </div>
           </section>
@@ -616,6 +651,7 @@ export default function Home() {
 
         <footer className="border-t border-white/10 bg-marketing-navy px-6 py-12 text-marketing-offwhite/60">
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 text-center sm:flex-row sm:items-start sm:justify-between sm:text-left">
+            {/* Logo + Description */}
             <div className="max-w-xs">
               <Image
                 src={AETARIX.wordmark}
@@ -624,24 +660,39 @@ export default function Home() {
                 height={96}
                 className="mx-auto h-6 w-auto object-contain sm:mx-0"
               />
+
               <p className="mt-3 text-sm leading-relaxed">
                 White-label CRM infrastructure for study-abroad consultancies —
                 built and hosted under your own brand.
               </p>
             </div>
-            <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              {NAV_LINKS.map((l) => (
-                <a key={l.href} href={l.href} className="transition hover:text-marketing-offwhite">
-                  {l.label}
-                </a>
-              ))}
-              <Link href="/login" className="transition hover:text-marketing-offwhite">
-                Sign in
-              </Link>
-            </nav>
+
+            {/* Right Side */}
+            <div className="flex items-center gap-6">
+              <a
+                href="https://aetarix.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex  p-2 rounded-md items-center gap-2 text-sm text-white bg-marketing-blue transition hover:bg-blue-500/80"
+              >
+                <span aria-hidden="true">🌐</span>
+                <span>aetarix.com</span>
+              </a>
+
+              <a
+                href={BOOK_DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex  p-2 rounded-md items-center gap-2 text-sm text-white bg-marketing-blue transition hover:bg-blue-500/80"
+              >
+                <span aria-hidden="true">📅</span>
+                <span>Book a Demo</span>
+              </a>
+            </div>
           </div>
           <p className="mt-10 text-center text-xs text-marketing-offwhite/40">
-            &copy; {new Date().getFullYear()} {AETARIX.name}. All rights reserved.
+            &copy; {new Date().getFullYear()} {AETARIX.name}. All rights
+            reserved.
           </p>
         </footer>
       </div>
