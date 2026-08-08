@@ -45,7 +45,7 @@ export function LeadForm({
   /** Consultancy named in the consent line — never hardcode one client here. */
   consentName = 'this consultancy',
   /** Defaults to the public apply-wizard actions; the staff "Create Query"
-   *  flow (app/(admin)/leads/new) passes its own session-scoped versions. */
+   *  dialog on /leads passes its own session-scoped versions. */
   actions = { step1: startLead, step2: saveStep2, step3: completeLead },
   /** Public flow completes via a server-side redirect to /thank-you, so this
    *  never fires there. The staff flow's step 3 returns normally instead of

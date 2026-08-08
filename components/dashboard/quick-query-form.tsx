@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createQuery, type CreateQueryState } from './actions';
+import { createQuery, type CreateQueryState } from '@/app/(admin)/leads/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -32,8 +32,18 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-destructive">{message}</p>;
 }
 
-/** Everything on one page, nothing required — Save whatever's known. */
-export function QuickQueryForm({ consentName }: { consentName: string }) {
+/**
+ * Everything on one page, nothing required — Save whatever's known. Rendered
+ * inside the "Create query" dialog on /leads; `onClose` closes that dialog
+ * (used for both Cancel and right before navigating away on success).
+ */
+export function QuickQueryForm({
+  consentName,
+  onClose,
+}: {
+  consentName: string;
+  onClose?: () => void;
+}) {
   const router = useRouter();
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
@@ -41,8 +51,11 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
   const err = state.fieldErrors ?? {};
 
   useEffect(() => {
-    if (state.ok && state.leadId) router.push(`/leads/${state.leadId}`);
-  }, [state, router]);
+    if (state.ok && state.leadId) {
+      onClose?.();
+      router.push(`/leads/${state.leadId}`);
+    }
+  }, [state, router, onClose]);
 
   return (
     <form action={action} className="space-y-6">
@@ -56,8 +69,8 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
           Contact
         </p>
-        
-        <div className="grid gap-4 sm:grid-cols-4">
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
           <Label htmlFor="full_name">Full name</Label>
           <Input id="full_name" name="full_name" autoComplete="name" />
@@ -76,7 +89,7 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
           <CountryField error={err.target_country} />
         </div>
         </div>
-        
+
         <label className="flex items-start gap-3 text-sm">
           <Checkbox name="consent_given" className="mt-0.5" />
           <span>
@@ -148,8 +161,8 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
             <Input id="work_experience_detail" name="work_experience_detail" placeholder="Optional" />
           </div>
         </div>
-       
-       
+
+
       </section>
 
       <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
@@ -234,7 +247,7 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
           type="button"
           variant="outline"
           size="lg"
-          onClick={() => router.push('/leads')}
+          onClick={() => onClose?.()}
           disabled={pending}
         >
           Cancel

@@ -292,7 +292,7 @@ export const leadEditSchema = leadObject
 export type LeadEditInput = z.infer<typeof leadEditSchema>;
 
 /**
- * Staff "Create Query" flow (app/(admin)/leads/new) — same fields as the
+ * Staff "Create Query" flow (the dialog on /leads) — same fields as the
  * public wizard, but every one of them is optional: a staff member taking a
  * partial phone query needs to save whatever they have, not be blocked by
  * missing fields. Blank strings are treated as "not provided" (not as

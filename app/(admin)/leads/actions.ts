@@ -7,12 +7,145 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus } from '@/lib/leads/display';
-import { leadEditSchema } from '@/lib/validation/lead';
+import { leadEditSchema, quickLeadSchema, normalizeSource } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
+}
+
+export interface CreateQueryState {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+  leadId?: string;
+}
+
+const formStr = (f: FormData, k: string) => (f.get(k) ?? '') as string;
+
+function fieldErrorsFrom(
+  issues: { path: (string | number)[]; message: string }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const i of issues) {
+    const key = i.path[0];
+    if (typeof key === 'string' && !out[key]) out[key] = i.message;
+  }
+  return out;
+}
+
+/**
+ * Single-page, single-save version of lead creation for staff (a query taken
+ * over the phone or in person, via the "Create query" dialog on /leads) —
+ * unlike the public wizard, nothing here is required; whatever the staff
+ * member has is saved. organization_id and created_by come from the session,
+ * never the client. Needs the service role because leads has no
+ * authenticated insert policy (the public wizard is otherwise the only
+ * writer).
+ */
+export async function createQuery(
+  _prev: CreateQueryState,
+  formData: FormData,
+): Promise<CreateQueryState> {
+  const user = await requireUser();
+
+  const parsed = quickLeadSchema.safeParse({
+    full_name: formStr(formData, 'full_name'),
+    email: formStr(formData, 'email'),
+    phone: formStr(formData, 'phone'),
+    date_of_birth: formStr(formData, 'date_of_birth'),
+    city: formStr(formData, 'city'),
+    district: formStr(formData, 'district'),
+    target_country: formStr(formData, 'target_country'),
+    institution: formStr(formData, 'institution'),
+    program: formStr(formData, 'program'),
+    intake_season: formStr(formData, 'intake_season'),
+    intake_year: formStr(formData, 'intake_year'),
+    highest_education: formStr(formData, 'highest_education'),
+    last_qualification: formStr(formData, 'last_qualification'),
+    prior_institution: formStr(formData, 'prior_institution'),
+    passing_year: formStr(formData, 'passing_year'),
+    grading_system: formStr(formData, 'grading_system'),
+    grade_value: formStr(formData, 'grade_value'),
+    work_experience_years: formStr(formData, 'work_experience_years'),
+    work_experience_detail: formStr(formData, 'work_experience_detail'),
+    english_test: formStr(formData, 'english_test'),
+    english_score: formStr(formData, 'english_score'),
+    funding_source: formStr(formData, 'funding_source'),
+    prior_rejection: formData.get('prior_rejection') === 'on',
+    prior_rejection_detail: formStr(formData, 'prior_rejection_detail'),
+    consent_given: formData.get('consent_given') === 'on',
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'Please correct the highlighted fields.',
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  }
+
+  const d = parsed.data;
+  const service = createServiceClient();
+  const { data: lead, error } = await service
+    .from('leads')
+    .insert({
+      ...d,
+      consent_at: d.consent_given ? new Date().toISOString() : null,
+      organization_id: user.organization_id,
+      created_by: user.id,
+      is_complete: true,
+      utm_source: normalizeSource(undefined),
+    })
+    .select('id, email, full_name, target_country, program, organization_id')
+    .single();
+  if (error || !lead) {
+    console.error('[createQuery] insert failed', error);
+    return { ok: false, error: 'Something went wrong. Please try again.' };
+  }
+
+  // Confirmation email — only if we actually have an address to send to.
+  if (lead.email) {
+    try {
+      const { data: tpl } = await service
+        .from('email_templates')
+        .select('subject, body')
+        .eq('organization_id', lead.organization_id)
+        .eq('key', 'welcome')
+        .single();
+      if (tpl) {
+        const vars = {
+          full_name: lead.full_name,
+          program: lead.program,
+          target_country: lead.target_country,
+        };
+        await sendEmail({
+          leadId: lead.id,
+          organizationId: lead.organization_id,
+          to: lead.email,
+          toName: lead.full_name || lead.email,
+          subject: renderTemplate(tpl.subject, vars),
+          body: renderTemplate(tpl.body, vars),
+          templateKey: 'welcome',
+          sentBy: user.id,
+        });
+      }
+    } catch (err) {
+      console.error('[createQuery] confirmation email failed', err);
+    }
+  }
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: user.organization_id,
+    action: 'lead_created',
+    entity: 'lead',
+    entityId: lead.id,
+    metadata: { via: 'staff-quick' },
+  });
+
+  revalidatePath('/leads');
+  return { ok: true, leadId: lead.id };
 }
 
 /**

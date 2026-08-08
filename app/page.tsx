@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Workflow,
   ShieldCheck,
-  Menu,
   ChevronDown,
   Check,
   CheckCircle2,
@@ -177,11 +176,6 @@ const TIERS: Tier[] = [
     ],
   },
 ];
-
-const NAV_LINKS = [
-  { href: '#features', label: 'Features' },
-  { href: '#pricing', label: 'Pricing' },
-] as const;
 
 const FAQS = [
   {

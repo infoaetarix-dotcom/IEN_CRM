@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Download, Plus, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Users } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
+import { getOrgBrand } from '@/lib/branding/org';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
+import { CreateQueryDialog } from '@/components/dashboard/create-query-dialog';
 import {
   RestoreLeadButton,
   LeadRowActions,
@@ -41,7 +43,8 @@ export default async function LeadsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireUser();
+  const profile = await requireUser();
+  const brand = await getOrgBrand(profile.organization_id);
   const sp = await searchParams;
 
   const q = str(sp.q);
@@ -126,12 +129,7 @@ export default async function LeadsPage({
         subtitle={`${total} total · manage your applicant pipeline`}
         action={
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/leads/new"
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue px-3 text-sm text-white hover:bg-marketing-blue/90"
-            >
-              <Plus className="h-4 w-4" /> Create query
-            </Link>
+            <CreateQueryDialog consentName={brand.legalName} />
             <a
               href={exportHref}
               className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue text-white px-3 text-sm hover:bg-marketing-blue/90"
