@@ -35,6 +35,7 @@ export default async function AdminLayout({
 
   return (
     <div
+      id="tenant-theme-root"
       style={themeStyleVars(theme.tokens)}
       className="flex min-h-screen flex-col bg-tenant-gray"
     >

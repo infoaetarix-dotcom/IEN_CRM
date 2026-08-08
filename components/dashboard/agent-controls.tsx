@@ -10,6 +10,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const initial: AgentActionResult = { ok: false };
 
@@ -25,57 +33,55 @@ export function CreateAgentForm() {
     }
   }, [state.ok, router]);
 
-  if (!open) {
-    return (
-      <Button
-        onClick={() => setOpen(true)}
-        size="sm"
-        className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-      >
-        Add staff member
-      </Button>
-    );
-  }
-
   return (
-    <form
-      action={action}
-      className="grid gap-3 rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm sm:grid-cols-2"
-    >
-      <div>
-        <Label htmlFor="full_name">Full name</Label>
-        <Input id="full_name" name="full_name" required />
-      </div>
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required />
-      </div>
-      <div>
-        <Label htmlFor="password">Temporary password</Label>
-        <Input id="password" name="password" type="text" minLength={8} required />
-      </div>
-      {state.error && (
-        <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>
-      )}
-      <div className="flex gap-2 sm:col-span-2">
-        <Button
-          type="submit"
-          disabled={pending}
-          size="sm"
-          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-        >
-          {pending ? 'Creating…' : 'Create'}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-tenant-accent text-white hover:bg-tenant-accent/90">
+          Add staff member
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen(false)}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-tenant-display text-tenant-ink">
+            Add staff member
+          </DialogTitle>
+          <DialogDescription>
+            They&rsquo;ll sign in with this email and temporary password, then set
+            their own on first login.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form action={action} className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="full_name">Full name</Label>
+            <Input id="full_name" name="full_name" required />
+          </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Temporary password</Label>
+            <Input id="password" name="password" type="text" minLength={8} required />
+          </div>
+          {state.error && (
+            <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>
+          )}
+          <div className="flex gap-2 sm:col-span-2">
+            <Button
+              type="submit"
+              disabled={pending}
+              className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+            >
+              {pending ? 'Creating…' : 'Create'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
