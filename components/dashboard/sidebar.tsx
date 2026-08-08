@@ -57,8 +57,8 @@ export function Sidebar({
             className={cn(
               'flex h-11 w-11 items-center justify-center rounded-lg transition-colors',
               active
-                ? 'bg-marketing-blue text-white'
-                : 'text-marketing-offwhite/70 hover:bg-white/10 hover:text-marketing-offwhite',
+                ? 'bg-tenant-accent text-white'
+                : 'text-tenant-offwhite/70 hover:bg-white/10 hover:text-tenant-offwhite',
             )}
           >
             <Icon className="h-5 w-5" />

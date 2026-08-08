@@ -1,9 +1,11 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
+import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
 
 export interface LoginState {
   error?: string;
@@ -56,6 +58,26 @@ export async function signIn(
     entity: 'profile',
     entityId: data.user.id,
   });
+
+  // Remember this org so /login and /forgot-password can show its theme
+  // and logo next time, on this browser, before anyone's signed in.
+  if (profile.organization_id) {
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('slug')
+      .eq('id', profile.organization_id)
+      .single();
+    if (org?.slug) {
+      const jar = await cookies();
+      jar.set(LAST_ORG_COOKIE, org.slug, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 90, // 90 days
+        path: '/',
+      });
+    }
+  }
 
   // Super admins land on the platform console; org staff on their dashboard.
   redirect(profile.is_super_admin ? '/super' : '/dashboard');

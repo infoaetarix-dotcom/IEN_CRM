@@ -69,7 +69,7 @@ export function LeadActions({
         ))}
 
       {canDelete && (
-        <div className="border-t border-marketing-ink/10 pt-3">
+        <div className="border-t border-tenant-ink/10 pt-3">
           {!confirming ? (
             <Button
               size="sm"
@@ -130,7 +130,7 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8 rounded-lg border border-marketing-blue/20 bg-marketing-blue/10 text-marketing-blue hover:bg-marketing-blue/20 hover:text-marketing-blue"
+        className="h-8 w-8 rounded-lg border border-tenant-accent/20 bg-tenant-accent/10 text-tenant-accent hover:bg-tenant-accent/20 hover:text-tenant-accent"
         title="Edit"
         disabled={pending}
         onClick={() => router.push(`/leads/${leadId}`)}
@@ -140,7 +140,7 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8 rounded-lg border border-marketing-cyan/20 bg-marketing-cyan/10 text-marketing-cyan hover:bg-marketing-cyan/20 hover:text-marketing-cyan"
+        className="h-8 w-8 rounded-lg border border-tenant-accent2/20 bg-tenant-accent2/10 text-tenant-accent2 hover:bg-tenant-accent2/20 hover:text-tenant-accent2"
         title="Copy"
         disabled={pending}
         onClick={() => run(() => copyLead(leadId))}

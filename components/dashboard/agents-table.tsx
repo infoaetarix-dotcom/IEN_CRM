@@ -49,7 +49,7 @@ export function AgentsTable({
         />
       </div>
 
-      <div className="rounded-xl border border-marketing-ink/10 bg-white shadow-sm">
+      <div className="rounded-xl border border-tenant-ink/10 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -75,7 +75,7 @@ export function AgentsTable({
                     variant={s.role === 'admin' ? 'accent' : 'neutral'}
                     className={
                       s.role === 'admin'
-                        ? 'border-transparent bg-marketing-blue/15 text-marketing-blue'
+                        ? 'border-transparent bg-tenant-accent/15 text-tenant-accent'
                         : undefined
                     }
                   >

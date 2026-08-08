@@ -31,6 +31,8 @@ export interface OrgBrand {
   logoUrl: string | null;
   /** 1–2 letter fallback monogram derived from the name. */
   initials: string;
+  /** Which color theme (lib/branding/themes.ts) this org's surfaces use. */
+  themeKey: string;
 }
 
 /** Neutral brand used before a tenant is known (e.g. the shared login page). */
@@ -39,6 +41,7 @@ export const FALLBACK_BRAND: OrgBrand = {
   legalName: 'this consultancy',
   logoUrl: null,
   initials: 'C',
+  themeKey: 'aetarix-default',
 };
 
 /**
@@ -57,6 +60,7 @@ export function brandFromOrg(org: {
   name: string | null;
   legal_name?: string | null;
   logo_url?: string | null;
+  theme_key?: string | null;
 }): OrgBrand {
   const name = org.name?.trim() || FALLBACK_BRAND.name;
   return {
@@ -64,5 +68,6 @@ export function brandFromOrg(org: {
     legalName: org.legal_name?.trim() || name,
     logoUrl: org.logo_url?.trim() || null,
     initials: initialsFrom(name),
+    themeKey: org.theme_key?.trim() || FALLBACK_BRAND.themeKey,
   };
 }

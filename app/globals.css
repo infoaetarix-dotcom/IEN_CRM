@@ -25,6 +25,19 @@
     --input: 209 30% 85%;
     --ring: 34 63% 48%;
     --radius: 0.5rem;
+
+    /* Per-tenant theme tokens (RGB triplets, for rgb(var(--x) / <alpha-value>)).
+       Defaults here are the 'aetarix-default' theme — see
+       lib/branding/themes.ts. Pages that know their org override these
+       inline via lib/branding/theme-style.ts; everything else safely falls
+       back to these defaults. */
+    --tenant-navy: 11 18 32;
+    --tenant-accent: 37 99 235;
+    --tenant-accent2: 6 182 212;
+    --tenant-offwhite: 248 247 243;
+    --tenant-gray: 243 245 248;
+    --tenant-ink: 17 24 39;
+    --tenant-font-display: var(--font-display);
   }
 }
 

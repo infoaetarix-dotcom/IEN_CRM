@@ -36,6 +36,18 @@ const config: Config = {
           gray: '#F3F5F8',
           ink: '#111827',
         },
+        // Per-tenant theme (admin panel, login, forgot/change/update password)
+        // — backed by CSS vars so a consultancy's chosen theme (see
+        // lib/branding/themes.ts) can be injected per-request without a
+        // rebuild. Defaults to the 'aetarix-default' theme's values.
+        tenant: {
+          navy: 'rgb(var(--tenant-navy) / <alpha-value>)',
+          accent: 'rgb(var(--tenant-accent) / <alpha-value>)',
+          accent2: 'rgb(var(--tenant-accent2) / <alpha-value>)',
+          offwhite: 'rgb(var(--tenant-offwhite) / <alpha-value>)',
+          gray: 'rgb(var(--tenant-gray) / <alpha-value>)',
+          ink: 'rgb(var(--tenant-ink) / <alpha-value>)',
+        },
         // shadcn semantic tokens (mapped to CSS vars in globals.css)
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -72,6 +84,9 @@ const config: Config = {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         // Display serif for the marketing page's major headings only.
         display: ['var(--font-display)', 'Georgia', 'serif'],
+        // Tenant-theme heading font — swaps per-request between the display
+        // serif and the body serif depending on the org's chosen theme.
+        'tenant-display': ['var(--tenant-font-display)', 'Georgia', 'serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -6,11 +6,14 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireSuperAdmin } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { DEFAULT_TEMPLATES } from '@/lib/org/defaults';
+import { DEFAULT_THEME_KEY, THEME_LIST, type ThemeKey } from '@/lib/branding/themes';
 
 export interface SuperResult {
   ok: boolean;
   error?: string;
 }
+
+const THEME_KEYS = THEME_LIST.map((t) => t.key) as [ThemeKey, ...ThemeKey[]];
 
 const createSchema = z.object({
   name: z.string().trim().min(2, 'Organisation name is required').max(120),
@@ -22,6 +25,7 @@ const createSchema = z.object({
   admin_name: z.string().trim().min(2, "Admin's name is required").max(120),
   admin_email: z.string().trim().toLowerCase().email('Valid admin email required'),
   admin_password: z.string().min(8, 'Password must be at least 8 characters'),
+  theme_key: z.enum(THEME_KEYS).default(DEFAULT_THEME_KEY),
 });
 
 /**
@@ -40,6 +44,7 @@ export async function createOrganization(
     admin_name: formData.get('admin_name'),
     admin_email: formData.get('admin_email'),
     admin_password: formData.get('admin_password'),
+    theme_key: formData.get('theme_key') || undefined,
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]!.message };
@@ -60,7 +65,7 @@ export async function createOrganization(
   // 1. Organization
   const { data: org, error: orgErr } = await service
     .from('organizations')
-    .insert({ name: d.name, slug: d.slug })
+    .insert({ name: d.name, slug: d.slug, theme_key: d.theme_key })
     .select('id')
     .single();
   if (orgErr || !org) {
@@ -197,6 +202,35 @@ export async function uploadOrgLogo(
 
   revalidatePath(`/super/orgs/${orgId}`);
   revalidatePath('/super');
+  return { ok: true };
+}
+
+/** Change a consultancy's color theme (admin panel, login, password pages). */
+export async function setOrgTheme(
+  orgId: string,
+  themeKey: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const parsed = z.enum(THEME_KEYS).safeParse(themeKey);
+  if (!parsed.success) return { ok: false, error: 'Unknown theme.' };
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from('organizations')
+    .update({ theme_key: parsed.data })
+    .eq('id', orgId);
+  if (error) return { ok: false, error: 'Could not save the theme.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { theme_key: parsed.data },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
   return { ok: true };
 }
 

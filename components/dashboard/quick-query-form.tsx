@@ -65,8 +65,8 @@ export function QuickQueryForm({
         </div>
       )}
 
-      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+      <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
           Contact
         </p>
 
@@ -99,8 +99,8 @@ export function QuickQueryForm({
         </label>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+      <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
           Background
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -165,8 +165,8 @@ export function QuickQueryForm({
 
       </section>
 
-      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+      <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
           Goals
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -238,7 +238,7 @@ export function QuickQueryForm({
         <Button
           type="submit"
           size="lg"
-          className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
           disabled={pending}
         >
           {pending ? 'Saving…' : 'Save'}

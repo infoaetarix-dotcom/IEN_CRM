@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { setOrgStatus, toggleModule } from '@/app/super/actions';
+import { setOrgStatus, toggleModule, setOrgTheme } from '@/app/super/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select } from '@/components/ui/select';
+import { THEME_LIST } from '@/lib/branding/themes';
 
 export function SuspendToggle({
   orgId,
@@ -31,6 +33,50 @@ export function SuspendToggle({
     >
       {pending ? '…' : suspended ? 'Reactivate' : 'Suspend'}
     </Button>
+  );
+}
+
+export function ThemeSelect({
+  orgId,
+  themeKey,
+}: {
+  orgId: string;
+  themeKey: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [value, setValue] = useState(themeKey);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="max-w-xs space-y-1">
+      <Select
+        value={value}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.value;
+          const prev = value;
+          setValue(next);
+          setError(null);
+          start(async () => {
+            const res = await setOrgTheme(orgId, next);
+            if (!res.ok) {
+              setValue(prev);
+              setError(res.error ?? 'Could not save.');
+            } else {
+              router.refresh();
+            }
+          });
+        }}
+      >
+        {THEME_LIST.map((t) => (
+          <option key={t.key} value={t.key}>
+            {t.label}
+          </option>
+        ))}
+      </Select>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   );
 }
 

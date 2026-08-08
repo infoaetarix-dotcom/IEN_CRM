@@ -17,7 +17,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { SuspendToggle, ModuleToggle } from '@/components/super/org-controls';
+import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org-controls';
 import { OrgBranding } from '@/components/super/org-branding';
 import { brandFromOrg } from '@/lib/branding';
 
@@ -33,7 +33,7 @@ export default async function OrgDetail({
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, slug, status, created_at, legal_name, logo_url')
+    .select('id, name, slug, status, created_at, legal_name, logo_url, theme_key')
     .eq('id', id)
     .single();
   if (!org) notFound();
@@ -94,8 +94,17 @@ export default async function OrgDetail({
         <CardHeader>
           <CardTitle className="font-display">Branding</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <OrgBranding orgId={org.id} brand={brand} />
+          <div className="border-t border-marketing-ink/10 pt-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+              Color theme
+            </p>
+            <ThemeSelect orgId={org.id} themeKey={brand.themeKey} />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Applies to their admin panel, login, and password pages.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

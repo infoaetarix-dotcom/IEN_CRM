@@ -69,7 +69,7 @@ function LField({ label, children }: { label: string; children: ReactElement }) 
     <div className="space-y-1">
       <label
         htmlFor={id}
-        className="block text-xs font-semibold uppercase tracking-[0.14em] text-marketing-blue"
+        className="block text-xs font-semibold uppercase tracking-[0.14em] text-tenant-accent"
       >
         {label}
       </label>
@@ -158,7 +158,7 @@ export function LeadDetailsEditor({
           </Button>
           <Button
             size="sm"
-            className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+            className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
             onClick={save}
             disabled={pending}
           >
@@ -173,9 +173,9 @@ export function LeadDetailsEditor({
       )}
 
       {/* Contact & location */}
-      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-display">Contact &amp; location</CardTitle>
+          <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Full name">{text('full_name')}</LField>
@@ -188,9 +188,9 @@ export function LeadDetailsEditor({
       </Card>
 
       {/* Prior education & experience */}
-      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-display">Prior education &amp; experience</CardTitle>
+          <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Highest education">
@@ -253,9 +253,9 @@ export function LeadDetailsEditor({
       </Card>
 
       {/* Study goals */}
-      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-display">Study goals</CardTitle>
+          <CardTitle className="font-tenant-display">Study goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Target country">

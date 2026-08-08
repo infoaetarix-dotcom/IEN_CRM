@@ -132,13 +132,13 @@ export default async function LeadsPage({
             <CreateQueryDialog consentName={brand.legalName} />
             <a
               href={exportHref}
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue text-white px-3 text-sm hover:bg-marketing-blue/90"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent text-white px-3 text-sm hover:bg-tenant-accent/90"
             >
               <Download className="h-4 w-4" /> Export
             </a>
             <Link
               href={showArchived ? '/leads' : '/leads?archived=1'}
-              className="inline-flex items-center gap-2 rounded-md text-sm text-marketing-ink border border-marketing-ink/15 hover:bg-marketing-ink/5 h-9 px-3"
+              className="inline-flex items-center gap-2 rounded-md text-sm text-tenant-ink border border-tenant-ink/15 hover:bg-tenant-ink/5 h-9 px-3"
             >
               {showArchived ? '← Back to active' : 'View archived'}
             </Link>
@@ -146,11 +146,11 @@ export default async function LeadsPage({
         }
       />
 
-      <div className="rounded-xl border border-marketing-ink/10 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm">
         <LeadsFilters />
       </div>
 
-      <div className="rounded-xl border border-marketing-ink/10 bg-white shadow-sm">
+      <div className="rounded-xl border border-tenant-ink/10 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -253,10 +253,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.max(1, page - 1))}
             aria-disabled={page <= 1}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-marketing-ink/15 px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-tenant-ink/15 px-3 text-sm ${
               page <= 1
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-marketing-gray'
+                : 'hover:bg-tenant-gray'
             }`}
           >
             <ChevronLeft className="h-4 w-4" /> Prev
@@ -264,10 +264,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.min(totalPages, page + 1))}
             aria-disabled={page >= totalPages}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-marketing-ink/15 px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-tenant-ink/15 px-3 text-sm ${
               page >= totalPages
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-marketing-gray'
+                : 'hover:bg-tenant-gray'
             }`}
           >
             Next <ChevronRight className="h-4 w-4" />

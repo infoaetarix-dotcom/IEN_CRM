@@ -57,7 +57,7 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
       <div className="flex items-center gap-3">
         <Button
           type="submit"
-          className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
           disabled={pending}
         >
           {pending ? 'Saving…' : 'Update password'}

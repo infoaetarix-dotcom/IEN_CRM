@@ -8,6 +8,7 @@ import {
 } from '@/app/super/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -18,6 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { THEME_LIST, DEFAULT_THEME_KEY } from '@/lib/branding/themes';
 
 const initial: SuperResult = { ok: false };
 
@@ -48,7 +50,7 @@ export function CreateOrgForm({
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New consultancy</DialogTitle>
+          <DialogTitle className="font-display text-marketing-ink">New consultancy</DialogTitle>
           <DialogDescription>
             Provision a tenant — organization, package, and their first admin login.
           </DialogDescription>
@@ -87,6 +89,20 @@ export function CreateOrgForm({
                 <Input id="admin_password" name="admin_password" type="text" minLength={8} required />
               </div>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="theme_key">Color theme</Label>
+            <Select id="theme_key" name="theme_key" defaultValue={DEFAULT_THEME_KEY}>
+              {THEME_LIST.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Applies to their admin panel, login, and password pages. Changeable later.
+            </p>
           </div>
 
           <div>

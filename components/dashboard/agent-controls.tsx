@@ -30,7 +30,7 @@ export function CreateAgentForm() {
       <Button
         onClick={() => setOpen(true)}
         size="sm"
-        className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+        className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
       >
         Add staff member
       </Button>
@@ -40,7 +40,7 @@ export function CreateAgentForm() {
   return (
     <form
       action={action}
-      className="grid gap-3 rounded-xl border border-marketing-ink/10 bg-white p-4 shadow-sm sm:grid-cols-2"
+      className="grid gap-3 rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm sm:grid-cols-2"
     >
       <div>
         <Label htmlFor="full_name">Full name</Label>
@@ -62,7 +62,7 @@ export function CreateAgentForm() {
           type="submit"
           disabled={pending}
           size="sm"
-          className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
         >
           {pending ? 'Creating…' : 'Create'}
         </Button>
@@ -110,7 +110,7 @@ export function AgentRowControls({
       <Button
         size="sm"
         variant={isActive ? 'outline' : undefined}
-        className={!isActive ? 'bg-marketing-blue text-white hover:bg-marketing-blue/90' : undefined}
+        className={!isActive ? 'bg-tenant-accent text-white hover:bg-tenant-accent/90' : undefined}
         disabled={pending}
         onClick={() => run(() => setAgentActive(id, !isActive))}
       >

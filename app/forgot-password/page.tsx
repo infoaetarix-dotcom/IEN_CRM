@@ -1,17 +1,31 @@
+import { cookies } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ForgotPasswordForm } from './forgot-password-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { AETARIX } from '@/lib/branding';
+import { getPublicOrgBrand } from '@/lib/branding/org';
+import { resolveTheme } from '@/lib/branding/themes';
+import { themeStyleVars } from '@/lib/branding/theme-style';
+import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
 
 export const metadata = { title: 'Reset password — CRM' };
 
-export default function ForgotPasswordPage() {
+/** Pre-auth, same "last org" cookie approach as /login — see that page's comment. */
+export default async function ForgotPasswordPage() {
+  const jar = await cookies();
+  const lastOrgSlug = jar.get(LAST_ORG_COOKIE)?.value;
+  const brand = lastOrgSlug ? await getPublicOrgBrand(lastOrgSlug) : null;
+  const theme = resolveTheme(brand?.themeKey);
+
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-marketing-navy px-6 py-16">
+    <main
+      style={themeStyleVars(theme.tokens)}
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-tenant-navy px-6 py-16"
+    >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 [background:radial-gradient(60%_50%_at_50%_0%,rgba(37,99,235,0.28),transparent_70%)]"
+        className="pointer-events-none absolute inset-0 [background:radial-gradient(60%_50%_at_50%_0%,rgb(var(--tenant-accent)/0.28),transparent_70%)]"
       />
       <div
         aria-hidden="true"
@@ -21,23 +35,32 @@ export default function ForgotPasswordPage() {
       <div className="relative w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link href="/" className="mb-6 inline-flex items-center justify-center">
-            <Image
-              src={AETARIX.wordmark}
-              alt={AETARIX.name}
-              width={295}
-              height={96}
-              className="h-8 w-auto object-contain"
-            />
+            {brand?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt={brand.name}
+                className="h-8 w-auto max-w-[220px] object-contain"
+              />
+            ) : (
+              <Image
+                src={AETARIX.wordmark}
+                alt={AETARIX.name}
+                width={295}
+                height={96}
+                className="h-8 w-auto object-contain"
+              />
+            )}
           </Link>
-          <h1 className="font-display text-2xl font-semibold text-marketing-offwhite">
+          <h1 className="font-tenant-display text-2xl font-semibold text-tenant-offwhite">
             Reset your password
           </h1>
-          <p className="mt-1 text-sm text-marketing-offwhite/60">
+          <p className="mt-1 text-sm text-tenant-offwhite/60">
             Enter your account email and we&rsquo;ll send you a link to set a new
             password.
           </p>
         </div>
-        <Card className="rounded-xl border-marketing-ink/10 shadow-2xl shadow-black/40">
+        <Card className="rounded-xl border-tenant-ink/10 shadow-2xl shadow-black/40">
           <CardContent className="space-y-4 p-6">
             <ForgotPasswordForm />
           </CardContent>

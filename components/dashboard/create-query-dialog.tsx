@@ -19,13 +19,13 @@ export function CreateQueryDialog({ consentName }: { consentName: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue px-3 text-sm text-white hover:bg-marketing-blue/90">
+        <button className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent px-3 text-sm text-white hover:bg-tenant-accent/90">
           <Plus className="h-4 w-4" /> Create query
         </button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Create query</DialogTitle>
+          <DialogTitle className="font-tenant-display text-tenant-ink">Create query</DialogTitle>
           <DialogDescription>
             For a query taken over the phone or in person — nothing is required, save whatever you have.
           </DialogDescription>

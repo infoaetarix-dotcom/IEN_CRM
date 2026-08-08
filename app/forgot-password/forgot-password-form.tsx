@@ -19,7 +19,7 @@ export function ForgotPasswordForm() {
           If an account exists for that email, we&rsquo;ve sent a link to reset
           your password. Check your inbox (and spam folder).
         </p>
-        <Link href="/login" className="text-sm text-marketing-blue hover:underline">
+        <Link href="/login" className="text-sm text-tenant-accent hover:underline">
           &larr; Back to sign in
         </Link>
       </div>
@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
       </div>
       <Button
         type="submit"
-        className="w-full bg-marketing-blue text-white hover:bg-marketing-blue/90"
+        className="w-full bg-tenant-accent text-white hover:bg-tenant-accent/90"
         disabled={pending}
       >
         {pending ? 'Sending…' : 'Send reset link'}

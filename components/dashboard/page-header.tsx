@@ -18,15 +18,15 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-marketing-blue to-marketing-cyan text-white shadow-sm">
+        <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-tenant-accent to-tenant-accent2 text-white shadow-sm">
           <Icon className="h-6 w-6" aria-hidden="true" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-semibold text-marketing-ink">
+          <h1 className="font-tenant-display text-2xl font-semibold text-tenant-ink">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-sm text-marketing-ink/60">{subtitle}</p>
+            <p className="text-sm text-tenant-ink/60">{subtitle}</p>
           )}
         </div>
       </div>
