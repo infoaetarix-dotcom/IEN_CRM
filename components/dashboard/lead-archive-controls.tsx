@@ -126,11 +126,11 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-end gap-1.5">
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8"
+        className="h-8 w-8 rounded-lg border border-marketing-blue/20 bg-marketing-blue/10 text-marketing-blue hover:bg-marketing-blue/20 hover:text-marketing-blue"
         title="Edit"
         disabled={pending}
         onClick={() => router.push(`/leads/${leadId}`)}
@@ -140,7 +140,7 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8"
+        className="h-8 w-8 rounded-lg border border-marketing-cyan/20 bg-marketing-cyan/10 text-marketing-cyan hover:bg-marketing-cyan/20 hover:text-marketing-cyan"
         title="Copy"
         disabled={pending}
         onClick={() => run(() => copyLead(leadId))}
@@ -151,7 +151,7 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
         <Button
           size="icon"
           variant="ghost"
-          className="h-8 w-8 text-destructive hover:text-destructive"
+          className="h-8 w-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-600"
           title="Delete"
           disabled={pending}
           onClick={() => setConfirming(true)}

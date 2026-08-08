@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
+import { KeyRound } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { getOrgBrand } from '@/lib/branding/org';
-import { Brandmark } from '@/components/branding/brandmark';
-import { PoweredByAetarix } from '@/components/branding/powered-by';
+import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { SignOutButton } from '@/components/dashboard/sign-out-button';
 import { Badge } from '@/components/ui/badge';
@@ -30,63 +31,78 @@ export default async function AdminLayout({
   const brand = await getOrgBrand(profile.organization_id);
 
   return (
-    <div className="flex min-h-screen bg-cream">
-      {/* Sidebar — the consultancy's own brand leads on navy */}
-      <aside className="hidden w-60 shrink-0 flex-col bg-navy md:flex">
-        <div className="px-5 py-6">
-          <Link href="/dashboard" className="block">
-            <Brandmark brand={brand} size="h-9" onDark />
-          </Link>
-          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-paper/50">
-            Client CRM
-          </p>
-        </div>
-        <Sidebar role={profile.role} />
+    <div className="flex min-h-screen flex-col bg-marketing-gray">
+      {/* Top navbar — full width: tenant logo left, account controls right */}
+      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-marketing-navy px-4 sm:px-6">
+        <Link
+          href="/dashboard"
+          className="flex items-center rounded-lg  px-3 py-2 shadow-sm"
+        >
+          {/* Tenant's own logo — falls back to the Aetarix wordmark until they upload one. */}
+          {brand.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brand.logoUrl}
+              alt={brand.name}
+              className="h-7 w-auto max-w-[160px] object-contain"
+            />
+          ) : (
+            <Image
+              src={AETARIX.wordmark}
+              alt={AETARIX.name}
+              width={295}
+              height={96}
+              className="h-7 w-auto object-contain"
+            />
+          )}
+        </Link>
 
-        {/* Platform attribution sits at the foot of the tenant's own chrome */}
-        <div className="mt-auto border-t border-paper/10 px-5 py-4">
-          <PoweredByAetarix onDark />
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-6 py-3">
-          {/* Mobile: tenant brand, since the sidebar is hidden */}
-          <Link href="/dashboard" className="md:hidden">
-            <Brandmark brand={brand} size="h-7" />
-          </Link>
-          {/* Desktop: Aetarix reads on white, where the blue mark belongs */}
-          <div className="hidden md:block">
-            <PoweredByAetarix />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3 sm:flex">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-marketing-blue to-marketing-cyan text-xs font-semibold text-white">
+              {initialsFrom(profile.full_name)}
+            </span>
+            <span className="text-sm font-medium text-marketing-offwhite">
+              {profile.full_name}
+            </span>
           </div>
+          <Badge
+            variant={profile.role === 'admin' ? 'accent' : 'neutral'}
+            className={
+              profile.role === 'admin'
+                ? 'border-transparent bg-marketing-blue/15 text-marketing-blue'
+                : undefined
+            }
+          >
+            {profile.role}
+          </Badge>
+          <Link
+            href="/change-password"
+            title="Change password"
+            aria-label="Change password"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-marketing-offwhite/70 transition-colors hover:bg-white/10 hover:text-marketing-offwhite"
+          >
+            <KeyRound className="h-4 w-4" />
+          </Link>
+          <SignOutButton
+            iconOnly
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200"
+          />
+        </div>
+      </header>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">
-                {profile.full_name}
-              </p>
-              <p className="text-xs text-muted-foreground">{profile.email}</p>
-            </div>
-            <Badge variant={profile.role === 'admin' ? 'accent' : 'neutral'}>
-              {profile.role}
-            </Badge>
-            <Link
-              href="/change-password"
-              className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-            >
-              Password
-            </Link>
-            <SignOutButton />
-          </div>
-        </header>
-
-        {/* Mobile nav row */}
-        <div className="border-b border-line bg-navy md:hidden">
+      <div className="flex min-w-0 flex-1 flex-col md:flex-row">
+        {/* Icon-only sidebar */}
+        <aside className="hidden w-16 flex-none flex-col items-center bg-marketing-navy py-4 md:flex">
           <Sidebar role={profile.role} />
+        </aside>
+
+        {/* Mobile nav row — icon-only, horizontal */}
+        <div className="flex items-center border-b border-white/10 bg-marketing-navy md:hidden">
+          <Sidebar role={profile.role} orientation="horizontal" />
         </div>
 
-        <main className="flex-1 p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-6">{children}</main>
       </div>
     </div>
   );

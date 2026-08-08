@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Plus, Users } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
 import {
   RestoreLeadButton,
@@ -119,39 +120,39 @@ export default async function LeadsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="label-eyebrow">Leads</p>
-          <h1 className="font-serif text-2xl">
-            {showArchived ? 'Archived leads' : 'All leads'}
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/leads/new"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-3 text-sm text-white hover:bg-accent/90"
-          >
-            <Plus className="h-4 w-4" /> Create query
-          </Link>
-          <a
-            href={exportHref}
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent text-white px-3 text-sm hover:bg-accent/90"
-          >
-            <Download className="h-4 w-4" /> Export
-          </a>
-          <Link
-            href={showArchived ? '/leads' : '/leads?archived=1'}
-            className="inline-flex items-center gap-2 rounded-md text-sm text-white bg-accent hover:bg-accent/90 h-9 px-3"
-          >
-            {showArchived ? '← Back to active' : 'View archived'}
-          </Link>
-          <p className="text-sm text-muted-foreground">{total} total</p>
-        </div>
+      <PageHeader
+        icon={Users}
+        title={showArchived ? 'Archived leads' : 'All leads'}
+        subtitle={`${total} total · manage your applicant pipeline`}
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/leads/new"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue px-3 text-sm text-white hover:bg-marketing-blue/90"
+            >
+              <Plus className="h-4 w-4" /> Create query
+            </Link>
+            <a
+              href={exportHref}
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-marketing-blue text-white px-3 text-sm hover:bg-marketing-blue/90"
+            >
+              <Download className="h-4 w-4" /> Export
+            </a>
+            <Link
+              href={showArchived ? '/leads' : '/leads?archived=1'}
+              className="inline-flex items-center gap-2 rounded-md text-sm text-marketing-ink border border-marketing-ink/15 hover:bg-marketing-ink/5 h-9 px-3"
+            >
+              {showArchived ? '← Back to active' : 'View archived'}
+            </Link>
+          </div>
+        }
+      />
+
+      <div className="rounded-xl border border-marketing-ink/10 bg-white p-4 shadow-sm">
+        <LeadsFilters />
       </div>
 
-      <LeadsFilters />
-
-      <div className="rounded-lg border border-line bg-white">
+      <div className="rounded-xl border border-marketing-ink/10 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -254,10 +255,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.max(1, page - 1))}
             aria-disabled={page <= 1}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-line px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-marketing-ink/15 px-3 text-sm ${
               page <= 1
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-secondary'
+                : 'hover:bg-marketing-gray'
             }`}
           >
             <ChevronLeft className="h-4 w-4" /> Prev
@@ -265,10 +266,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.min(totalPages, page + 1))}
             aria-disabled={page >= totalPages}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-line px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-marketing-ink/15 px-3 text-sm ${
               page >= totalPages
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-secondary'
+                : 'hover:bg-marketing-gray'
             }`}
           >
             Next <ChevronRight className="h-4 w-4" />

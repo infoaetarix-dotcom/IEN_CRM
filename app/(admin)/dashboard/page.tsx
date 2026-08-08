@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { LayoutDashboard } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { SourceBar, PipelineBar, VolumeLine } from '@/components/charts/dashboard-charts';
 import {
   buildSourceData,
@@ -30,10 +32,14 @@ function MetricCard({
   hint?: string;
 }) {
   return (
-    <Card>
+    <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
       <CardContent className="p-5">
-        <p className="label-eyebrow">{label}</p>
-        <p className="mt-2 font-serif text-3xl">{value}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          {label}
+        </p>
+        <p className="mt-2 font-display text-3xl font-semibold text-marketing-ink">
+          {value}
+        </p>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
@@ -84,12 +90,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="label-eyebrow">Overview</p>
-        <h1 className="font-serif text-2xl">
-          Welcome back, {profile.full_name.split(' ')[0]}
-        </h1>
-      </div>
+      <PageHeader
+        icon={LayoutDashboard}
+        title={`Welcome back, ${profile.full_name.split(' ')[0]}`}
+        subtitle="Your consultancy's leads at a glance"
+      />
 
       {/* Metric cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -113,9 +118,9 @@ export default async function DashboardPage() {
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardHeader>
-            <CardTitle>Leads by source</CardTitle>
+            <CardTitle className="font-display">Leads by source</CardTitle>
           </CardHeader>
           <CardContent>
             {sourceData.length ? (
@@ -127,9 +132,9 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardHeader>
-            <CardTitle>Pipeline status</CardTitle>
+            <CardTitle className="font-display">Pipeline status</CardTitle>
           </CardHeader>
           <CardContent>
             <PipelineBar data={pipelineData} />
@@ -137,9 +142,9 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Lead volume (last 14 days)</CardTitle>
+          <CardTitle className="font-display">Lead volume (last 14 days)</CardTitle>
         </CardHeader>
         <CardContent>
           <VolumeLine data={volumeData} />
@@ -147,9 +152,9 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Recent leads */}
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Recent leads</CardTitle>
+          <CardTitle className="font-display">Recent leads</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           {recent.length === 0 && (
@@ -159,7 +164,7 @@ export default async function DashboardPage() {
             <Link
               key={l.id}
               href={`/leads/${l.id}`}
-              className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-secondary/40"
+              className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-marketing-gray"
             >
               <span className="font-medium">{l.full_name || '(no name)'}</span>
               <span className="flex items-center gap-2">

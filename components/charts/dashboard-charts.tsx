@@ -13,9 +13,9 @@ import {
   Cell,
 } from 'recharts';
 
-const ACCENT = '#C8872E';
-const NAVY = '#0A1A2F';
-const GRID = 'rgba(11,31,51,0.08)';
+const ACCENT = '#2563EB';
+const NAVY = '#0B1220';
+const GRID = 'rgba(17,24,39,0.08)';
 
 interface Datum {
   label: string;
@@ -40,7 +40,7 @@ export function SourceBar({ data }: { data: Datum[] }) {
           tickLine={false}
         />
         <Tooltip
-          cursor={{ fill: 'rgba(200,135,46,0.08)' }}
+          cursor={{ fill: 'rgba(37,99,235,0.08)' }}
           contentStyle={{ fontSize: 12, borderRadius: 8 }}
         />
         <Bar dataKey="value" radius={[4, 4, 0, 0]} fill={ACCENT} />
@@ -51,7 +51,7 @@ export function SourceBar({ data }: { data: Datum[] }) {
 
 const PIPELINE_COLORS: Record<string, string> = {
   New: '#0ea5e9',
-  Contacted: '#C8872E',
+  Contacted: '#2563EB',
   'In progress': '#f59e0b',
   Accepted: '#10b981',
   Rejected: '#ef4444',
@@ -77,7 +77,7 @@ export function PipelineBar({ data }: { data: Datum[] }) {
           tickLine={false}
         />
         <Tooltip
-          cursor={{ fill: 'rgba(11,31,51,0.05)' }}
+          cursor={{ fill: 'rgba(17,24,39,0.05)' }}
           contentStyle={{ fontSize: 12, borderRadius: 8 }}
         />
         <Bar dataKey="value" radius={[4, 4, 0, 0]}>

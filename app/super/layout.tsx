@@ -26,9 +26,7 @@ export default async function SuperLayout({
               super admin
             </Badge>
             <span className="text-sm text-marketing-offwhite/60">{profile.email}</span>
-            <span className="[&_button]:text-marketing-offwhite/60 [&_button:hover]:text-white">
-              <SignOutButton />
-            </span>
+            <SignOutButton className="flex items-center gap-2 text-sm text-marketing-offwhite/60 transition-colors hover:text-white" />
           </div>
         </div>
       </header>
