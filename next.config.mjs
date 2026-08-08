@@ -17,7 +17,7 @@ const csp = [
   "default-src 'self'",
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
   "frame-src https://challenges.cloudflare.com",
   "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",

@@ -33,7 +33,7 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen flex-col bg-marketing-gray">
       {/* Top navbar — full width: tenant logo left, account controls right */}
-      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-marketing-navy px-4 py-10 sm:px-6">
+      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-marketing-navy p-5 md:p-10 ">
         <Link
           href="/dashboard"
           className="flex items-center rounded-lg  px-3 py-2 shadow-sm"
@@ -44,7 +44,7 @@ export default async function AdminLayout({
             <img
               src={brand.logoUrl}
               alt={brand.name}
-              className="h-7 w-auto max-w-[160px] object-contain"
+              className="h-10 w-auto max-w-[160px] object-contain"
             />
           ) : (
             <Image

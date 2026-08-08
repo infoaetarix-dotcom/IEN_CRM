@@ -169,7 +169,12 @@ export async function uploadOrgLogo(
   const { error: upErr } = await service.storage
     .from('org-logos')
     .upload(path, file, { contentType: file.type, upsert: true });
-  if (upErr) return { ok: false, error: 'Upload failed. Please try again.' };
+  if (upErr) {
+    // Surface the real Supabase error (e.g. "Bucket not found" means
+    // migration 0007_org_branding.sql — which creates the org-logos bucket —
+    // hasn't been run against this project yet) instead of a generic message.
+    return { ok: false, error: `Upload failed: ${upErr.message}` };
+  }
 
   const {
     data: { publicUrl },
