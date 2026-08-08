@@ -52,8 +52,10 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
         </div>
       )}
 
-      <section className="space-y-4 rounded-lg border border-line bg-white p-6">
-        <p className="label-eyebrow">Contact</p>
+      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          Contact
+        </p>
         
         <div className="grid gap-4 sm:grid-cols-4">
           <div>
@@ -84,8 +86,10 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
         </label>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-line bg-white p-6">
-        <p className="label-eyebrow">Background</p>
+      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          Background
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <Label htmlFor="date_of_birth">Date of birth</Label>
@@ -148,8 +152,10 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
        
       </section>
 
-      <section className="space-y-4 rounded-lg border border-line bg-white p-6">
-        <p className="label-eyebrow">Goals</p>
+      <section className="space-y-4 rounded-xl border border-marketing-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+          Goals
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="institution">Preferred institution (abroad)</Label>
@@ -216,7 +222,12 @@ export function QuickQueryForm({ consentName }: { consentName: string }) {
       </section>
 
       <div className="flex gap-3">
-        <Button type="submit" variant="accent" size="lg" disabled={pending}>
+        <Button
+          type="submit"
+          size="lg"
+          className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+          disabled={pending}
+        >
           {pending ? 'Saving…' : 'Save'}
         </Button>
         <Button

@@ -114,7 +114,7 @@ export function EmailPanel({
       </Select>
 
       {selected && (
-        <div className="rounded-md border border-line bg-secondary/30 p-3 text-sm">
+        <div className="rounded-md border border-marketing-ink/10 bg-marketing-gray p-3 text-sm">
           <p className="font-medium">{selected.subject}</p>
           <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
             {selected.body}
@@ -132,7 +132,7 @@ export function EmailPanel({
 
       <Button
         size="sm"
-        variant="accent"
+        className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
         disabled={pending || !key}
         onClick={() =>
           run(async () => {

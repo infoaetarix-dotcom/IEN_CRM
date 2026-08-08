@@ -43,7 +43,9 @@ function fmtDateTime(s: string) {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="label-eyebrow">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-marketing-blue">
+        {label}
+      </p>
       <p className="mt-0.5 text-sm">{value || '—'}</p>
     </div>
   );
@@ -139,7 +141,7 @@ export default async function LeadDetailPage({
     <div className="space-y-6">
       <Link
         href="/leads"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-marketing-blue"
       >
         <ArrowLeft className="h-4 w-4" /> Back to leads
       </Link>
@@ -147,7 +149,9 @@ export default async function LeadDetailPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-serif text-2xl">{lead.full_name || '(no name)'}</h1>
+            <h1 className="font-display text-2xl font-semibold text-marketing-ink">
+              {lead.full_name || '(no name)'}
+            </h1>
             <Badge variant={STATUS_BADGE[lead.status as LeadStatus]}>
               {STATUS_LABELS[lead.status as LeadStatus]}
             </Badge>
@@ -182,9 +186,9 @@ export default async function LeadDetailPage({
             canEdit={canEdit}
             initial={initial}
           >
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Contact &amp; location</CardTitle>
+              <CardTitle className="font-display">Contact &amp; location</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Email" value={lead.email} />
@@ -210,9 +214,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Prior education &amp; experience</CardTitle>
+              <CardTitle className="font-display">Prior education &amp; experience</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Highest education" value={lead.highest_education} />
@@ -238,9 +242,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Study goals</CardTitle>
+              <CardTitle className="font-display">Study goals</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Target country" value={lead.target_country} />
@@ -285,9 +289,9 @@ export default async function LeadDetailPage({
 
           </LeadDetailsEditor>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle className="font-display">Notes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <NoteComposer leadId={lead.id} />
@@ -298,7 +302,7 @@ export default async function LeadDetailPage({
                 {(notesRes.data ?? []).map((n) => (
                   <div
                     key={n.id}
-                    className="rounded-md border border-line bg-secondary/20 p-3"
+                    className="rounded-md border border-marketing-ink/10 bg-marketing-gray p-3"
                   >
                     <p className="whitespace-pre-wrap text-sm">{n.body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -317,21 +321,23 @@ export default async function LeadDetailPage({
 
         {/* Right: actions + histories */}
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Manage</CardTitle>
+              <CardTitle className="font-display">Manage</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="label-eyebrow mb-1">Status</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-marketing-blue">
+                  Status
+                </p>
                 <StatusChanger leadId={lead.id} current={lead.status} />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Send email</CardTitle>
+              <CardTitle className="font-display">Send email</CardTitle>
             </CardHeader>
             <CardContent>
               {(templatesRes.data ?? []).length > 0 ? (
@@ -347,9 +353,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Message history</CardTitle>
+              <CardTitle className="font-display">Message history</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(messagesRes.data ?? []).length === 0 && (
@@ -385,9 +391,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Status history</CardTitle>
+              <CardTitle className="font-display">Status history</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(historyRes.data ?? []).length === 0 && (
@@ -410,9 +416,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Lead actions</CardTitle>
+              <CardTitle className="font-display">Lead actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {isArchived && (

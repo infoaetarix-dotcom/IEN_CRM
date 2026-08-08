@@ -69,7 +69,7 @@ export function LeadActions({
         ))}
 
       {canDelete && (
-        <div className="border-t border-line pt-3">
+        <div className="border-t border-marketing-ink/10 pt-3">
           {!confirming ? (
             <Button
               size="sm"

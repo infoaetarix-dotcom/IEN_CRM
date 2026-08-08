@@ -67,7 +67,10 @@ function LField({ label, children }: { label: string; children: ReactElement }) 
   const id = useId();
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="label-eyebrow block">
+      <label
+        htmlFor={id}
+        className="block text-xs font-semibold uppercase tracking-[0.14em] text-marketing-blue"
+      >
         {label}
       </label>
       {cloneElement(children, { id } as { id: string })}
@@ -153,7 +156,12 @@ export function LeadDetailsEditor({
           <Button size="sm" variant="outline" onClick={cancel} disabled={pending}>
             Cancel
           </Button>
-          <Button size="sm" variant="accent" onClick={save} disabled={pending}>
+          <Button
+            size="sm"
+            className="bg-marketing-blue text-white hover:bg-marketing-blue/90"
+            onClick={save}
+            disabled={pending}
+          >
             {pending ? 'Saving…' : 'Save changes'}
           </Button>
         </div>
@@ -165,9 +173,9 @@ export function LeadDetailsEditor({
       )}
 
       {/* Contact & location */}
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Contact &amp; location</CardTitle>
+          <CardTitle className="font-display">Contact &amp; location</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Full name">{text('full_name')}</LField>
@@ -180,9 +188,9 @@ export function LeadDetailsEditor({
       </Card>
 
       {/* Prior education & experience */}
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Prior education &amp; experience</CardTitle>
+          <CardTitle className="font-display">Prior education &amp; experience</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Highest education">
@@ -245,9 +253,9 @@ export function LeadDetailsEditor({
       </Card>
 
       {/* Study goals */}
-      <Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle>Study goals</CardTitle>
+          <CardTitle className="font-display">Study goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Target country">
