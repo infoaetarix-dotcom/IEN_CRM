@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createServiceClient } from '@/lib/supabase/service';
+import { brandFromOrg } from '@/lib/branding';
 
 /**
  * Brevo transactional email + message logging.
@@ -36,19 +37,31 @@ export interface TransactionalEmail {
   subject: string;
   /** Plain text; newlines become <br/> and the content is HTML-escaped. */
   body: string;
+  /**
+   * Display name recipients see as the sender — should be the consultancy's
+   * own name for anything tied to a tenant, never a fixed platform default.
+   * Falls back to BREVO_SENDER_NAME (then a hardcoded default) only when the
+   * caller has no org context to give one.
+   */
+  senderName?: string | null;
 }
 
 /**
  * Raw Brevo transport — no lead, no message log. Used for emails that aren't
  * tied to a lead (staff password resets and other account mail). Lead-facing
  * mail should use `sendEmail`, which logs every attempt to `messages`.
+ *
+ * Every tenant shares one Brevo-verified sender *address* (deliverability —
+ * each consultancy sending from their own domain needs its own domain
+ * verification in Brevo, not done yet) but gets its own sender *name*, so
+ * recipients see the consultancy that actually contacted them.
  */
 export async function sendTransactionalEmail(
   params: TransactionalEmail,
 ): Promise<{ ok: boolean; providerMessageId?: string; error?: string }> {
   const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
-  const senderName = process.env.BREVO_SENDER_NAME ?? 'Visa Consultancy';
+  const senderName = params.senderName || process.env.BREVO_SENDER_NAME || 'Aetarix CRM';
 
   if (!apiKey || !senderEmail) {
     return { ok: false, error: 'Brevo not configured' };
@@ -112,6 +125,14 @@ interface SendResult {
 export async function sendEmail(params: SendParams): Promise<SendResult> {
   const supabase = createServiceClient();
 
+  // The sending org's own name — never a different (or default) tenant's.
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, legal_name')
+    .eq('id', params.organizationId)
+    .single();
+  const senderName = org ? brandFromOrg(org).legalName : undefined;
+
   // 1. Log as queued first so nothing is ever sent without a record.
   const { data: msg, error: logErr } = await supabase
     .from('messages')
@@ -138,6 +159,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
     toName: params.toName,
     subject: params.subject,
     body: params.body,
+    senderName,
   });
 
   if (!res.ok) {

@@ -1,15 +1,25 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
 import { getPublicOrgBrand } from '@/lib/branding/org';
 import { FALLBACK_BRAND } from '@/lib/branding';
 import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
 
-export const metadata = {
-  title: 'Application received',
-};
-
 type SearchParams = Promise<{ org?: string }>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const { org } = await searchParams;
+  const brand = org ? await getPublicOrgBrand(org) : FALLBACK_BRAND;
+  return {
+    title: `Application received — ${brand.name}`,
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
 
 export default async function ThankYouPage({
   searchParams,

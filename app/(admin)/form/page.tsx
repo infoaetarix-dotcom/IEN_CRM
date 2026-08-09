@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { LinkCard } from '@/components/dashboard/form-link-card';
 
-export const metadata = { title: 'Application form — CRM' };
+export const metadata = { title: 'Application form' };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 

@@ -59,7 +59,7 @@ export function OrgBranding({
       {/* Preview on both surfaces the logo actually appears on */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex h-16 items-center rounded-md bg-marketing-navy px-4">
-          <Brandmark brand={brand} size="h-8" onDark />
+          <Brandmark brand={brand} size="h-8" />
         </div>
         <div className="flex h-16 items-center rounded-md border border-marketing-ink/10 bg-white px-4">
           <Brandmark brand={brand} size="h-8" />

@@ -11,7 +11,10 @@ type Params = Promise<{ slug: string }>;
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
   const brand = await getPublicOrgBrand(slug);
-  return { title: `Start your application — ${brand.legalName}` };
+  return {
+    title: `Start your application — ${brand.legalName}`,
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
 }
 
 export default async function ApplyPage({ params }: { params: Params }) {
@@ -28,7 +31,7 @@ export default async function ApplyPage({ params }: { params: Params }) {
       {/* Editorial header band */}
       <header className="bg-tenant-navy px-6 py-12 text-tenant-offwhite">
         <div className="mx-auto max-w-2xl">
-          <Brandmark brand={brand} size="h-10" onDark className="mb-5" />
+          <Brandmark brand={brand} size="h-10" className="mb-5" />
           <h1 className="font-tenant-display text-3xl leading-tight sm:text-4xl">
             Start your study-abroad journey
           </h1>

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { AgentsTable } from '@/components/dashboard/agents-table';
 import { CreateAgentForm } from '@/components/dashboard/agent-controls';
 
-export const metadata = { title: 'Agents — CRM' };
+export const metadata = { title: 'Agents' };
 
 export default async function AgentsPage() {
   // Admin-only (defense in depth: layout guard + this + RLS).

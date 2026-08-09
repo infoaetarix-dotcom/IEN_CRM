@@ -28,7 +28,7 @@ import {
 } from '@/lib/leads/display';
 import { applyLeadFilters } from '@/lib/leads/filters';
 
-export const metadata = { title: 'Leads — CRM' };
+export const metadata = { title: 'Leads' };
 
 const PAGE_SIZE = 20;
 

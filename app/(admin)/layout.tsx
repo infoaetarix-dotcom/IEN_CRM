@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { KeyRound } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
+import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
@@ -10,6 +12,32 @@ import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { SignOutButton } from '@/components/dashboard/sign-out-button';
 import { Badge } from '@/components/ui/badge';
+
+/**
+ * Browser-tab title and favicon for the whole tenant admin panel — the
+ * consultancy's own brand, not a fixed "Aetarix CRM". Deliberately read-only
+ * and best-effort (never throws/redirects): auth enforcement is the layout
+ * component's job below, not metadata generation's.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+  const brand = await getOrgBrand(profile?.organization_id ?? null);
+
+  return {
+    title: { default: brand.name, template: `%s — ${brand.name}` },
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
 
 export default async function AdminLayout({
   children,

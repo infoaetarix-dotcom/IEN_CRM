@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth/guards';
+import { createClient } from '@/lib/supabase/server';
 import { ChangePasswordForm } from './change-password-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { AETARIX } from '@/lib/branding';
@@ -8,7 +10,25 @@ import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
 
-export const metadata = { title: 'Change password — CRM' };
+/** Read-only and best-effort — auth enforcement is the page component's job. */
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { title: 'Change password — CRM' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+  const brand = await getOrgBrand(profile?.organization_id ?? null);
+  return {
+    title: `Change password — ${brand.name}`,
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
 
 export default async function ChangePasswordPage() {
   const profile = await requireUser();

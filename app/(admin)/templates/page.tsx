@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { TemplateEditor } from '@/components/dashboard/template-editor';
 
-export const metadata = { title: 'Email templates — CRM' };
+export const metadata = { title: 'Email templates' };
 
 export default async function TemplatesPage() {
   await requireRole('admin');

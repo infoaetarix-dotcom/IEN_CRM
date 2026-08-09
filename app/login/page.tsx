@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { cookies, headers } from 'next/headers';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LoginForm } from './login-form';
@@ -9,7 +10,19 @@ import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
 import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
 
-export const metadata = { title: 'Staff sign in — Aetarix CRM' };
+async function resolveVisitorBrand() {
+  const [jar, h] = await Promise.all([cookies(), headers()]);
+  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
+  return orgSlug ? await getPublicOrgBrand(orgSlug) : null;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await resolveVisitorBrand();
+  return {
+    title: brand ? `Staff sign in — ${brand.name}` : 'Staff sign in — Aetarix CRM',
+    icons: brand?.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
 
 /**
  * Shared sign-in for every consultancy on the platform. The tenant isn't
@@ -22,9 +35,7 @@ export const metadata = { title: 'Staff sign in — Aetarix CRM' };
  * header, no cookie) gets the Aetarix default, same as before.
  */
 export default async function LoginPage() {
-  const [jar, h] = await Promise.all([cookies(), headers()]);
-  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
-  const brand = orgSlug ? await getPublicOrgBrand(orgSlug) : null;
+  const brand = await resolveVisitorBrand();
   const theme = resolveTheme(brand?.themeKey);
 
   return (

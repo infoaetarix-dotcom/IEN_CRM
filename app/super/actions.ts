@@ -9,6 +9,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { sendTransactionalEmail } from '@/lib/email/brevo';
 import { DEFAULT_TEMPLATES } from '@/lib/org/defaults';
 import { DEFAULT_THEME_KEY, THEME_LIST, type ThemeKey } from '@/lib/branding/themes';
+import { brandFromOrg } from '@/lib/branding';
 
 export interface SuperResult {
   ok: boolean;
@@ -389,6 +390,15 @@ export async function sendPasswordReset(
   const email = userRes.user.email;
   const name = (userRes.user.user_metadata?.full_name as string | undefined) ?? '';
 
+  // The requesting org's own name — this email must never look like it came
+  // from a different (or default) tenant.
+  const { data: orgRow } = await service
+    .from('organizations')
+    .select('name, legal_name')
+    .eq('id', orgId)
+    .single();
+  const orgName = orgRow ? brandFromOrg(orgRow).legalName : 'your organization';
+
   const { data, error } = await service.auth.admin.generateLink({
     type: 'recovery',
     email,
@@ -409,10 +419,11 @@ export async function sendPasswordReset(
     await sendTransactionalEmail({
       to: email,
       toName: name || undefined,
-      subject: 'Reset your CRM password',
+      subject: `Reset your ${orgName} CRM password`,
+      senderName: orgRow ? orgName : undefined,
       body: `${name ? `Hi ${name.split(' ')[0]},` : 'Hello,'}
 
-An administrator has started a password reset for your CRM account.
+An administrator has started a password reset for your ${orgName} CRM account.
 
 Open this link to choose a new password:
 ${link}

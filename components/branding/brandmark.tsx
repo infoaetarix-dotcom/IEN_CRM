@@ -1,14 +1,20 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { AETARIX } from '@/lib/branding';
 import type { OrgBrand } from '@/lib/branding';
 
 /**
- * A tenant's logo, or an initials monogram when none is uploaded.
+ * A tenant's logo, or the Aetarix wordmark when none is uploaded yet —
+ * matches the same fallback already used in the admin panel header and the
+ * login/password pages, so a brand-new consultancy with no logo looks
+ * consistent everywhere rather than showing initials in some places and
+ * Aetarix in others.
  *
  * Tenant logos arrive in unpredictable aspect ratios, so the image is
  * constrained by height with `object-contain` and a max width — a wide
  * wordmark and a square mark both sit correctly without distortion.
  *
- * Uses a plain <img> rather than next/image on purpose: sources are arbitrary
+ * Uses a plain <img> for the tenant logo on purpose: sources are arbitrary
  * per-tenant Storage URLs, and next/image would require editing
  * remotePatterns every time branding moves.
  */
@@ -17,12 +23,10 @@ export function Brandmark({
   className,
   /** Tailwind height class for the logo image, e.g. 'h-8'. */
   size = 'h-8',
-  onDark = false,
 }: {
   brand: OrgBrand;
   className?: string;
   size?: string;
-  onDark?: boolean;
 }) {
   if (brand.logoUrl) {
     return (
@@ -36,19 +40,12 @@ export function Brandmark({
   }
 
   return (
-    <span
-      aria-label={brand.name}
-      className={cn(
-        'inline-flex items-center justify-center rounded-md font-serif text-sm font-medium tracking-wide',
-        size,
-        'aspect-square',
-        onDark
-          ? 'bg-tenant-accent/20 text-tenant-accent'
-          : 'bg-tenant-navy/10 text-tenant-navy',
-        className,
-      )}
-    >
-      {brand.initials}
-    </span>
+    <Image
+      src={AETARIX.wordmark}
+      alt={AETARIX.name}
+      width={295}
+      height={96}
+      className={cn(size, 'w-auto max-w-[220px] object-contain object-left', className)}
+    />
   );
 }
