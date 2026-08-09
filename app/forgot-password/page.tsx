@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ForgotPasswordForm } from './forgot-password-form';
@@ -11,11 +11,11 @@ import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
 
 export const metadata = { title: 'Reset password — CRM' };
 
-/** Pre-auth, same "last org" cookie approach as /login — see that page's comment. */
+/** Pre-auth, same domain-header-then-cookie approach as /login — see that page's comment. */
 export default async function ForgotPasswordPage() {
-  const jar = await cookies();
-  const lastOrgSlug = jar.get(LAST_ORG_COOKIE)?.value;
-  const brand = lastOrgSlug ? await getPublicOrgBrand(lastOrgSlug) : null;
+  const [jar, h] = await Promise.all([cookies(), headers()]);
+  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
+  const brand = orgSlug ? await getPublicOrgBrand(orgSlug) : null;
   const theme = resolveTheme(brand?.themeKey);
 
   return (

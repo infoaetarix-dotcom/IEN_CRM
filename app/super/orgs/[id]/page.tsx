@@ -19,9 +19,8 @@ import {
 } from '@/components/ui/table';
 import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org-controls';
 import { OrgBranding } from '@/components/super/org-branding';
+import { OrgDomains } from '@/components/super/org-domains';
 import { brandFromOrg } from '@/lib/branding';
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
 export default async function OrgDetail({
   params,
@@ -33,7 +32,9 @@ export default async function OrgDetail({
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, slug, status, created_at, legal_name, logo_url, theme_key')
+    .select(
+      'id, name, slug, status, created_at, legal_name, logo_url, theme_key, form_domain, portal_domain',
+    )
     .eq('id', id)
     .single();
   if (!org) notFound();
@@ -80,11 +81,7 @@ export default async function OrgDetail({
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Form link:{' '}
-            <span className="font-mono">
-              {APP_URL}/{org.slug}/apply
-            </span>{' '}
-            · {leadsRes.count ?? 0} leads
+            {leadsRes.count ?? 0} leads
           </p>
         </div>
         <SuspendToggle orgId={org.id} status={org.status} />
@@ -105,6 +102,20 @@ export default async function OrgDetail({
               Applies to their admin panel, login, and password pages.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Domains</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrgDomains
+            orgId={org.id}
+            slug={org.slug}
+            formDomain={org.form_domain}
+            portalDomain={org.portal_domain}
+          />
         </CardContent>
       </Card>
 

@@ -11,7 +11,8 @@ is the first client — not the product.** Never hardcode a client's name, colou
 or copy: anything tenant-specific comes from the `organizations` row.
 
 Two audiences, two surfaces:
-- **Applicants** — a public 3-step form (`/apply`) that captures leads progressively.
+- **Applicants** — a public 3-step form (`/{slug}/apply`, one per consultancy)
+  that captures leads progressively.
 - **Consultancy staff** — the CRM (`/dashboard`, `/leads`, `/agents`, `/templates`).
 - **Aetarix** — the platform console (`/super`) to onboard and configure tenants.
 
@@ -65,9 +66,15 @@ API** — not Supabase SMTP. `sendTransactionalEmail()` is the raw transport;
 `admin.generateLink()` and send it ourselves, so the link is on our domain
 (`/auth/confirm`) and can be branded per tenant later.
 
-**Domain split.** `FORM_HOST` env var: on that host only the public form is
-served and every CRM path (including `/login`) redirects to `/apply`. Unset =
-no-op. Live: `form.ieneducation.com` (form) and `portal.ieneducation.com` (CRM).
+**Domain split.** Per-org `form_domain` / `portal_domain` columns on
+`organizations`, set exclusively in Super Admin (`/super/orgs/{id}` →
+Domains) — never tenant self-service. `lib/routing/domain-lookup.ts` resolves
+the request Host header to an org; `lib/routing/domain-routing.ts` holds the
+pure routing rules; `middleware.ts` applies them. A `form_domain` serves only
+that org's `/{slug}/apply`; a `portal_domain` serves the full CRM but blocks
+`/super` and signs out any session that isn't that org's own. No custom
+domain is configured today — everything currently runs on the base app
+domain, same as before this existed. See `docs/FORM_SUBDOMAIN.md`.
 
 ## Conventions
 

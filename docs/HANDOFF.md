@@ -48,8 +48,8 @@ run against the real Supabase project (they create and clean up their own data).
 | **Phase A** — multi-tenant foundation, org-scoped RLS | live |
 | **Phase B** — `/super` platform console (create org, modules, suspend, team) | live |
 | Auth: roles, forced password change, self-service change, email reset | live |
-| Per-tenant branding (logo + name), Aetarix platform brand | live |
-| Form/CRM domain split via `FORM_HOST` | live |
+| Per-tenant branding (logo + name + color theme), Aetarix platform brand | live |
+| Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -107,15 +107,20 @@ analytics and email. `leads` is a core module and always on.
 → Spec and task-by-task plan in `docs/superpowers/`. Branch:
 `phase-c-module-gating`.
 
-**Phase D — per-consultancy form links** *(Stage 1 done)*
+**Phase D — per-consultancy form links** *(done)*
 `/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.
-`/ien/apply`), resolved from the slug already collected at org creation. Bare
-`/apply` now redirects to the marketing site instead of defaulting to `ien`.
-Stage 2 (custom domains — `form.ieneducation.com`, `portal.ieneducation.com`
-per org, fully Super-Admin-configured) is planned but not started: needs
-`form_domain`/`portal_domain` columns on `organizations` and middleware that
-resolves an org by incoming Host header instead of the single hardcoded
-`FORM_HOST`.
+`/ien/apply`), themed dynamically like the rest of their surfaces. Bare
+`/apply` redirects to the marketing site instead of defaulting to `ien`.
+
+Stage 2 — custom domains — also ships: `organizations.form_domain` /
+`portal_domain` (migration `0018_org_domains.sql`), set exclusively in Super
+Admin (`/super/orgs/{id}` → Domains), resolved per-request by
+`lib/routing/domain-lookup.ts` + `lib/routing/domain-routing.ts`. Replaces
+the old single-domain `FORM_HOST` env var entirely — nothing reads it
+anymore. **No consultancy has a custom domain configured yet**; everything
+still runs on the base app domain until a Super Admin sets one (see
+`docs/FORM_SUBDOMAIN.md` for the setup steps, including the required Vercel +
+DNS side that can't be done from code).
 
 **UI/UX polish** *(in progress)*
 Branding landed. Remaining: screen-by-screen design pass (dashboard, leads

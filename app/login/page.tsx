@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LoginForm } from './login-form';
@@ -13,17 +13,18 @@ export const metadata = { title: 'Staff sign in — Aetarix CRM' };
 
 /**
  * Shared sign-in for every consultancy on the platform. The tenant isn't
- * known until after authentication (all clients share one domain) — so
- * unlike the admin panel, this page can't just read profile.organization_id.
- * Instead it uses a "last org" cookie set on a previous successful sign-in
- * (see lib/auth/actions.ts) to guess the theme/logo for a returning user on
- * this browser; a first-time visitor (or no cookie) gets the Aetarix
- * default, same as before.
+ * known until after authentication — so unlike the admin panel, this page
+ * can't just read profile.organization_id. On a consultancy's own
+ * form_domain/portal_domain, middleware already knows which org that is and
+ * forwards it as the x-tenant-slug header; otherwise (the base app domain)
+ * it falls back to a "last org" cookie set on a previous successful sign-in
+ * (see lib/auth/actions.ts). A first-time visitor on the base domain (no
+ * header, no cookie) gets the Aetarix default, same as before.
  */
 export default async function LoginPage() {
-  const jar = await cookies();
-  const lastOrgSlug = jar.get(LAST_ORG_COOKIE)?.value;
-  const brand = lastOrgSlug ? await getPublicOrgBrand(lastOrgSlug) : null;
+  const [jar, h] = await Promise.all([cookies(), headers()]);
+  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
+  const brand = orgSlug ? await getPublicOrgBrand(orgSlug) : null;
   const theme = resolveTheme(brand?.themeKey);
 
   return (

@@ -262,6 +262,83 @@ export async function updateOrgLegalName(
   return { ok: true };
 }
 
+const domainSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(255)
+  .refine(
+    (v) =>
+      v === '' ||
+      /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(v),
+    { message: 'Enter a valid domain, e.g. form.yourdomain.com' },
+  );
+
+/** Does any *other* org already claim this domain, on either field? */
+async function domainClaimedByAnotherOrg(
+  service: ReturnType<typeof createServiceClient>,
+  domain: string,
+  excludeOrgId: string,
+): Promise<boolean> {
+  const [{ data: a }, { data: b }] = await Promise.all([
+    service.from('organizations').select('id').eq('form_domain', domain).neq('id', excludeOrgId).maybeSingle(),
+    service.from('organizations').select('id').eq('portal_domain', domain).neq('id', excludeOrgId).maybeSingle(),
+  ]);
+  return !!a || !!b;
+}
+
+/**
+ * Set a consultancy's dedicated form and/or portal domain. Super-admin only
+ * — the domain itself must also be added to the Vercel project (Settings →
+ * Domains) with its DNS CNAME pointed at Vercel, or requests to it will
+ * never reach this app; see docs/FORM_SUBDOMAIN.md. Pass '' to clear either.
+ */
+export async function setOrgDomains(
+  orgId: string,
+  formDomain: string,
+  portalDomain: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const fParsed = domainSchema.safeParse(formDomain);
+  if (!fParsed.success) return { ok: false, error: `Form domain: ${fParsed.error.issues[0]!.message}` };
+  const pParsed = domainSchema.safeParse(portalDomain);
+  if (!pParsed.success) return { ok: false, error: `Portal domain: ${pParsed.error.issues[0]!.message}` };
+
+  const form_domain = fParsed.data || null;
+  const portal_domain = pParsed.data || null;
+  if (form_domain && form_domain === portal_domain) {
+    return { ok: false, error: 'Form and portal domains must be different.' };
+  }
+
+  const service = createServiceClient();
+
+  if (form_domain && (await domainClaimedByAnotherOrg(service, form_domain, orgId))) {
+    return { ok: false, error: `"${form_domain}" is already in use by another consultancy.` };
+  }
+  if (portal_domain && (await domainClaimedByAnotherOrg(service, portal_domain, orgId))) {
+    return { ok: false, error: `"${portal_domain}" is already in use by another consultancy.` };
+  }
+
+  const { error } = await service
+    .from('organizations')
+    .update({ form_domain, portal_domain })
+    .eq('id', orgId);
+  if (error) return { ok: false, error: 'Could not save the domains.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { form_domain, portal_domain },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
 /** Enable or disable a module for a consultancy (packaging). */
 export async function toggleModule(
   orgId: string,

@@ -3,8 +3,16 @@
 import { useState } from 'react';
 import { Copy, Check, ExternalLink } from 'lucide-react';
 
-/** Shows the org's public application URL with a one-click copy button. */
-export function FormLinkCard({ url }: { url: string }) {
+/** A labeled, copyable URL — used for the org's application form and portal links. */
+export function LinkCard({
+  label,
+  url,
+  description,
+}: {
+  label: string;
+  url: string;
+  description: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -15,7 +23,7 @@ export function FormLinkCard({ url }: { url: string }) {
 
   return (
     <div className="rounded-lg border border-tenant-ink/10 bg-white p-6">
-      <p className="label-eyebrow">Your public application form</p>
+      <p className="label-eyebrow">{label}</p>
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
         <code className="flex-1 truncate rounded-md border border-tenant-ink/10 bg-tenant-gray px-3 py-2 text-sm text-tenant-ink">
           {url}
@@ -39,11 +47,7 @@ export function FormLinkCard({ url }: { url: string }) {
           </a>
         </div>
       </div>
-      <p className="mt-4 text-sm text-tenant-ink/60">
-        Share this link with prospective students, or add it to your website,
-        ads, and social bios. Every submission comes straight into your Leads
-        pipeline.
-      </p>
+      <p className="mt-4 text-sm text-tenant-ink/60">{description}</p>
     </div>
   );
 }
