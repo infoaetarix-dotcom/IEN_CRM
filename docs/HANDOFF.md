@@ -85,11 +85,15 @@ Migrations `0001`–`0007` are applied to production.
   needed for tight spaces and a favicon.
 - **Platform base domain move to `consultancy.aetarix.com`** (owner owns
   `aetarix.com`, currently unused; base domain is `ien-crm.vercel.app`). Owner's
-  side: add the domain in Vercel, add `https://consultancy.aetarix.com/auth/confirm`
-  to Supabase Auth's allowed redirect URLs (**keep the old `vercel.app` one too**
-  until IEN's existing link is retired — see `GO_LIVE.md`), then update
-  `NEXT_PUBLIC_APP_URL`. No code change needed — this is a platform-wide domain,
-  unrelated to the per-tenant `form_domain`/`portal_domain` feature above.
+  side: add the domain in Vercel, update `NEXT_PUBLIC_APP_URL`, keep the old
+  `vercel.app` domain attached too until IEN's existing link is retired (see
+  `GO_LIVE.md`). No code change needed, and no Supabase Auth dashboard step
+  either — password reset (`app/super/actions.ts` → `sendPasswordReset`) mints
+  its own token and verifies it via `/auth/confirm` (`verifyOtp` directly, off
+  the request's own `Host` header), never Supabase's `redirectTo`/OAuth
+  mechanism, which is the only thing Supabase's redirect-URL allowlist governs.
+  This is a platform-wide domain, unrelated to the per-tenant
+  `form_domain`/`portal_domain` feature above.
 
 ### Accepted risks (owner's explicit decision)
 - **No database backups.** Supabase free tier. A hard delete or bad migration is
