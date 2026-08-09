@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
 import { getPublicOrgBrand } from '@/lib/branding/org';
