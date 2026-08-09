@@ -47,7 +47,9 @@ run against the real Supabase project (they create and clean up their own data).
 | Email templates, transactional send, message log | live |
 | **Phase A** — multi-tenant foundation, org-scoped RLS | live |
 | **Phase B** — `/super` platform console (create org, modules, suspend, team) | live |
-| Auth: roles, forced password change, self-service change, email reset | live |
+| Auth: roles, forced password change, self-service change | live |
+| Login hardening: Turnstile, rate limiting, failed-attempt logging | live |
+| Password reset: super-admin-issued only (no self-service) | live |
 | Per-tenant branding (logo + name + color theme), Aetarix platform brand | live |
 | Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
 | Keep-warm cron (stops free-tier idle pause) | live |

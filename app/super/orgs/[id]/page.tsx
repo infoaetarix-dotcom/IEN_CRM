@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -20,6 +21,7 @@ import {
 import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org-controls';
 import { OrgBranding } from '@/components/super/org-branding';
 import { OrgDomains } from '@/components/super/org-domains';
+import { SendResetButton } from '@/components/super/send-reset-button';
 import { brandFromOrg } from '@/lib/branding';
 
 export default async function OrgDetail({
@@ -59,6 +61,16 @@ export default async function OrgDetail({
 
   const enabled = new Map(
     (orgModules ?? []).map((m) => [m.module_key, m.enabled]),
+  );
+
+  // Email lives on the auth user, not the profiles row — resolved via the
+  // admin API, only ever from this super-admin-only page.
+  const service = createServiceClient();
+  const staffWithEmail = await Promise.all(
+    (staff ?? []).map(async (s) => {
+      const { data } = await service.auth.admin.getUserById(s.id);
+      return { ...s, email: data.user?.email ?? null };
+    }),
   );
 
   return (
@@ -119,72 +131,76 @@ export default async function OrgDetail({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">Package — modules</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {(modules ?? []).map((m) => (
-              <ModuleToggle
-                key={m.key}
-                orgId={org.id}
-                moduleKey={m.key}
-                moduleName={m.name}
-                enabled={enabled.get(m.key) === true}
-              />
-            ))}
-          </CardContent>
-        </Card>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Package — modules</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          {(modules ?? []).map((m) => (
+            <ModuleToggle
+              key={m.key}
+              orgId={org.id}
+              moduleKey={m.key}
+              moduleName={m.name}
+              enabled={enabled.get(m.key) === true}
+            />
+          ))}
+        </CardContent>
+      </Card>
 
-        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">Team</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Team</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Password</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {staffWithEmail.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.full_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{s.email ?? '—'}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={s.role === 'admin' ? 'accent' : 'neutral'}
+                      className={
+                        s.role === 'admin'
+                          ? 'border-transparent bg-marketing-blue/15 text-marketing-blue'
+                          : undefined
+                      }
+                    >
+                      {s.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={s.is_active ? 'success' : 'danger'}>
+                      {s.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <SendResetButton userId={s.id} orgId={org.id} />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(staff ?? []).map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.full_name}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={s.role === 'admin' ? 'accent' : 'neutral'}
-                        className={
-                          s.role === 'admin'
-                            ? 'border-transparent bg-marketing-blue/15 text-marketing-blue'
-                            : undefined
-                        }
-                      >
-                        {s.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={s.is_active ? 'success' : 'danger'}>
-                        {s.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(staff ?? []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
-                      No staff yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+              {staffWithEmail.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-muted-foreground">
+                    No staff yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

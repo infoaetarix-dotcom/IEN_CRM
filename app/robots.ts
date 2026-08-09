@@ -20,7 +20,6 @@ export default function robots(): MetadataRoute.Robots {
         '/login',
         '/apply',
         '/change-password',
-        '/forgot-password',
         '/update-password',
         '/api',
       ],

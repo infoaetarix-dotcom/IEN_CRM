@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { serviceClient, TEST_PASSWORD } from './helpers';
+import { serviceClient, TEST_PASSWORD, submitLogin } from './helpers';
 
 /**
  * A super admin has cross-org RLS access, so if they land in the org CRM they
@@ -32,10 +32,7 @@ test('a super admin is kept out of the org CRM and routed to /super', async ({
     .eq('id', uid);
 
   try {
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill(email);
-    await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-    await page.getByRole('button', { name: /sign in/i }).click();
+    await submitLogin(page, email, TEST_PASSWORD);
 
     // Sign-in lands on the platform console, not a tenant dashboard.
     await page.waitForURL(/\/super/);

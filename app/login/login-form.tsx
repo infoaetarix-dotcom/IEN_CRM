@@ -1,16 +1,17 @@
 'use client';
 
-import { useActionState } from 'react';
-import Link from 'next/link';
+import { useActionState, useState } from 'react';
 import { signIn, type LoginState } from '@/lib/auth/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Turnstile } from '@/components/form/turnstile';
 
 const initial: LoginState = {};
 
 export function LoginForm() {
   const [state, action, isPending] = useActionState(signIn, initial);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   return (
     <form action={action} className="space-y-4">
@@ -19,6 +20,7 @@ export function LoginForm() {
           {state.error}
         </div>
       )}
+      <input type="hidden" name="cf-turnstile-response" value={turnstileToken} />
       <div>
         <Label htmlFor="email">Email</Label>
         <Input
@@ -30,15 +32,7 @@ export function LoginForm() {
         />
       </div>
       <div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Link
-            href="/forgot-password"
-            className="text-xs text-muted-foreground hover:text-tenant-accent hover:underline"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           name="password"
@@ -47,6 +41,7 @@ export function LoginForm() {
           required
         />
       </div>
+      <Turnstile onVerify={setTurnstileToken} />
       <Button
         type="submit"
         className="w-full bg-tenant-accent text-white hover:bg-tenant-accent/90"
@@ -54,6 +49,9 @@ export function LoginForm() {
       >
         {isPending ? 'Signing in…' : 'Sign in'}
       </Button>
+      <p className="text-center text-xs text-muted-foreground">
+        Forgotten your password? Contact your administrator.
+      </p>
     </form>
   );
 }

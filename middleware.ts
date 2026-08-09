@@ -34,8 +34,8 @@ export async function middleware(request: NextRequest) {
   const domainMatch = await resolveDomain(host);
 
   // Forward the resolved tenant to pages that want to brand a pre-auth
-  // screen (login, forgot-password) by domain instead of guessing from a
-  // "last org" cookie — meaningful on a first-ever visit to a custom domain.
+  // screen (login) by domain instead of guessing from a "last org" cookie —
+  // meaningful on a first-ever visit to a custom domain.
   const requestHeaders = new Headers(request.headers);
   if (domainMatch) requestHeaders.set('x-tenant-slug', domainMatch.slug);
   const nextInit = { request: { headers: requestHeaders } };

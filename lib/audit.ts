@@ -17,7 +17,9 @@ export type AuditAction =
   | 'profile_change'
   | 'org_change'
   | 'module_change'
-  | 'login';
+  | 'login'
+  | 'login_failed'
+  | 'password_reset_sent';
 
 export type AuditEntity = 'lead' | 'message' | 'profile' | 'organization';
 

@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { TEST_USERS, TEST_PASSWORD, STATE_FILE } from './helpers';
+import { TEST_USERS, TEST_PASSWORD, STATE_FILE, submitLogin } from './helpers';
 
 function state() {
   return JSON.parse(readFileSync(STATE_FILE, 'utf8'));
 }
 
 async function login(page: import('@playwright/test').Page, email: string) {
-  await page.goto('/login');
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await submitLogin(page, email, TEST_PASSWORD);
   await page.waitForURL(/\/dashboard/);
 }
 

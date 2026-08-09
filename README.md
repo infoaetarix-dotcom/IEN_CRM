@@ -79,8 +79,8 @@ merge the code that depends on it. Never edit an applied migration.
 
 | Path | Who |
 |---|---|
-| `/apply`, `/thank-you` | applicants (public) |
-| `/login`, `/forgot-password`, `/update-password`, `/change-password` | auth |
+| `/{slug}/apply`, `/thank-you` | applicants (public) |
+| `/login`, `/update-password`, `/change-password` | auth |
 | `/dashboard`, `/leads`, `/agents`, `/templates` | consultancy staff |
 | `/super`, `/super/orgs/[id]` | Aetarix platform admin |
 | `/api/health`, `/api/keep-warm` | uptime + free-tier keep-warm cron |

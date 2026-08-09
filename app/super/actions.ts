@@ -1,10 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireSuperAdmin } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
+import { sendTransactionalEmail } from '@/lib/email/brevo';
 import { DEFAULT_TEMPLATES } from '@/lib/org/defaults';
 import { DEFAULT_THEME_KEY, THEME_LIST, type ThemeKey } from '@/lib/branding/themes';
 
@@ -362,5 +364,73 @@ export async function toggleModule(
     metadata: { module: moduleKey, enabled },
   });
   revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+/**
+ * Send a staff member a password-reset link. Super-admin only — staff no
+ * longer have self-service "forgot password" (README-noted security
+ * decision), so this is the sole way anyone regains access. Reuses the same
+ * mechanism the old self-service flow used: a link minted with the admin API
+ * and delivered through our own Brevo transport, landing on /auth/confirm →
+ * /update-password.
+ */
+export async function sendPasswordReset(
+  userId: string,
+  orgId: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const service = createServiceClient();
+
+  const { data: userRes, error: userErr } = await service.auth.admin.getUserById(userId);
+  if (userErr || !userRes.user?.email) {
+    return { ok: false, error: 'Could not find that user.' };
+  }
+  const email = userRes.user.email;
+  const name = (userRes.user.user_metadata?.full_name as string | undefined) ?? '';
+
+  const { data, error } = await service.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+  });
+  const tokenHash = data?.properties?.hashed_token;
+  if (error || !tokenHash) {
+    return { ok: false, error: 'Could not generate a reset link.' };
+  }
+
+  const h = await headers();
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const origin = `${proto}://${h.get('host')}`;
+  const link = `${origin}/auth/confirm?token_hash=${encodeURIComponent(
+    tokenHash,
+  )}&type=recovery&next=${encodeURIComponent('/update-password')}`;
+
+  try {
+    await sendTransactionalEmail({
+      to: email,
+      toName: name || undefined,
+      subject: 'Reset your CRM password',
+      body: `${name ? `Hi ${name.split(' ')[0]},` : 'Hello,'}
+
+An administrator has started a password reset for your CRM account.
+
+Open this link to choose a new password:
+${link}
+
+This link can only be used once and expires shortly. If you weren't expecting this, contact your administrator before using it.`,
+    });
+  } catch {
+    return { ok: false, error: 'Could not send the email.' };
+  }
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'password_reset_sent',
+    entity: 'profile',
+    entityId: userId,
+    metadata: { email },
+  });
+
   return { ok: true };
 }

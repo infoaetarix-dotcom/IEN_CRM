@@ -1,10 +1,20 @@
 import 'server-only';
 
+import { headers } from 'next/headers';
+
 /**
  * IP-based rate limiting. Uses Upstash Redis when configured; otherwise falls
  * back to an in-memory sliding window (fine for local/single-instance, NOT for
  * multi-instance production — set Upstash env vars before scaling).
  */
+
+/** Best-effort client IP from proxy headers — 'unknown' if neither is set. */
+export async function clientIp(): Promise<string> {
+  const h = await headers();
+  const fwd = h.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0]!.trim();
+  return h.get('x-real-ip') ?? 'unknown';
+}
 
 type Result = { success: boolean; remaining: number };
 

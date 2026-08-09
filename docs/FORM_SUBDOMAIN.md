@@ -31,9 +31,9 @@ change their own domain — only Aetarix, from `/super/orgs/{id}` → Domains.
   tenant's (or the platform's) data, even from a stale/borrowed session.
 - **Host matches neither (the base app domain):** unchanged — full CRM with
   auth, `/super`, and the marketing page all behave exactly as before.
-- `/login` and `/forgot-password` read the resolved org from the
-  `x-tenant-slug` request header middleware sets whenever a domain matched,
-  so a consultancy's own domain shows their branding immediately — even on a
+- `/login` reads the resolved org from the `x-tenant-slug` request header
+  middleware sets whenever a domain matched, so a consultancy's own domain
+  shows their branding immediately — even on a
   visitor's very first visit, before any "last org" cookie exists.
 
 ## Setting one up (Super Admin does this per consultancy)
