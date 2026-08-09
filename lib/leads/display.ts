@@ -38,6 +38,7 @@ export const LEAD_SOURCES = [
   'linkedin',
   'youtube',
   'whatsapp',
+  'website',
   'direct',
   'other',
 ] as const;
@@ -49,6 +50,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   linkedin: 'LinkedIn',
   youtube: 'YouTube',
   whatsapp: 'WhatsApp',
+  website: 'Website',
   direct: 'Direct',
   other: 'Other',
 };

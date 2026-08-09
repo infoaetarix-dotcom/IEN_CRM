@@ -75,6 +75,7 @@ describe('normalizeSource', () => {
   it('maps known sources', () => {
     expect(normalizeSource('instagram')).toBe('instagram');
     expect(normalizeSource('Facebook')).toBe('facebook');
+    expect(normalizeSource('website')).toBe('website');
   });
   it('maps unknown to other and empty to direct', () => {
     expect(normalizeSource('tiktok')).toBe('other');

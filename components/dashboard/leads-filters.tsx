@@ -7,18 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LEAD_STATUSES, STATUS_LABELS, LEAD_SOURCES, SOURCE_LABELS } from '@/lib/leads/display';
 
-interface AgentOption {
-  id: string;
-  full_name: string;
-}
-
-export function LeadsFilters({
-  agents,
-  showAgentFilter,
-}: {
-  agents: AgentOption[];
-  showAgentFilter: boolean;
-}) {
+export function LeadsFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -86,22 +75,6 @@ export function LeadsFilters({
         <option value="complete">Completed</option>
         <option value="incomplete">Incomplete only</option>
       </Select>
-
-      {showAgentFilter && (
-        <Select
-          defaultValue={params.get('agent') ?? ''}
-          className="w-[170px]"
-          onChange={(e) => setParam('agent', e.target.value)}
-        >
-          <option value="">All agents</option>
-          <option value="unassigned">Unassigned</option>
-          {agents.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.full_name}
-            </option>
-          ))}
-        </Select>
-      )}
 
       {isPending && (
         <span className="text-xs text-muted-foreground">Updating…</span>

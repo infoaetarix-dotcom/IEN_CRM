@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Copy, Pencil, Trash2 } from 'lucide-react';
 import {
   archiveLead,
   unarchiveLead,
   deleteLead,
+  copyLead,
 } from '@/app/(admin)/leads/actions';
 import { Button } from '@/components/ui/button';
 
@@ -68,7 +69,7 @@ export function LeadActions({
         ))}
 
       {canDelete && (
-        <div className="border-t border-line pt-3">
+        <div className="border-t border-tenant-ink/10 pt-3">
           {!confirming ? (
             <Button
               size="sm"
@@ -110,6 +111,74 @@ export function LeadActions({
       )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Edit / Copy / Delete controls for a row in the active-leads list. Any
+ * active org member may use all three (shared-data model) — Edit navigates
+ * via the router instead of a real <a href>, so hovering the button doesn't
+ * preview the lead's raw UUID in the browser's status bar.
+ */
+export function LeadRowActions({ leadId }: { leadId: string }) {
+  const { pending, error, run, router } = useRun();
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 rounded-lg border border-tenant-accent/20 bg-tenant-accent/10 text-tenant-accent hover:bg-tenant-accent/20 hover:text-tenant-accent"
+        title="Edit"
+        disabled={pending}
+        onClick={() => router.push(`/leads/${leadId}`)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 rounded-lg border border-tenant-accent2/20 bg-tenant-accent2/10 text-tenant-accent2 hover:bg-tenant-accent2/20 hover:text-tenant-accent2"
+        title="Copy"
+        disabled={pending}
+        onClick={() => run(() => copyLead(leadId))}
+      >
+        <Copy className="h-4 w-4" />
+      </Button>
+      {!confirming ? (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-600"
+          title="Delete"
+          disabled={pending}
+          onClick={() => setConfirming(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ) : (
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={pending}
+            onClick={() => run(() => deleteLead(leadId))}
+          >
+            {pending ? 'Deleting…' : 'Confirm'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => setConfirming(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
+      {error && <span className="text-xs text-destructive">{error}</span>}
     </div>
   );
 }

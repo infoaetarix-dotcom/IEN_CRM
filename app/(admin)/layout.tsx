@@ -1,12 +1,41 @@
 import Link from 'next/link';
+import Image from 'next/image';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/guards';
+import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
-import { Brandmark } from '@/components/branding/brandmark';
-import { PoweredByAetarix } from '@/components/branding/powered-by';
+import { resolveTheme } from '@/lib/branding/themes';
+import { themeStyleVars } from '@/lib/branding/theme-style';
+import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
-import { SignOutButton } from '@/components/dashboard/sign-out-button';
-import { Badge } from '@/components/ui/badge';
+import { AccountMenu } from '@/components/dashboard/account-menu';
+
+/**
+ * Browser-tab title and favicon for the whole tenant admin panel — the
+ * consultancy's own brand, not a fixed "Aetarix CRM". Deliberately read-only
+ * and best-effort (never throws/redirects): auth enforcement is the layout
+ * component's job below, not metadata generation's.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+  const brand = await getOrgBrand(profile?.organization_id ?? null);
+
+  return {
+    title: { default: brand.name, template: `%s — ${brand.name}` },
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
 
 export default async function AdminLayout({
   children,
@@ -28,65 +57,77 @@ export default async function AdminLayout({
 
   // Tenant brand — never hardcode a client here; consultancy #2 uses this too.
   const brand = await getOrgBrand(profile.organization_id);
+  const theme = resolveTheme(brand.themeKey);
+
+  // Which opt-in modules (e.g. Finance) this org has enabled — drives nav
+  // visibility. The route itself re-checks this independently; hiding the
+  // link is a UX nicety, not the access control.
+  const supabase = await createClient();
+  const { data: orgModules } = await supabase
+    .from('organization_modules')
+    .select('module_key')
+    .eq('organization_id', profile.organization_id)
+    .eq('enabled', true);
+  const enabledModules = (orgModules ?? []).map((m) => m.module_key);
 
   return (
-    <div className="flex min-h-screen bg-cream">
-      {/* Sidebar — the consultancy's own brand leads on navy */}
-      <aside className="hidden w-60 shrink-0 flex-col bg-navy md:flex">
-        <div className="px-5 py-6">
-          <Link href="/dashboard" className="block">
-            <Brandmark brand={brand} size="h-9" onDark />
-          </Link>
-          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-paper/50">
-            Client CRM
-          </p>
-        </div>
-        <Sidebar role={profile.role} />
+    <div
+      id="tenant-theme-root"
+      style={themeStyleVars(theme.tokens)}
+      className="bg-tenant-gray flex min-h-screen flex-col"
+    >
+      {/* Top navbar — full width: tenant logo left, account controls right */}
+      <header className="bg-tenant-navy flex h-16 flex-none items-center justify-between border-b border-white/10 p-5 md:p-10">
+        <Link
+          href="/dashboard"
+          className="relative flex items-center rounded-lg px-3 py-2"
+        >
+          {/* Transparent blurred background */}
+          <div className="absolute inset-0 rounded-lg bg-white/5 backdrop-blur-md" />
 
-        {/* Platform attribution sits at the foot of the tenant's own chrome */}
-        <div className="mt-auto border-t border-paper/10 px-5 py-4">
-          <PoweredByAetarix onDark />
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 border-b border-line bg-white px-6 py-3">
-          {/* Mobile: tenant brand, since the sidebar is hidden */}
-          <Link href="/dashboard" className="md:hidden">
-            <Brandmark brand={brand} size="h-7" />
-          </Link>
-          {/* Desktop: Aetarix reads on white, where the blue mark belongs */}
-          <div className="hidden md:block">
-            <PoweredByAetarix />
+          {/* Logo stays sharp */}
+          <div className="relative z-10">
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt={brand.name}
+                className="h-10 w-auto max-w-[160px] object-contain"
+              />
+            ) : (
+              <Image
+                src={AETARIX.wordmark}
+                alt={AETARIX.name}
+                width={295}
+                height={96}
+                className="h-10 w-auto object-contain"
+              />
+            )}
           </div>
+        </Link>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">
-                {profile.full_name}
-              </p>
-              <p className="text-xs text-muted-foreground">{profile.email}</p>
-            </div>
-            <Badge variant={profile.role === 'admin' ? 'accent' : 'neutral'}>
-              {profile.role}
-            </Badge>
-            <Link
-              href="/change-password"
-              className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-            >
-              Password
-            </Link>
-            <SignOutButton />
-          </div>
-        </header>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <AccountMenu
+            fullName={profile.full_name}
+            email={profile.email}
+            role={profile.role}
+            initials={initialsFrom(profile.full_name)}
+          />
+        </div>
+      </header>
 
-        {/* Mobile nav row */}
-        <div className="border-b border-line bg-navy md:hidden">
-          <Sidebar role={profile.role} />
+      <div className="flex min-w-0 flex-1 flex-col md:flex-row">
+        {/* Icon-only sidebar */}
+        <aside className="bg-tenant-navy hidden w-16 flex-none flex-col items-center px-10 py-4 md:flex">
+          <Sidebar role={profile.role} enabledModules={enabledModules} />
+        </aside>
+
+        {/* Mobile nav row — icon-only, horizontal */}
+        <div className="bg-tenant-navy flex items-center border-b border-white/10 py-3 md:hidden">
+          <Sidebar role={profile.role} enabledModules={enabledModules} orientation="horizontal" />
         </div>
 
-        <main className="flex-1 p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-6">{children}</main>
       </div>
     </div>
   );

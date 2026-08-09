@@ -36,13 +36,19 @@ export function TemplateEditor({ template }: { template: Template }) {
   return (
     <form
       action={action}
-      className="space-y-3 rounded-lg border border-line bg-white p-5"
+      className="space-y-3 rounded-xl border border-tenant-ink/10 bg-white p-5 shadow-sm"
     >
       <input type="hidden" name="key" value={template.key} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-serif text-lg">{template.name}</h3>
-          {template.is_auto && <Badge variant="accent">Auto-send</Badge>}
+          <h3 className="font-tenant-display text-lg font-semibold text-tenant-ink">
+            {template.name}
+          </h3>
+          {template.is_auto && (
+            <Badge variant="accent" className="border-transparent bg-tenant-accent/15 text-tenant-accent">
+              Auto-send
+            </Badge>
+          )}
         </div>
         <code className="text-xs text-muted-foreground">{template.key}</code>
       </div>

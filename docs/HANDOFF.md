@@ -47,9 +47,13 @@ run against the real Supabase project (they create and clean up their own data).
 | Email templates, transactional send, message log | live |
 | **Phase A** — multi-tenant foundation, org-scoped RLS | live |
 | **Phase B** — `/super` platform console (create org, modules, suspend, team) | live |
-| Auth: roles, forced password change, self-service change, email reset | live |
-| Per-tenant branding (logo + name), Aetarix platform brand | live |
-| Form/CRM domain split via `FORM_HOST` | live |
+| Auth: roles, forced password change, self-service change | live |
+| Login hardening: Turnstile, rate limiting, failed-attempt logging | live |
+| Password reset: super-admin-issued only (no self-service) | live |
+| Per-tenant branding (logo + name + color theme), Aetarix platform brand | live |
+| Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
+| Finance module — private per-admin ledger, opt-in, PDF statements | live |
+| Embeddable apply form — `/{slug}/apply` + `/thank-you` iframe-able on a consultancy's own site, `website` lead source | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -79,6 +83,17 @@ Migrations `0001`–`0007` are applied to production.
   `noreply@ieneducation.com`.
 - **No Aetarix square mark.** The wordmark stands in everywhere; a square icon is
   needed for tight spaces and a favicon.
+- **Platform base domain move to `consultancy.aetarix.com`** (owner owns
+  `aetarix.com`, currently unused; base domain is `ien-crm.vercel.app`). Owner's
+  side: add the domain in Vercel, update `NEXT_PUBLIC_APP_URL`, keep the old
+  `vercel.app` domain attached too until IEN's existing link is retired (see
+  `GO_LIVE.md`). No code change needed, and no Supabase Auth dashboard step
+  either — password reset (`app/super/actions.ts` → `sendPasswordReset`) mints
+  its own token and verifies it via `/auth/confirm` (`verifyOtp` directly, off
+  the request's own `Host` header), never Supabase's `redirectTo`/OAuth
+  mechanism, which is the only thing Supabase's redirect-URL allowlist governs.
+  This is a platform-wide domain, unrelated to the per-tenant
+  `form_domain`/`portal_domain` feature above.
 
 ### Accepted risks (owner's explicit decision)
 - **No database backups.** Supabase free tier. A hard delete or bad migration is
@@ -100,16 +115,42 @@ Migrations `0001`–`0007` are applied to production.
 
 ## Roadmap
 
-**Phase C — module gating** *(specced and planned, not built)*
-Make the per-org module toggles in `/super` actually enforce access: nav
-filtering, route guards and server-action guards, plus feature-level gating for
-analytics and email. `leads` is a core module and always on.
+**Phase C — module gating** *(started — Finance is the first module with real enforcement)*
+The Finance module (below) is the first to actually enforce its toggle: nav
+item hidden when off, and the route/server actions independently re-check
+before serving anything (never trust the sidebar alone). `analytics`,
+`email`, `templates`, `agents` etc. still don't enforce their toggles yet —
+same pattern, just not built for them. `leads` stays a core module, always on.
 → Spec and task-by-task plan in `docs/superpowers/`. Branch:
 `phase-c-module-gating`.
 
-**Phase D — per-consultancy form links** *(not started)*
-`/{slug}/apply` so each consultancy gets its own public intake URL. Today
-`/apply` defaults to the `ien` slug (see `DEFAULT_ORG_SLUG`).
+**Finance module** *(done)*
+Opt-in (Super Admin → Package — modules, off by default), admin-only —
+agents never see it. Each admin gets their own **private** ledger (income,
+expense, category, payment method, optional link to a lead, note, date) —
+not shared with other admins, not visible to agents. Dashboard shows
+totals + a running table; PDF statements are generated per-admin with the
+org's own logo/theme and the admin's name + role in the title, downloadable
+for This month / Last month / This year / All time.
+Deliberately scoped per-admin (not org-wide) so that when an "owner" role
+(see Deferred by design, above) eventually ships, it only needs one new
+read policy layered on top — no migration of existing entries, since every
+row already carries which admin it belongs to.
+
+**Phase D — per-consultancy form links** *(done)*
+`/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.
+`/ien/apply`), themed dynamically like the rest of their surfaces. Bare
+`/apply` redirects to the marketing site instead of defaulting to `ien`.
+
+Stage 2 — custom domains — also ships: `organizations.form_domain` /
+`portal_domain` (migration `0018_org_domains.sql`), set exclusively in Super
+Admin (`/super/orgs/{id}` → Domains), resolved per-request by
+`lib/routing/domain-lookup.ts` + `lib/routing/domain-routing.ts`. Replaces
+the old single-domain `FORM_HOST` env var entirely — nothing reads it
+anymore. **No consultancy has a custom domain configured yet**; everything
+still runs on the base app domain until a Super Admin sets one (see
+`docs/FORM_SUBDOMAIN.md` for the setup steps, including the required Vercel +
+DNS side that can't be done from code).
 
 **UI/UX polish** *(in progress)*
 Branding landed. Remaining: screen-by-screen design pass (dashboard, leads

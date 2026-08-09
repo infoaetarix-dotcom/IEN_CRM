@@ -49,6 +49,7 @@ export const LEAD_SOURCES = [
   'linkedin',
   'youtube',
   'whatsapp',
+  'website',
   'direct',
   'other',
 ] as const;
@@ -290,6 +291,30 @@ export const leadEditSchema = leadObject
   .refine(gradeInRange, GRADE_MSG);
 
 export type LeadEditInput = z.infer<typeof leadEditSchema>;
+
+/**
+ * Staff "Create Query" flow (the dialog on /leads) — same fields as the
+ * public wizard, but every one of them is optional: a staff member taking a
+ * partial phone query needs to save whatever they have, not be blocked by
+ * missing fields. Blank strings are treated as "not provided" (not as
+ * invalid values) so the underlying field validators only run when a value
+ * is actually present. consent_given drops the literal(true) requirement —
+ * it can be true, false, or omitted.
+ */
+export const quickLeadSchema = z.preprocess((raw) => {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    cleaned[k] = v === '' ? undefined : v;
+  }
+  return cleaned;
+}, leadObject
+  .partial()
+  .extend({ consent_given: z.boolean().default(false) })
+  .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
+  .refine(gradeInRange, GRADE_MSG));
+
+export type QuickLeadInput = z.infer<typeof quickLeadSchema>;
 
 export type LeadInput = z.infer<typeof leadSchema>;
 

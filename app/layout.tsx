@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Source_Serif_4 } from 'next/font/google';
+import { Inter, Source_Serif_4, Playfair_Display } from 'next/font/google';
 import './globals.css';
 
 const sans = Inter({
@@ -14,7 +14,16 @@ const serif = Source_Serif_4({
   display: 'swap',
 });
 
+// Marketing-page display serif (headlines only — see tailwind `font-display`).
+const display = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'Aetarix CRM',
   description: 'Study-abroad and student-visa consultancy.',
   robots: { index: false, follow: false },
@@ -26,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="en" className={`${sans.variable} ${serif.variable} ${display.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

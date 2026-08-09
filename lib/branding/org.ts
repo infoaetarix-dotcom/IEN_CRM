@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { brandFromOrg, FALLBACK_BRAND, type OrgBrand } from './index';
 
+const BRAND_COLUMNS = 'name, legal_name, logo_url, theme_key';
+
 /**
  * The signed-in user's organization brand. Memoized per request so a layout
  * and its pages share one query.
@@ -15,7 +17,7 @@ export const getOrgBrand = cache(
     const supabase = await createClient();
     const { data } = await supabase
       .from('organizations')
-      .select('name, legal_name, logo_url')
+      .select(BRAND_COLUMNS)
       .eq('id', orgId)
       .single();
     return data ? brandFromOrg(data) : FALLBACK_BRAND;
@@ -32,7 +34,7 @@ export const getPublicOrgBrand = cache(
     const service = createServiceClient();
     const { data } = await service
       .from('organizations')
-      .select('name, legal_name, logo_url')
+      .select(BRAND_COLUMNS)
       .eq('slug', slug)
       .maybeSingle();
     return data ? brandFromOrg(data) : FALLBACK_BRAND;

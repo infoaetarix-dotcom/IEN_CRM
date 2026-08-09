@@ -32,13 +32,22 @@ describe('brandFromOrg', () => {
       name: 'IEN',
       legal_name: 'International Education Network',
       logo_url: 'https://cdn.example.com/ien.png',
+      theme_key: 'classic-editorial',
     });
     expect(b).toEqual({
       name: 'IEN',
       legalName: 'International Education Network',
       logoUrl: 'https://cdn.example.com/ien.png',
       initials: 'IE',
+      themeKey: 'classic-editorial',
     });
+  });
+
+  it('falls back to the default theme when theme_key is missing/blank', () => {
+    expect(brandFromOrg({ name: 'Acme' }).themeKey).toBe(FALLBACK_BRAND.themeKey);
+    expect(brandFromOrg({ name: 'Acme', theme_key: '  ' }).themeKey).toBe(
+      FALLBACK_BRAND.themeKey,
+    );
   });
 
   it('falls back to name when legal_name is missing', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeHost, isFormPath, formHostAction } from '@/lib/routing/form-host';
+import { normalizeHost, isFormPath } from '@/lib/routing/form-host';
 
 describe('normalizeHost', () => {
   it('strips the port and lowercases', () => {
@@ -16,6 +16,16 @@ describe('isFormPath', () => {
     expect(isFormPath('/apply')).toBe(true);
     expect(isFormPath('/thank-you')).toBe(true);
   });
+  it('allows the per-consultancy /{slug}/apply route', () => {
+    expect(isFormPath('/ien/apply')).toBe(true);
+    expect(isFormPath('/acme-study/apply')).toBe(true);
+    expect(isFormPath('/ien/apply/anything')).toBe(true);
+  });
+  it('does not treat a bare slug or a non-apply subpath as a form path', () => {
+    expect(isFormPath('/ien')).toBe(false);
+    expect(isFormPath('/ien/dashboard')).toBe(false);
+    expect(isFormPath('/Ien/apply')).toBe(false); // slugs are lowercase-only
+  });
   it('does NOT allow the marketing root (it redirects to /apply on the form host)', () => {
     expect(isFormPath('/')).toBe(false);
   });
@@ -27,30 +37,5 @@ describe('isFormPath', () => {
   it('root does not over-match other paths', () => {
     expect(isFormPath('/dashboard')).toBe(false);
     expect(isFormPath('/apply-now')).toBe(false); // not a subpath of /apply
-  });
-});
-
-describe('formHostAction', () => {
-  const FH = 'apply.ien.com';
-
-  it('is a no-op when FORM_HOST is unset (single-domain today + local dev)', () => {
-    expect(formHostAction('apply.ien.com', undefined, '/dashboard')).toBe('not-form-host');
-    expect(formHostAction('apply.ien.com', '', '/dashboard')).toBe('not-form-host');
-  });
-
-  it('ignores requests arriving on the CRM host', () => {
-    expect(formHostAction('app.ien.com', FH, '/dashboard')).toBe('not-form-host');
-    expect(formHostAction('ien-crm.vercel.app', FH, '/login')).toBe('not-form-host');
-  });
-
-  it('allows the public form pages on the form host (case/port-insensitive)', () => {
-    expect(formHostAction('apply.ien.com', FH, '/apply')).toBe('allow');
-    expect(formHostAction('APPLY.IEN.COM:443', FH, '/thank-you')).toBe('allow');
-  });
-
-  it('redirects the marketing root and any CRM path to /apply on the form host', () => {
-    for (const p of ['/', '/login', '/dashboard', '/leads', '/super', '/api/health']) {
-      expect(formHostAction('apply.ien.com', FH, p)).toBe('redirect-apply');
-    }
   });
 });

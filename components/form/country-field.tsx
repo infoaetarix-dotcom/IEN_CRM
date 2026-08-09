@@ -109,7 +109,7 @@ export function CountryField({
                       )}
                       <span className="truncate">{c.name}</span>
                       {selected?.code === c.code && (
-                        <Check className="ml-auto h-4 w-4 text-accent" />
+                        <Check className="ml-auto h-4 w-4 text-tenant-accent" />
                       )}
                     </CommandItem>
                   );

@@ -43,8 +43,9 @@ UPSTASH_REDIS_REST_TOKEN=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-`FORM_HOST` is production-only — leave it unset locally (it hides the CRM on
-the public form's domain).
+Per-consultancy custom domains (`form_domain` / `portal_domain`) are
+configured in Super Admin, not via env vars — see `docs/FORM_SUBDOMAIN.md`.
+There's nothing to set locally for this.
 
 ```bash
 pnpm dev     # http://localhost:3000
@@ -78,8 +79,8 @@ merge the code that depends on it. Never edit an applied migration.
 
 | Path | Who |
 |---|---|
-| `/apply`, `/thank-you` | applicants (public) |
-| `/login`, `/forgot-password`, `/update-password`, `/change-password` | auth |
+| `/{slug}/apply`, `/thank-you` | applicants (public) |
+| `/login`, `/update-password`, `/change-password` | auth |
 | `/dashboard`, `/leads`, `/agents`, `/templates` | consultancy staff |
 | `/super`, `/super/orgs/[id]` | Aetarix platform admin |
 | `/api/health`, `/api/keep-warm` | uptime + free-tier keep-warm cron |

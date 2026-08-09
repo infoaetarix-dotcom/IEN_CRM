@@ -1,8 +1,10 @@
+import { Mail } from 'lucide-react';
 import { requireRole } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { TemplateEditor } from '@/components/dashboard/template-editor';
 
-export const metadata = { title: 'Email templates — CRM' };
+export const metadata = { title: 'Email templates' };
 
 export default async function TemplatesPage() {
   await requireRole('admin');
@@ -15,14 +17,11 @@ export default async function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="label-eyebrow">Email</p>
-        <h1 className="font-serif text-2xl">Templates</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Edit the messages staff send to leads. The “welcome” template sends
-          automatically on every new application.
-        </p>
-      </div>
+      <PageHeader
+        icon={Mail}
+        title="Templates"
+        subtitle={'Edit the messages staff send to leads. The “welcome” template sends automatically on every new application.'}
+      />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {(templates ?? []).map((t) => (

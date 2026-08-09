@@ -4,15 +4,148 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUser, requireRole } from '@/lib/auth/guards';
+import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus } from '@/lib/leads/display';
-import { leadEditSchema } from '@/lib/validation/lead';
+import { leadEditSchema, quickLeadSchema, normalizeSource } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
+}
+
+export interface CreateQueryState {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+  leadId?: string;
+}
+
+const formStr = (f: FormData, k: string) => (f.get(k) ?? '') as string;
+
+function fieldErrorsFrom(
+  issues: { path: (string | number)[]; message: string }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const i of issues) {
+    const key = i.path[0];
+    if (typeof key === 'string' && !out[key]) out[key] = i.message;
+  }
+  return out;
+}
+
+/**
+ * Single-page, single-save version of lead creation for staff (a query taken
+ * over the phone or in person, via the "Create query" dialog on /leads) —
+ * unlike the public wizard, nothing here is required; whatever the staff
+ * member has is saved. organization_id and created_by come from the session,
+ * never the client. Needs the service role because leads has no
+ * authenticated insert policy (the public wizard is otherwise the only
+ * writer).
+ */
+export async function createQuery(
+  _prev: CreateQueryState,
+  formData: FormData,
+): Promise<CreateQueryState> {
+  const user = await requireUser();
+
+  const parsed = quickLeadSchema.safeParse({
+    full_name: formStr(formData, 'full_name'),
+    email: formStr(formData, 'email'),
+    phone: formStr(formData, 'phone'),
+    date_of_birth: formStr(formData, 'date_of_birth'),
+    city: formStr(formData, 'city'),
+    district: formStr(formData, 'district'),
+    target_country: formStr(formData, 'target_country'),
+    institution: formStr(formData, 'institution'),
+    program: formStr(formData, 'program'),
+    intake_season: formStr(formData, 'intake_season'),
+    intake_year: formStr(formData, 'intake_year'),
+    highest_education: formStr(formData, 'highest_education'),
+    last_qualification: formStr(formData, 'last_qualification'),
+    prior_institution: formStr(formData, 'prior_institution'),
+    passing_year: formStr(formData, 'passing_year'),
+    grading_system: formStr(formData, 'grading_system'),
+    grade_value: formStr(formData, 'grade_value'),
+    work_experience_years: formStr(formData, 'work_experience_years'),
+    work_experience_detail: formStr(formData, 'work_experience_detail'),
+    english_test: formStr(formData, 'english_test'),
+    english_score: formStr(formData, 'english_score'),
+    funding_source: formStr(formData, 'funding_source'),
+    prior_rejection: formData.get('prior_rejection') === 'on',
+    prior_rejection_detail: formStr(formData, 'prior_rejection_detail'),
+    consent_given: formData.get('consent_given') === 'on',
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'Please correct the highlighted fields.',
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  }
+
+  const d = parsed.data;
+  const service = createServiceClient();
+  const { data: lead, error } = await service
+    .from('leads')
+    .insert({
+      ...d,
+      consent_at: d.consent_given ? new Date().toISOString() : null,
+      organization_id: user.organization_id,
+      created_by: user.id,
+      is_complete: true,
+      utm_source: normalizeSource(undefined),
+    })
+    .select('id, email, full_name, target_country, program, organization_id')
+    .single();
+  if (error || !lead) {
+    console.error('[createQuery] insert failed', error);
+    return { ok: false, error: 'Something went wrong. Please try again.' };
+  }
+
+  // Confirmation email — only if we actually have an address to send to.
+  if (lead.email) {
+    try {
+      const { data: tpl } = await service
+        .from('email_templates')
+        .select('subject, body')
+        .eq('organization_id', lead.organization_id)
+        .eq('key', 'welcome')
+        .single();
+      if (tpl) {
+        const vars = {
+          full_name: lead.full_name,
+          program: lead.program,
+          target_country: lead.target_country,
+        };
+        await sendEmail({
+          leadId: lead.id,
+          organizationId: lead.organization_id,
+          to: lead.email,
+          toName: lead.full_name || lead.email,
+          subject: renderTemplate(tpl.subject, vars),
+          body: renderTemplate(tpl.body, vars),
+          templateKey: 'welcome',
+          sentBy: user.id,
+        });
+      }
+    } catch (err) {
+      console.error('[createQuery] confirmation email failed', err);
+    }
+  }
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: user.organization_id,
+    action: 'lead_created',
+    entity: 'lead',
+    entityId: lead.id,
+    metadata: { via: 'staff-quick' },
+  });
+
+  revalidatePath('/leads');
+  return { ok: true, leadId: lead.id };
 }
 
 /**
@@ -96,34 +229,6 @@ export async function addNote(
   });
 
   revalidatePath(`/leads/${leadId}`);
-  return { ok: true };
-}
-
-/** Assign a lead to an agent (admin only). */
-export async function assignLead(
-  leadId: string,
-  agentId: string | null,
-): Promise<ActionResult> {
-  const admin = await requireRole('admin');
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from('leads')
-    .update({ assigned_to: agentId })
-    .eq('id', leadId);
-  if (error) return { ok: false, error: 'Could not assign lead.' };
-
-  await writeAuditLog({
-    actorId: admin.id,
-    organizationId: admin.organization_id,
-    action: 'lead_assigned',
-    entity: 'lead',
-    entityId: leadId,
-    metadata: { assigned_to: agentId },
-  });
-
-  revalidatePath(`/leads/${leadId}`);
-  revalidatePath('/leads');
   return { ok: true };
 }
 
@@ -295,13 +400,69 @@ export async function unarchiveLead(leadId: string): Promise<ActionResult> {
 }
 
 /**
- * Permanently delete a lead (admin only). Notes / status history / messages
- * cascade automatically (FK ON DELETE CASCADE). The audit row is written FIRST,
- * before the lead is gone, so the deletion trail survives (audit_log does not
- * cascade). Unrecoverable — the UI must confirm before calling this.
+ * Duplicate a lead's full data into a new row (fresh id + lead_number).
+ * The read is RLS-gated on the session client, same as every other action
+ * here; the insert runs on the service role because `leads` has no
+ * authenticated insert policy (the public wizard is the only client-side
+ * insert path — see startLead). organization_id comes from the fetched row,
+ * which RLS already guaranteed belongs to the caller's org, not from any
+ * client input.
+ */
+export async function copyLead(
+  leadId: string,
+): Promise<ActionResult & { newLeadId?: string }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: source, error: fetchErr } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', leadId)
+    .single();
+  if (fetchErr || !source) return { ok: false, error: 'Lead not found or access denied.' };
+
+  const {
+    id: _id,
+    lead_number: _leadNumber,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    archived_at: _archivedAt,
+    archived_by: _archivedBy,
+    submission_token: _submissionToken,
+    ...copyable
+  } = source;
+
+  const service = createServiceClient();
+  const { data: created, error: insertErr } = await service
+    .from('leads')
+    .insert(copyable)
+    .select('id')
+    .single();
+  if (insertErr || !created) return { ok: false, error: 'Could not copy lead.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: source.organization_id,
+    action: 'lead_copied',
+    entity: 'lead',
+    entityId: created.id,
+    metadata: { copied_from: leadId },
+  });
+
+  revalidatePath('/leads');
+  return { ok: true, newLeadId: created.id };
+}
+
+/**
+ * Permanently delete a lead. Any active org member may delete any lead in
+ * their org (shared-data model — see leads_delete RLS). Notes / status
+ * history / messages cascade automatically (FK ON DELETE CASCADE). The audit
+ * row is written FIRST, before the lead is gone, so the deletion trail
+ * survives (audit_log does not cascade). Unrecoverable — the UI must confirm
+ * before calling this.
  */
 export async function deleteLead(leadId: string): Promise<ActionResult> {
-  const admin = await requireRole('admin');
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data: lead } = await supabase
@@ -312,7 +473,7 @@ export async function deleteLead(leadId: string): Promise<ActionResult> {
   if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
 
   await writeAuditLog({
-    actorId: admin.id,
+    actorId: user.id,
     organizationId: lead.organization_id,
     action: 'lead_deleted',
     entity: 'lead',

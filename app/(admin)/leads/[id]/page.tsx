@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import {
   StatusChanger,
-  AssignControl,
   NoteComposer,
   EmailPanel,
 } from '@/components/dashboard/lead-controls';
@@ -44,7 +43,9 @@ function fmtDateTime(s: string) {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="label-eyebrow">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-tenant-accent">
+        {label}
+      </p>
       <p className="mt-0.5 text-sm">{value || '—'}</p>
     </div>
   );
@@ -56,7 +57,7 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await requireUser();
+  await requireUser();
   const supabase = await createClient();
 
   const { data: lead } = await supabase
@@ -83,7 +84,7 @@ export default async function LeadDetailPage({
         .select('id, subject, status, template_key, sent_by, created_at, error_detail')
         .eq('lead_id', id)
         .order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, full_name, is_active'),
+      supabase.from('profiles').select('id, full_name, email, is_active'),
       supabase
         .from('email_templates')
         .select('key, name, subject, body')
@@ -93,16 +94,17 @@ export default async function LeadDetailPage({
   const nameById = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name]),
   );
-  const agents = (profilesRes.data ?? [])
-    .filter((p) => p.is_active)
-    .map((p) => ({ id: p.id, full_name: p.full_name }));
+  const emailById = new Map(
+    (profilesRes.data ?? []).map((p) => [p.id, p.email]),
+  );
   const age = ageFromDob(lead.date_of_birth);
 
-  // Editing is gated by RLS (admin or assigned agent); mirror it here so the
-  // Edit button only shows to those who can actually save.
-  const canEdit = profile.role === 'admin' || lead.assigned_to === profile.id;
+  // Shared-data model: RLS (leads_update / leads_delete) allows any active
+  // org member to edit or delete any lead in their org, not just admins or
+  // the assigned agent.
+  const canEdit = true;
   const isArchived = lead.archived_at != null;
-  const canDelete = profile.role === 'admin';
+  const canDelete = true;
   const archivedByName = lead.archived_by
     ? (nameById.get(lead.archived_by) ?? 'Unknown')
     : null;
@@ -139,7 +141,7 @@ export default async function LeadDetailPage({
     <div className="space-y-6">
       <Link
         href="/leads"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-tenant-accent"
       >
         <ArrowLeft className="h-4 w-4" /> Back to leads
       </Link>
@@ -147,7 +149,9 @@ export default async function LeadDetailPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-serif text-2xl">{lead.full_name}</h1>
+            <h1 className="font-tenant-display text-2xl font-semibold text-tenant-ink">
+              {lead.full_name || '(no name)'}
+            </h1>
             <Badge variant={STATUS_BADGE[lead.status as LeadStatus]}>
               {STATUS_LABELS[lead.status as LeadStatus]}
             </Badge>
@@ -182,9 +186,9 @@ export default async function LeadDetailPage({
             canEdit={canEdit}
             initial={initial}
           >
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Contact &amp; location</CardTitle>
+              <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Email" value={lead.email} />
@@ -210,9 +214,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Prior education &amp; experience</CardTitle>
+              <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Highest education" value={lead.highest_education} />
@@ -238,9 +242,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Study goals</CardTitle>
+              <CardTitle className="font-tenant-display">Study goals</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Target country" value={lead.target_country} />
@@ -285,9 +289,9 @@ export default async function LeadDetailPage({
 
           </LeadDetailsEditor>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle className="font-tenant-display">Notes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <NoteComposer leadId={lead.id} />
@@ -298,12 +302,15 @@ export default async function LeadDetailPage({
                 {(notesRes.data ?? []).map((n) => (
                   <div
                     key={n.id}
-                    className="rounded-md border border-line bg-secondary/20 p-3"
+                    className="rounded-md border border-tenant-ink/10 bg-tenant-gray p-3"
                   >
                     <p className="whitespace-pre-wrap text-sm">{n.body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {nameById.get(n.author_id) ?? 'Unknown'} ·{' '}
-                      {fmtDateTime(n.created_at)}
+                      {nameById.get(n.author_id) ?? 'Unknown'}
+                      {emailById.get(n.author_id)
+                        ? ` (${emailById.get(n.author_id)})`
+                        : ''}{' '}
+                      · {fmtDateTime(n.created_at)}
                     </p>
                   </div>
                 ))}
@@ -314,31 +321,23 @@ export default async function LeadDetailPage({
 
         {/* Right: actions + histories */}
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Manage</CardTitle>
+              <CardTitle className="font-tenant-display">Manage</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="label-eyebrow mb-1">Status</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-tenant-accent">
+                  Status
+                </p>
                 <StatusChanger leadId={lead.id} current={lead.status} />
               </div>
-              {profile.role === 'admin' && (
-                <div>
-                  <p className="label-eyebrow mb-1">Assigned agent</p>
-                  <AssignControl
-                    leadId={lead.id}
-                    current={lead.assigned_to}
-                    agents={agents}
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Send email</CardTitle>
+              <CardTitle className="font-tenant-display">Send email</CardTitle>
             </CardHeader>
             <CardContent>
               {(templatesRes.data ?? []).length > 0 ? (
@@ -354,9 +353,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Message history</CardTitle>
+              <CardTitle className="font-tenant-display">Message history</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(messagesRes.data ?? []).length === 0 && (
@@ -392,9 +391,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Status history</CardTitle>
+              <CardTitle className="font-tenant-display">Status history</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(historyRes.data ?? []).length === 0 && (
@@ -417,9 +416,9 @@ export default async function LeadDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle>Lead actions</CardTitle>
+              <CardTitle className="font-tenant-display">Lead actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {isArchived && (

@@ -1,44 +1,101 @@
-# Form subdomain — split the public form onto its own domain
+# Custom domains — a consultancy's own form and portal domains
 
-Goal: give end users (students) a form-only domain that **cannot reach the
-CRM**, while staff use the CRM on the main domain. Both are served by the same
-Vercel deployment; the middleware decides what each host may serve.
+Goal: give each consultancy a dedicated domain for their public application
+form (`form.theirdomain.com`) and/or their whole staff CRM
+(`portal.theirdomain.com`), fully isolated from every other tenant and from
+the Aetarix platform console. One Vercel deployment serves all of it —
+middleware decides what each incoming Host header may see, based on the
+`organizations.form_domain` / `organizations.portal_domain` columns
+(migration `0018_org_domains.sql`).
+
+**All configuration rights live in Super Admin.** A tenant cannot set or
+change their own domain — only Aetarix, from `/super/orgs/{id}` → Domains.
 
 ## How it works
 
-- `lib/routing/form-host.ts` + `middleware.ts` gate requests by the `Host`
-  header, driven by one env var: **`FORM_HOST`**.
-- On the host equal to `FORM_HOST`: only `/`, `/apply`, `/thank-you` (and their
-  assets) are served; **every other path — the whole CRM, including `/login` —
-  redirects to `/apply`.** The CRM is unreachable there.
-- On any other host (the CRM domain): unchanged — full CRM with auth.
-- **`FORM_HOST` unset = no-op.** That's the current production state, so nothing
-  changes until you deliberately turn it on.
+- `lib/routing/domain-lookup.ts` resolves the request's Host header to an
+  org's `form_domain` or `portal_domain` via the service role (there's no
+  session yet at this point), cached in-memory for up to 60s.
+- `lib/routing/domain-routing.ts` holds the actual routing rules as pure,
+  unit-tested functions (`formDomainDecision`, `portalDomainDecision`);
+  `middleware.ts` just applies whichever one matches.
+- **Host matches an org's `form_domain`:** only that org's own
+  `/{slug}/apply` and `/thank-you` are served. Every other path — including
+  another org's slug, the marketing root, and `/super` — redirects to that
+  org's apply page. The CRM is unreachable there.
+- **Host matches an org's `portal_domain`:** the full CRM is served, but
+  scoped to that one org. `/super` and `/` redirect to `/login`. A session
+  belonging to a *different* org (or a super admin) is signed out and
+  redirected to the base app domain (`NEXT_PUBLIC_APP_URL`) to sign in with
+  the right account — so a tenant's portal domain can never show another
+  tenant's (or the platform's) data, even from a stale/borrowed session.
+- **Host matches neither (the base app domain):** unchanged — full CRM with
+  auth, `/super`, and the marketing page all behave exactly as before.
+- `/login` reads the resolved org from the `x-tenant-slug` request header
+  middleware sets whenever a domain matched, so a consultancy's own domain
+  shows their branding immediately — even on a
+  visitor's very first visit, before any "last org" cookie exists.
 
-## Turning it on (the only remaining step — do this when ready)
+## Setting one up (Super Admin does this per consultancy)
 
-1. **Pick the subdomain.** Must be a valid hostname: letters, digits, hyphens —
-   **no underscores.** e.g. `apply.yourdomain.com` or
-   `ien-education-form.yourdomain.com` (NOT `ien_education_form`).
-2. **Add it in Vercel:** project `ien-crm` → Settings → Domains → add the
-   subdomain → follow the DNS record it shows (a `CNAME` to `cname.vercel-dns.com`
-   on your domain's DNS). Wait for it to verify.
-3. **Set the env var:** Vercel → project `ien-crm` → Settings → Environment
-   Variables → add `FORM_HOST` = the exact subdomain (e.g. `apply.yourdomain.com`),
-   scope **Production**.
-4. **Redeploy** (or push any commit) so the new env var is picked up.
+1. In `/super/orgs/{id}` → **Domains**, enter the domain (e.g.
+   `form.theirdomain.com`) and save. Must be a bare hostname — letters,
+   digits, hyphens, at least one dot — **no scheme, path, port, or
+   underscores** (`form.theirdomain.com`, not
+   `https://form.theirdomain.com/apply` or `form_theirdomain.com`).
+2. **Add it in Vercel:** project → Settings → Domains → add the domain →
+   follow the DNS record it shows (a `CNAME` to `cname.vercel-dns.com` on the
+   consultancy's DNS, which they'll need to add). Wait for it to verify.
+3. That's it — no redeploy needed. The next request that arrives on that host
+   is resolved against step 1's saved value (cache is at most 60s stale).
 
-That's it. The form is now live on the subdomain with the CRM hidden; staff keep
-using the CRM on `ien-crm.vercel.app` (or whatever the main domain becomes).
+Saving the domain in Super Admin *before* it's added in Vercel is harmless —
+it just won't route anywhere until DNS + Vercel are both in place. Likewise,
+adding it in Vercel without saving it in Super Admin leaves it 404ing (no org
+claims that host yet).
+
+## Embedding on a consultancy's own website
+
+`/{slug}/apply` and `/thank-you` are the one deliberate exception to the
+app's normal clickjacking lock: `next.config.mjs` omits `X-Frame-Options`
+and `frame-ancestors` for just those two routes (every other route, staff
+CRM included, stays `frame-ancestors 'none'` / `X-Frame-Options: DENY`).
+Safe to leave open to any origin — both pages are unauthenticated and
+already reachable by anyone with the URL, so framing them grants an
+attacker nothing they didn't already have.
+
+Give the consultancy an iframe snippet pointing at their own form (works
+whether they're using the base app domain, a `/{slug}/apply` link, or their
+`form_domain`):
+
+```html
+<iframe
+  src="https://consultancy.aetarix.com/ien/apply?utm_source=website"
+  style="width: 100%; height: 900px; border: 0"
+  title="Apply now"
+></iframe>
+```
+
+The `utm_source=website` query param is what tags leads submitted through
+the embed as coming from their site rather than a direct visit — see
+`lib/validation/lead.ts`'s `LEAD_SOURCES` (`'website'` added in migration
+`0020_website_lead_source.sql`). It has to be baked into the embed URL
+itself; there's no way to auto-detect "this request came from inside an
+iframe" server-side.
 
 ## Notes
 
-- Give students the **form subdomain**; give staff the **CRM domain**. The
-  security still comes from auth + RLS — this split is defense-in-depth +
-  clean separation, not the primary lock.
-- To also move the CRM onto a branded domain later (e.g. `app.yourdomain.com`),
-  add that domain in Vercel too; no code change needed — only `FORM_HOST` is
-  special-cased.
-- Verified behaviour (local, `FORM_HOST=apply.test.local`): form host serves
-  `/apply`,`/thank-you`,`/` and redirects `/login`,`/dashboard`,`/leads`,`/super`
-  to `/apply`; CRM host unchanged.
+- A domain can only belong to one org at a time (enforced by a unique
+  constraint on each column, plus a same-org distinctness check and an
+  application-level cross-column check in `setOrgDomains`).
+- The default link — `{NEXT_PUBLIC_APP_URL}/{slug}/apply` — always keeps
+  working even after a custom form domain is set, and needs no DNS/Vercel
+  setup. Staff see both (when configured) on the **Form** tab in their CRM
+  sidebar, with copy buttons.
+- Security still comes from auth + RLS; the domain split is defense-in-depth
+  and a clean, branded surface for each tenant — not the primary lock.
+- Local/dev testing: there's no real DNS to point at localhost, so this is
+  verified by (a) unit tests on the pure decision functions
+  (`tests/unit/domain-routing.test.ts`) and (b) manually overriding the
+  `Host` request header against a local server, which middleware reads the
+  same way a real edge request would.

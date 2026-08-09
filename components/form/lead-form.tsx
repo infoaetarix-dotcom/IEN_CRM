@@ -7,7 +7,7 @@ import {
   saveStep2,
   completeLead,
   type StepState,
-} from './actions';
+} from '@/app/(public)/apply/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -34,6 +34,8 @@ const init: StepState = { ok: false };
 const SCORED_TESTS = ['ielts', 'toefl', 'pte', 'duolingo'];
 const STEP_LABELS = ['Let’s start', 'Your background', 'Your goals'];
 
+type StepAction = (prev: StepState, formData: FormData) => Promise<StepState>;
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-xs text-destructive">{message}</p>;
@@ -42,8 +44,27 @@ function FieldError({ message }: { message?: string }) {
 export function LeadForm({
   /** Consultancy named in the consent line — never hardcode one client here. */
   consentName = 'this consultancy',
+  /** Which org this submission belongs to — read from the /{slug}/apply route
+   *  and passed through as a hidden field so startLead knows who owns the
+   *  lead. The staff "Create Query" flow doesn't set this: its own
+   *  session-scoped action infers the org from the signed-in user instead. */
+  orgSlug,
+  /** Defaults to the public apply-wizard actions; the staff "Create Query"
+   *  dialog on /leads passes its own session-scoped versions. */
+  actions = { step1: startLead, step2: saveStep2, step3: completeLead },
+  /** Public flow completes via a server-side redirect to /thank-you, so this
+   *  never fires there. The staff flow's step 3 returns normally instead of
+   *  redirecting (it's rendered inside the CRM, not a standalone page), and
+   *  uses this to navigate to the new lead once it's done. */
+  onComplete,
+  /** Staff are already authenticated — skip the bot-verification widget. */
+  showTurnstile = true,
 }: {
   consentName?: string;
+  orgSlug?: string;
+  actions?: { step1: StepAction; step2: StepAction; step3: StepAction };
+  onComplete?: (leadId: string) => void;
+  showTurnstile?: boolean;
 }) {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
@@ -52,9 +73,9 @@ export function LeadForm({
   const [englishTest, setEnglishTest] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
 
-  const [s1, action1, p1] = useActionState(startLead, init);
-  const [s2, action2, p2] = useActionState(saveStep2, init);
-  const [s3, action3, p3] = useActionState(completeLead, init);
+  const [s1, action1, p1] = useActionState(actions.step1, init);
+  const [s2, action2, p2] = useActionState(actions.step2, init);
+  const [s3, action3, p3] = useActionState(actions.step3, init);
 
   const [utm, setUtm] = useState({ source: '', medium: '', campaign: '' });
   useEffect(() => {
@@ -75,6 +96,10 @@ export function LeadForm({
   useEffect(() => {
     if (s2.ok) setStep((s) => (s < 3 ? 3 : s));
   }, [s2]);
+  useEffect(() => {
+    if (s3.ok && lead.id) onComplete?.(lead.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s3]);
 
   const err1 = s1.fieldErrors ?? {};
   const err2 = s2.fieldErrors ?? {};
@@ -95,7 +120,7 @@ export function LeadForm({
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
           <div
-            className="h-full rounded-full bg-accent transition-all duration-300"
+            className="h-full rounded-full bg-tenant-accent transition-all duration-300"
             style={{ width: `${(step / 3) * 100}%` }}
           />
         </div>
@@ -113,6 +138,7 @@ export function LeadForm({
         {/* Hidden: identity of the in-progress lead + UTM + Turnstile + honeypot */}
         <input type="hidden" name="lead_id" value={lead.id} />
         <input type="hidden" name="submission_token" value={lead.token} />
+        {orgSlug && <input type="hidden" name="org_slug" value={orgSlug} />}
         <input type="hidden" name="utm_source" value={utm.source} />
         <input type="hidden" name="utm_medium" value={utm.medium} />
         <input type="hidden" name="utm_campaign" value={utm.campaign} />
@@ -154,14 +180,14 @@ export function LeadForm({
               <CountryField error={err1.target_country} />
             </div>
             <label className="flex items-start gap-3 text-sm">
-              <Checkbox name="consent_given" className="mt-0.5" />
+              <Checkbox name="consent_given" className="mt-0.5 text-tenant-accent accent-tenant-accent" />
               <span>
                 I consent to {consentName} storing and processing these details
                 to contact me about my application. *
               </span>
             </label>
             <FieldError message={err1.consent_given} />
-            <Turnstile onVerify={setTurnstileToken} />
+            {showTurnstile && <Turnstile onVerify={setTurnstileToken} />}
           </section>
 
           <Button
@@ -170,7 +196,7 @@ export function LeadForm({
             variant="accent"
             size="lg"
             disabled={p1}
-            className="w-full sm:w-auto"
+            className="w-full bg-tenant-accent hover:bg-tenant-accent/90 sm:w-auto"
           >
             {p1 ? 'Saving…' : 'Continue →'}
           </Button>
@@ -258,7 +284,7 @@ export function LeadForm({
             <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>
               ← Back
             </Button>
-            <Button type="submit" formAction={action2} variant="accent" size="lg" disabled={p2} className="flex-1 sm:flex-none">
+            <Button type="submit" formAction={action2} variant="accent" size="lg" disabled={p2} className="flex-1 bg-tenant-accent hover:bg-tenant-accent/90 sm:flex-none">
               {p2 ? 'Saving…' : 'Continue →'}
             </Button>
           </div>
@@ -323,7 +349,7 @@ export function LeadForm({
               </div>
             )}
             <label className="flex items-center gap-3 text-sm">
-              <Checkbox name="prior_rejection" checked={priorRejection} onChange={(e) => setPriorRejection(e.target.checked)} />
+              <Checkbox name="prior_rejection" checked={priorRejection} onChange={(e) => setPriorRejection(e.target.checked)} className="text-tenant-accent accent-tenant-accent" />
               I have had a prior visa rejection
             </label>
             {priorRejection && (
@@ -339,7 +365,7 @@ export function LeadForm({
             <Button type="button" variant="outline" size="lg" onClick={() => setStep(2)}>
               ← Back
             </Button>
-            <Button type="submit" formAction={action3} variant="accent" size="lg" disabled={p3} className="flex-1 sm:flex-none">
+            <Button type="submit" formAction={action3} variant="accent" size="lg" disabled={p3} className="flex-1 bg-tenant-accent hover:bg-tenant-accent/90 sm:flex-none">
               {p3 ? 'Submitting…' : 'Submit application'}
             </Button>
           </div>

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { serviceClient, STATE_FILE } from './helpers';
+import { serviceClient, STATE_FILE, submitLogin } from './helpers';
 
 function state() {
   return JSON.parse(readFileSync(STATE_FILE, 'utf8'));
@@ -35,10 +35,7 @@ test('new staff are forced to change their temporary password on first login', a
 
   try {
     // Sign in with the temporary password.
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill(email);
-    await page.getByLabel(/password/i).fill(tempPassword);
-    await page.getByRole('button', { name: /sign in/i }).click();
+    await submitLogin(page, email, tempPassword);
 
     // Forced onto /change-password — the CRM is blocked until they set one.
     await page.waitForURL(/\/change-password/);

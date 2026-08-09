@@ -1,7 +1,6 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import {
   step1Schema,
   step2Schema,
@@ -9,7 +8,7 @@ import {
   normalizeSource,
 } from '@/lib/validation/lead';
 import { verifyTurnstile } from '@/lib/security/turnstile';
-import { rateLimit } from '@/lib/security/rate-limit';
+import { rateLimit, clientIp } from '@/lib/security/rate-limit';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 import { writeAuditLog } from '@/lib/audit';
@@ -23,13 +22,6 @@ export interface StepState {
 }
 
 const g = (f: FormData, k: string) => (f.get(k) ?? '') as string;
-
-async function clientIp(): Promise<string> {
-  const h = await headers();
-  const fwd = h.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0]!.trim();
-  return h.get('x-real-ip') ?? 'unknown';
-}
 
 function fieldErrorsFrom(
   issues: { path: (string | number)[]; message: string }[],
@@ -224,6 +216,8 @@ export async function completeLead(
     return { ok: false, error: 'Your session expired. Please start again.' };
   }
 
+  const orgSlug = g(formData, 'org_slug');
+
   const parsed = step3Schema.safeParse({
     institution: g(formData, 'institution'),
     program: g(formData, 'program'),
@@ -306,5 +300,5 @@ export async function completeLead(
     metadata: { completed: true },
   });
 
-  redirect('/thank-you');
+  redirect(orgSlug ? `/thank-you?org=${encodeURIComponent(orgSlug)}` : '/thank-you');
 }

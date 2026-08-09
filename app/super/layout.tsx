@@ -12,17 +12,21 @@ export default async function SuperLayout({
   const profile = await requireSuperAdmin();
 
   return (
-    <div className="min-h-screen bg-cream">
-      <header className="border-b border-line bg-navy text-paper">
+    <div className="min-h-screen bg-marketing-gray">
+      <header className="border-b border-white/10 bg-marketing-navy text-marketing-offwhite">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link href="/super" className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-accent" />
-            <span className="font-serif text-lg">Aetarix · Platform Console</span>
+            <ShieldCheck className="h-5 w-5 text-marketing-blue" />
+            <span className="font-display text-lg font-semibold">
+              Aetarix · Platform Console
+            </span>
           </Link>
           <div className="flex items-center gap-4">
-            <Badge variant="accent">super admin</Badge>
-            <span className="text-sm text-muted">{profile.email}</span>
-            <SignOutButton />
+            <Badge variant="accent" className="border-transparent bg-marketing-blue/15 text-marketing-blue">
+              super admin
+            </Badge>
+            <span className="text-sm text-marketing-offwhite/60">{profile.email}</span>
+            <SignOutButton className="flex items-center gap-2 text-sm text-marketing-offwhite/60 transition-colors hover:text-white" />
           </div>
         </div>
       </header>

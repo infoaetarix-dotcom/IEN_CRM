@@ -5,13 +5,19 @@ import { useRouter } from 'next/navigation';
 import {
   createAgent,
   setAgentActive,
-  setAgentRole,
   type AgentActionResult,
 } from '@/app/(admin)/agents/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const initial: AgentActionResult = { ok: false };
 
@@ -27,66 +33,64 @@ export function CreateAgentForm() {
     }
   }, [state.ok, router]);
 
-  if (!open) {
-    return (
-      <Button onClick={() => setOpen(true)} variant="accent" size="sm">
-        Add staff member
-      </Button>
-    );
-  }
-
   return (
-    <form
-      action={action}
-      className="grid gap-3 rounded-lg border border-line bg-white p-4 sm:grid-cols-2"
-    >
-      <div>
-        <Label htmlFor="full_name">Full name</Label>
-        <Input id="full_name" name="full_name" required />
-      </div>
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required />
-      </div>
-      <div>
-        <Label htmlFor="password">Temporary password</Label>
-        <Input id="password" name="password" type="text" minLength={8} required />
-      </div>
-      <div>
-        <Label htmlFor="role">Role</Label>
-        <Select id="role" name="role" defaultValue="agent">
-          <option value="agent">Agent</option>
-          <option value="admin">Admin</option>
-        </Select>
-      </div>
-      {state.error && (
-        <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>
-      )}
-      <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" disabled={pending} variant="accent" size="sm">
-          {pending ? 'Creating…' : 'Create'}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-tenant-accent text-white hover:bg-tenant-accent/90">
+          Add staff member
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen(false)}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-tenant-display text-tenant-ink">
+            Add staff member
+          </DialogTitle>
+          <DialogDescription>
+            They&rsquo;ll sign in with this email and temporary password, then set
+            their own on first login.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form action={action} className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="full_name">Full name</Label>
+            <Input id="full_name" name="full_name" required />
+          </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Temporary password</Label>
+            <Input id="password" name="password" type="text" minLength={8} required />
+          </div>
+          {state.error && (
+            <p className="text-sm text-destructive sm:col-span-2">{state.error}</p>
+          )}
+          <div className="flex gap-2 sm:col-span-2">
+            <Button
+              type="submit"
+              disabled={pending}
+              className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+            >
+              {pending ? 'Creating…' : 'Create'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 export function AgentRowControls({
   id,
-  role,
   isActive,
   isSelf,
 }: {
   id: string;
-  role: 'admin' | 'agent';
   isActive: boolean;
   isSelf: boolean;
 }) {
@@ -109,20 +113,10 @@ export function AgentRowControls({
 
   return (
     <div className="flex items-center gap-2">
-      <Select
-        defaultValue={role}
-        disabled={pending}
-        className="h-8 w-[110px]"
-        onChange={(e) =>
-          run(() => setAgentRole(id, e.target.value as 'admin' | 'agent'))
-        }
-      >
-        <option value="agent">Agent</option>
-        <option value="admin">Admin</option>
-      </Select>
       <Button
         size="sm"
-        variant={isActive ? 'outline' : 'accent'}
+        variant={isActive ? 'outline' : undefined}
+        className={!isActive ? 'bg-tenant-accent text-white hover:bg-tenant-accent/90' : undefined}
         disabled={pending}
         onClick={() => run(() => setAgentActive(id, !isActive))}
       >

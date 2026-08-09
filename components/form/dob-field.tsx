@@ -51,6 +51,11 @@ export function DobField({ error }: { error?: string }) {
               setOpen(false);
             }}
             disabled={{ after: now }}
+            classNames={{
+              day_selected:
+                'bg-tenant-accent text-white hover:bg-tenant-accent hover:text-white focus:bg-tenant-accent focus:text-white',
+              day_today: 'border border-tenant-accent/60 text-tenant-accent',
+            }}
           />
         </PopoverContent>
       </Popover>

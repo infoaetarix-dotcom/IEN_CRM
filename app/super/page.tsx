@@ -39,8 +39,12 @@ export default async function SuperHome() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="label-eyebrow">Platform</p>
-          <h1 className="font-serif text-2xl">Consultancies</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+            Platform
+          </p>
+          <h1 className="font-display text-2xl font-semibold text-marketing-ink">
+            Consultancies
+          </h1>
         </div>
         <CreateOrgForm
           modules={modules ?? []}
@@ -49,29 +53,39 @@ export default async function SuperHome() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardContent className="p-5">
-            <p className="label-eyebrow">Consultancies</p>
-            <p className="mt-2 font-serif text-3xl">{orgs?.length ?? 0}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+              Consultancies
+            </p>
+            <p className="mt-2 font-display text-3xl font-semibold text-marketing-ink">
+              {orgs?.length ?? 0}
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardContent className="p-5">
-            <p className="label-eyebrow">Active</p>
-            <p className="mt-2 font-serif text-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+              Active
+            </p>
+            <p className="mt-2 font-display text-3xl font-semibold text-marketing-ink">
               {(orgs ?? []).filter((o) => o.status === 'active').length}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
           <CardContent className="p-5">
-            <p className="label-eyebrow">Total leads (all)</p>
-            <p className="mt-2 font-serif text-3xl">{totalLeads}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-blue">
+              Total leads (all)
+            </p>
+            <p className="mt-2 font-display text-3xl font-semibold text-marketing-ink">
+              {totalLeads}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-lg border border-line bg-white">
+      <div className="rounded-xl border border-marketing-ink/10 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -98,7 +112,7 @@ export default async function SuperHome() {
                 <TableCell className="text-right">
                   <Link
                     href={`/super/orgs/${o.id}`}
-                    className="text-sm text-accent hover:underline"
+                    className="text-sm text-marketing-blue hover:underline"
                   >
                     Manage →
                   </Link>

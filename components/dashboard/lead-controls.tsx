@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   updateLeadStatus,
   addNote,
-  assignLead,
   sendLeadEmail,
 } from '@/app/(admin)/leads/actions';
 import { Select } from '@/components/ui/select';
@@ -46,37 +45,6 @@ export function StatusChanger({
         {LEAD_STATUSES.map((s) => (
           <option key={s} value={s}>
             {STATUS_LABELS[s]}
-          </option>
-        ))}
-      </Select>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-export function AssignControl({
-  leadId,
-  current,
-  agents,
-}: {
-  leadId: string;
-  current: string | null;
-  agents: { id: string; full_name: string }[];
-}) {
-  const { pending, error, run } = useAction();
-  return (
-    <div className="space-y-1">
-      <Select
-        defaultValue={current ?? ''}
-        disabled={pending}
-        onChange={(e) =>
-          run(() => assignLead(leadId, e.target.value || null))
-        }
-      >
-        <option value="">Unassigned</option>
-        {agents.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.full_name}
           </option>
         ))}
       </Select>
@@ -146,7 +114,7 @@ export function EmailPanel({
       </Select>
 
       {selected && (
-        <div className="rounded-md border border-line bg-secondary/30 p-3 text-sm">
+        <div className="rounded-md border border-tenant-ink/10 bg-tenant-gray p-3 text-sm">
           <p className="font-medium">{selected.subject}</p>
           <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
             {selected.body}
@@ -164,7 +132,7 @@ export function EmailPanel({
 
       <Button
         size="sm"
-        variant="accent"
+        className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
         disabled={pending || !key}
         onClick={() =>
           run(async () => {

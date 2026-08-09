@@ -27,7 +27,7 @@ export function PoweredByAetarix({
       <span
         className={cn(
           'text-[10px] uppercase tracking-[0.16em]',
-          onDark ? 'text-paper/70' : 'text-muted-foreground',
+          onDark ? 'text-tenant-offwhite/70' : 'text-muted-foreground',
         )}
       >
         Powered by
@@ -35,7 +35,7 @@ export function PoweredByAetarix({
       {/* The wordmark is dark blue, so it disappears on navy — on dark surfaces
           the name is set in type instead of forcing an unreadable image. */}
       {onDark ? (
-        <span className="font-serif text-sm text-paper/85">{AETARIX.name}</span>
+        <span className="font-serif text-sm text-tenant-offwhite/85">{AETARIX.name}</span>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img

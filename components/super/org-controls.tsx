@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { setOrgStatus, toggleModule } from '@/app/super/actions';
+import { setOrgStatus, toggleModule, setOrgTheme } from '@/app/super/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select } from '@/components/ui/select';
+import { THEME_LIST } from '@/lib/branding/themes';
 
 export function SuspendToggle({
   orgId,
@@ -19,7 +21,8 @@ export function SuspendToggle({
   return (
     <Button
       size="sm"
-      variant={suspended ? 'accent' : 'outline'}
+      variant={suspended ? undefined : 'outline'}
+      className={suspended ? 'bg-marketing-blue text-white hover:bg-marketing-blue/90' : undefined}
       disabled={pending}
       onClick={() =>
         start(async () => {
@@ -30,6 +33,50 @@ export function SuspendToggle({
     >
       {pending ? '…' : suspended ? 'Reactivate' : 'Suspend'}
     </Button>
+  );
+}
+
+export function ThemeSelect({
+  orgId,
+  themeKey,
+}: {
+  orgId: string;
+  themeKey: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [value, setValue] = useState(themeKey);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="max-w-xs space-y-1">
+      <Select
+        value={value}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.value;
+          const prev = value;
+          setValue(next);
+          setError(null);
+          start(async () => {
+            const res = await setOrgTheme(orgId, next);
+            if (!res.ok) {
+              setValue(prev);
+              setError(res.error ?? 'Could not save.');
+            } else {
+              router.refresh();
+            }
+          });
+        }}
+      >
+        {THEME_LIST.map((t) => (
+          <option key={t.key} value={t.key}>
+            {t.label}
+          </option>
+        ))}
+      </Select>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   );
 }
 
@@ -48,11 +95,12 @@ export function ModuleToggle({
   const [pending, start] = useTransition();
   const [on, setOn] = useState(enabled);
   return (
-    <label className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2 text-sm">
+    <label className="flex items-center justify-between gap-3 rounded-md border border-marketing-ink/10 px-3 py-2 text-sm">
       <span>{moduleName}</span>
       <Checkbox
         checked={on}
         disabled={pending}
+        className="accent-marketing-blue text-marketing-blue"
         onChange={(e) => {
           const next = e.target.checked;
           setOn(next);

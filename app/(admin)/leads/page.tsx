@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Users } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
+import { getOrgBrand } from '@/lib/branding/org';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,18 +12,23 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
-import { RestoreLeadButton } from '@/components/dashboard/lead-archive-controls';
+import { CreateQueryDialog } from '@/components/dashboard/create-query-dialog';
+import {
+  RestoreLeadButton,
+  LeadRowActions,
+} from '@/components/dashboard/lead-archive-controls';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
   SOURCE_LABELS,
-  isLeadStatus,
   type LeadStatus,
   type LeadSource,
 } from '@/lib/leads/display';
+import { applyLeadFilters } from '@/lib/leads/filters';
 
-export const metadata = { title: 'Leads — CRM' };
+export const metadata = { title: 'Leads' };
 
 const PAGE_SIZE = 20;
 
@@ -32,23 +38,18 @@ function str(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? '';
 }
 
-// Strip characters that would break a PostgREST or() filter.
-function sanitize(q: string): string {
-  return q.replace(/[,()*]/g, ' ').trim().slice(0, 80);
-}
-
 export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   const profile = await requireUser();
+  const brand = await getOrgBrand(profile.organization_id);
   const sp = await searchParams;
 
-  const q = sanitize(str(sp.q));
+  const q = str(sp.q);
   const status = str(sp.status);
   const source = str(sp.source);
-  const agent = str(sp.agent);
   const completeness = str(sp.completeness); // '', 'complete', 'incomplete'
   const from = str(sp.from);
   const to = str(sp.to);
@@ -65,36 +66,30 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, full_name, email, phone, utm_source, status, assigned_to, created_at, is_complete, archived_at, archived_by',
+      'id, lead_number, full_name, email, phone, utm_source, status, created_by, created_at, is_complete, archived_at, archived_by',
       { count: 'exact' },
     );
 
-  if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
-  if (status && isLeadStatus(status)) query = query.eq('status', status);
-  if (source) query = query.eq('utm_source', source);
-  if (agent === 'unassigned') query = query.is('assigned_to', null);
-  else if (agent) query = query.eq('assigned_to', agent);
-  if (completeness === 'incomplete') query = query.eq('is_complete', false);
-  else if (completeness === 'complete') query = query.eq('is_complete', true);
-  if (from) query = query.gte('created_at', from);
-  if (to) query = query.lte('created_at', `${to}T23:59:59`);
-  // Split active vs archived — the default list hides archived leads.
-  if (showArchived) query = query.not('archived_at', 'is', null);
-  else query = query.is('archived_at', null);
+  query = applyLeadFilters(query, {
+    q,
+    status,
+    source,
+    completeness,
+    from,
+    to,
+    archived: showArchived,
+  });
 
   const offset = (page - 1) * PAGE_SIZE;
   const { data: leads, count } = await query
     .order(sortCol, { ascending: dir === 'asc' })
     .range(offset, offset + PAGE_SIZE - 1);
 
-  // Agent name map + filter options (admin sees all profiles; agent sees self).
+  // Name map for Created By / Archived by lookups.
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, role, is_active');
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
-  const agentOptions = (profiles ?? [])
-    .filter((p) => p.is_active)
-    .map((p) => ({ id: p.id, full_name: p.full_name }));
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -104,7 +99,6 @@ export default async function LeadsPage({
     if (q) next.set('q', q);
     if (status) next.set('status', status);
     if (source) next.set('source', source);
-    if (agent) next.set('agent', agent);
     if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
@@ -115,51 +109,67 @@ export default async function LeadsPage({
     return `/leads?${next.toString()}`;
   };
 
+  const exportHref = (() => {
+    const next = new URLSearchParams();
+    if (q) next.set('q', q);
+    if (status) next.set('status', status);
+    if (source) next.set('source', source);
+    if (completeness) next.set('completeness', completeness);
+    if (from) next.set('from', from);
+    if (to) next.set('to', to);
+    if (showArchived) next.set('archived', '1');
+    return `/api/leads/export?${next.toString()}`;
+  })();
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="label-eyebrow">Leads</p>
-          <h1 className="font-serif text-2xl">
-            {showArchived ? 'Archived leads' : 'All leads'}
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href={showArchived ? '/leads' : '/leads?archived=1'}
-            className="text-sm text-accent hover:underline"
-          >
-            {showArchived ? '← Back to active' : 'View archived'}
-          </Link>
-          <p className="text-sm text-muted-foreground">{total} total</p>
-        </div>
-      </div>
-
-      <LeadsFilters
-        agents={agentOptions}
-        showAgentFilter={profile.role === 'admin'}
+      <PageHeader
+        icon={Users}
+        title={showArchived ? 'Archived leads' : 'All leads'}
+        subtitle={`${total} total · manage your applicant pipeline`}
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            <CreateQueryDialog consentName={brand.legalName} />
+            <a
+              href={exportHref}
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent text-white px-3 text-sm hover:bg-tenant-accent/90"
+            >
+              <Download className="h-4 w-4" /> Export
+            </a>
+            <Link
+              href={showArchived ? '/leads' : '/leads?archived=1'}
+              className="inline-flex items-center gap-2 rounded-md text-sm text-tenant-ink border border-tenant-ink/15 hover:bg-tenant-ink/5 h-9 px-3"
+            >
+              {showArchived ? '← Back to active' : 'View archived'}
+            </Link>
+          </div>
+        }
       />
 
-      <div className="rounded-lg border border-line bg-white">
+      <div className="rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm">
+        <LeadsFilters />
+      </div>
+
+      <div className="rounded-xl border border-tenant-ink/10 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden md:table-cell">Contact</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
-              {profile.role === 'admin' && (
-                <TableHead className="hidden lg:table-cell">Assigned</TableHead>
-              )}
-              <TableHead className="hidden sm:table-cell">Received</TableHead>
-              {showArchived && <TableHead>Archived</TableHead>}
+              <TableHead className='border'>ID</TableHead>
+              <TableHead className='border'>Name</TableHead>
+              <TableHead className="hidden md:table-cell border">Contact</TableHead>
+              <TableHead className='border'>Source</TableHead>
+              <TableHead className='border'>Status</TableHead>
+              <TableHead className="hidden lg:table-cell border">Created By</TableHead>
+              <TableHead className="hidden sm:table-cell border">Received</TableHead>
+              {showArchived && <TableHead className='border'>Archived</TableHead>}
+              {!showArchived && <TableHead className="text-right border">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {(leads ?? []).length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No leads match your filters.
@@ -168,36 +178,37 @@ export default async function LeadsPage({
             )}
             {(leads ?? []).map((l) => (
               <TableRow key={l.id} className="cursor-pointer">
-                <TableCell className="font-medium">
+                <TableCell className="text-muted-foreground border">
+                  <Link href={`/leads/${l.id}`} className="hover:underline">
+                    #{l.lead_number}
+                  </Link>
+                </TableCell>
+                <TableCell className="font-medium border">
                   <Link href={`/leads/${l.id}`} className="flex items-center gap-2 hover:underline">
-                    {l.full_name}
+                    {l.full_name || '(no name)'}
                     {l.is_complete === false && (
                       <Badge variant="warning">Incomplete</Badge>
                     )}
                   </Link>
                 </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  <div>{l.email}</div>
-                  <div className="text-xs">{l.phone}</div>
+                <TableCell className="hidden text-muted-foreground md:table-cell border">
+                  <div>{l.email || '—'}</div>
+                  <div className="text-xs">{l.phone || '—'}</div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="border">
                   <Badge variant="outline">
                     {SOURCE_LABELS[l.utm_source as LeadSource] ?? l.utm_source}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="border">
                   <Badge variant={STATUS_BADGE[l.status as LeadStatus]}>
                     {STATUS_LABELS[l.status as LeadStatus] ?? l.status}
                   </Badge>
                 </TableCell>
-                {profile.role === 'admin' && (
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {l.assigned_to
-                      ? (nameById.get(l.assigned_to) ?? '—')
-                      : '—'}
-                  </TableCell>
-                )}
-                <TableCell className="hidden text-muted-foreground sm:table-cell">
+                <TableCell className="hidden text-blue-500 font-semibold lg:table-cell border">
+                  {l.created_by ? (nameById.get(l.created_by) ?? '—') : '—'}
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground sm:table-cell border">
                   {new Date(l.created_at).toLocaleDateString('en-GB', {
                     day: '2-digit',
                     month: 'short',
@@ -205,7 +216,7 @@ export default async function LeadsPage({
                   })}
                 </TableCell>
                 {showArchived && (
-                  <TableCell>
+                  <TableCell className="border">
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <div>
                         {l.archived_by
@@ -220,6 +231,11 @@ export default async function LeadsPage({
                       </div>
                       <RestoreLeadButton leadId={l.id} />
                     </div>
+                  </TableCell>
+                )}
+                {!showArchived && (
+                  <TableCell className="text-right border">
+                    <LeadRowActions leadId={l.id} />
                   </TableCell>
                 )}
               </TableRow>
@@ -237,10 +253,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.max(1, page - 1))}
             aria-disabled={page <= 1}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-line px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-tenant-ink/15 px-3 text-sm ${
               page <= 1
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-secondary'
+                : 'hover:bg-tenant-gray'
             }`}
           >
             <ChevronLeft className="h-4 w-4" /> Prev
@@ -248,10 +264,10 @@ export default async function LeadsPage({
           <Link
             href={buildPageHref(Math.min(totalPages, page + 1))}
             aria-disabled={page >= totalPages}
-            className={`inline-flex h-9 items-center gap-1 rounded-md border border-line px-3 text-sm ${
+            className={`inline-flex h-9 items-center gap-1 rounded-md border border-tenant-ink/15 px-3 text-sm ${
               page >= totalPages
                 ? 'pointer-events-none opacity-40'
-                : 'hover:bg-secondary'
+                : 'hover:bg-tenant-gray'
             }`}
           >
             Next <ChevronRight className="h-4 w-4" />

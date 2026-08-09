@@ -10,7 +10,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Email input with inline validation on blur — flags a missing "@" or malformed
  * address before submit, mirroring the phone field's UX. The server re-validates.
  */
-export function EmailField({ error }: { error?: string }) {
+export function EmailField({
+  error,
+  required = true,
+}: {
+  error?: string;
+  required?: boolean;
+}) {
   const [value, setValue] = useState('');
   const [touched, setTouched] = useState(false);
 
@@ -32,7 +38,7 @@ export function EmailField({ error }: { error?: string }) {
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => setTouched(true)}
         aria-invalid={invalid || undefined}
-        required
+        required={required}
       />
       {showError && <p className="mt-1 text-xs text-destructive">{showError}</p>}
     </div>

@@ -1,17 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test('home page loads with primary CTAs', async ({ page }) => {
+test('platform landing page loads with nav sign-in and section anchors', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: /start your application/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^sign in$/i }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /staff sign in/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^pricing$/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /book demo/i }).first()).toBeVisible();
 });
 
-test('apply wizard step 1 renders', async ({ page }) => {
-  await page.goto('/apply');
+test('apply wizard step 1 renders on the per-consultancy slug route', async ({ page }) => {
+  await page.goto('/ien/apply');
   await expect(page.getByText(/step 1 of 3/i)).toBeVisible();
   await expect(page.getByLabel(/full name/i)).toBeVisible();
   await expect(page.getByLabel(/^email/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /continue/i })).toBeVisible();
+});
+
+test('bare /apply redirects to the marketing site', async ({ page }) => {
+  await page.goto('/apply');
+  await expect(page).toHaveURL('/');
 });
 
 test('protected routes redirect to login when unauthenticated', async ({ page }) => {

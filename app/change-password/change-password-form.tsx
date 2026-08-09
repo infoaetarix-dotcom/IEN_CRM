@@ -55,7 +55,11 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center gap-3">
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button
+          type="submit"
+          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+          disabled={pending}
+        >
           {pending ? 'Saving…' : 'Update password'}
         </Button>
         {!forced && (
