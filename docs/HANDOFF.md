@@ -52,6 +52,7 @@ run against the real Supabase project (they create and clean up their own data).
 | Password reset: super-admin-issued only (no self-service) | live |
 | Per-tenant branding (logo + name + color theme), Aetarix platform brand | live |
 | Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
+| Finance module — private per-admin ledger, opt-in, PDF statements | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -102,12 +103,27 @@ Migrations `0001`–`0007` are applied to production.
 
 ## Roadmap
 
-**Phase C — module gating** *(specced and planned, not built)*
-Make the per-org module toggles in `/super` actually enforce access: nav
-filtering, route guards and server-action guards, plus feature-level gating for
-analytics and email. `leads` is a core module and always on.
+**Phase C — module gating** *(started — Finance is the first module with real enforcement)*
+The Finance module (below) is the first to actually enforce its toggle: nav
+item hidden when off, and the route/server actions independently re-check
+before serving anything (never trust the sidebar alone). `analytics`,
+`email`, `templates`, `agents` etc. still don't enforce their toggles yet —
+same pattern, just not built for them. `leads` stays a core module, always on.
 → Spec and task-by-task plan in `docs/superpowers/`. Branch:
 `phase-c-module-gating`.
+
+**Finance module** *(done)*
+Opt-in (Super Admin → Package — modules, off by default), admin-only —
+agents never see it. Each admin gets their own **private** ledger (income,
+expense, category, payment method, optional link to a lead, note, date) —
+not shared with other admins, not visible to agents. Dashboard shows
+totals + a running table; PDF statements are generated per-admin with the
+org's own logo/theme and the admin's name + role in the title, downloadable
+for This month / Last month / This year / All time.
+Deliberately scoped per-admin (not org-wide) so that when an "owner" role
+(see Deferred by design, above) eventually ships, it only needs one new
+read policy layered on top — no migration of existing entries, since every
+row already carries which admin it belongs to.
 
 **Phase D — per-consultancy form links** *(done)*
 `/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.

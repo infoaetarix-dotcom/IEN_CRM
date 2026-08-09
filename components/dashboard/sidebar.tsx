@@ -8,6 +8,7 @@ import {
   UserCog,
   Mail,
   Link2,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  /** Only shown when this key is in the org's enabled modules — opt-in features. */
+  moduleKey?: string;
 }
 
 const NAV: NavItem[] = [
@@ -25,17 +28,25 @@ const NAV: NavItem[] = [
   { href: '/agents', label: 'Agents', icon: UserCog, adminOnly: true },
   { href: '/templates', label: 'Templates', icon: Mail, adminOnly: true },
   { href: '/form', label: 'Form', icon: Link2 },
+  { href: '/finance', label: 'Finance', icon: Wallet, adminOnly: true, moduleKey: 'finance' },
 ];
 
 export function Sidebar({
   role,
+  enabledModules = [],
   orientation = 'vertical',
 }: {
   role: 'admin' | 'agent';
+  /** Module keys enabled for this org (see organization_modules). */
+  enabledModules?: string[];
   orientation?: 'vertical' | 'horizontal';
 }) {
   const pathname = usePathname();
-  const items = NAV.filter((i) => !i.adminOnly || role === 'admin');
+  const items = NAV.filter((i) => {
+    if (i.adminOnly && role !== 'admin') return false;
+    if (i.moduleKey && !enabledModules.includes(i.moduleKey)) return false;
+    return true;
+  });
 
   return (
     <nav

@@ -59,6 +59,17 @@ export default async function AdminLayout({
   const brand = await getOrgBrand(profile.organization_id);
   const theme = resolveTheme(brand.themeKey);
 
+  // Which opt-in modules (e.g. Finance) this org has enabled — drives nav
+  // visibility. The route itself re-checks this independently; hiding the
+  // link is a UX nicety, not the access control.
+  const supabase = await createClient();
+  const { data: orgModules } = await supabase
+    .from('organization_modules')
+    .select('module_key')
+    .eq('organization_id', profile.organization_id)
+    .eq('enabled', true);
+  const enabledModules = (orgModules ?? []).map((m) => m.module_key);
+
   return (
     <div
       id="tenant-theme-root"
@@ -108,12 +119,12 @@ export default async function AdminLayout({
       <div className="flex min-w-0 flex-1 flex-col md:flex-row">
         {/* Icon-only sidebar */}
         <aside className="bg-tenant-navy hidden w-16 flex-none flex-col items-center px-10 py-4 md:flex">
-          <Sidebar role={profile.role} />
+          <Sidebar role={profile.role} enabledModules={enabledModules} />
         </aside>
 
         {/* Mobile nav row — icon-only, horizontal */}
         <div className="bg-tenant-navy flex items-center border-b border-white/10 py-3 md:hidden">
-          <Sidebar role={profile.role} orientation="horizontal" />
+          <Sidebar role={profile.role} enabledModules={enabledModules} orientation="horizontal" />
         </div>
 
         <main className="min-w-0 flex-1 p-6">{children}</main>

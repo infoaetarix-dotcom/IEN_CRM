@@ -19,9 +19,12 @@ export type AuditAction =
   | 'module_change'
   | 'login'
   | 'login_failed'
-  | 'password_reset_sent';
+  | 'password_reset_sent'
+  | 'finance_entry_created'
+  | 'finance_entry_updated'
+  | 'finance_entry_deleted';
 
-export type AuditEntity = 'lead' | 'message' | 'profile' | 'organization';
+export type AuditEntity = 'lead' | 'message' | 'profile' | 'organization' | 'finance_entry';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action
