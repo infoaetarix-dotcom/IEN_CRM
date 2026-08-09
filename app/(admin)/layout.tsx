@@ -2,7 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { KeyRound } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
@@ -10,8 +9,7 @@ import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
 import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
-import { SignOutButton } from '@/components/dashboard/sign-out-button';
-import { Badge } from '@/components/ui/badge';
+import { AccountMenu } from '@/components/dashboard/account-menu';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -65,75 +63,56 @@ export default async function AdminLayout({
     <div
       id="tenant-theme-root"
       style={themeStyleVars(theme.tokens)}
-      className="flex min-h-screen flex-col bg-tenant-gray"
+      className="bg-tenant-gray flex min-h-screen flex-col"
     >
       {/* Top navbar — full width: tenant logo left, account controls right */}
-      <header className="flex h-16 flex-none items-center justify-between border-b border-white/10 bg-tenant-navy p-5 md:p-10 ">
+      <header className="bg-tenant-navy flex h-16 flex-none items-center justify-between border-b border-white/10 p-5 md:p-10">
         <Link
           href="/dashboard"
-          className="flex items-center rounded-lg  px-3 py-2 shadow-sm"
+          className="relative flex items-center rounded-lg px-3 py-2"
         >
-          {/* Tenant's own logo — falls back to the Aetarix wordmark until they upload one. */}
-          {brand.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logoUrl}
-              alt={brand.name}
-              className="h-10 w-auto max-w-[160px] object-contain"
-            />
-          ) : (
-            <Image
-              src={AETARIX.wordmark}
-              alt={AETARIX.name}
-              width={295}
-              height={96}
-              className="h-7 w-auto object-contain"
-            />
-          )}
+          {/* Transparent blurred background */}
+          <div className="absolute inset-0 rounded-lg bg-white/5 backdrop-blur-md" />
+
+          {/* Logo stays sharp */}
+          <div className="relative z-10">
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt={brand.name}
+                className="h-10 w-auto max-w-[160px] object-contain"
+              />
+            ) : (
+              <Image
+                src={AETARIX.wordmark}
+                alt={AETARIX.name}
+                width={295}
+                height={96}
+                className="h-10 w-auto object-contain"
+              />
+            )}
+          </div>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3 sm:flex">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-tenant-accent to-tenant-accent2 text-xs font-semibold text-white">
-              {initialsFrom(profile.full_name)}
-            </span>
-            <span className="text-sm font-medium text-tenant-offwhite">
-              {profile.full_name}
-            </span>
-          </div>
-          <Badge
-            variant={profile.role === 'admin' ? 'accent' : 'neutral'}
-            className={
-              profile.role === 'admin'
-                ? 'border-transparent bg-tenant-accent/15 text-tenant-accent'
-                : undefined
-            }
-          >
-            {profile.role}
-          </Badge>
-          <Link
-            href="/change-password"
-            title="Change password"
-            aria-label="Change password"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-tenant-offwhite/70 transition-colors hover:bg-white/10 hover:text-tenant-offwhite"
-          >
-            <KeyRound className="h-4 w-4" />
-          </Link>
-          <SignOutButton
-            iconOnly
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200"
+          <AccountMenu
+            fullName={profile.full_name}
+            email={profile.email}
+            role={profile.role}
+            initials={initialsFrom(profile.full_name)}
           />
         </div>
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col md:flex-row">
         {/* Icon-only sidebar */}
-        <aside className="hidden w-16 px-10 flex-none flex-col items-center bg-tenant-navy py-4 md:flex">
+        <aside className="bg-tenant-navy hidden w-16 flex-none flex-col items-center px-10 py-4 md:flex">
           <Sidebar role={profile.role} />
         </aside>
 
         {/* Mobile nav row — icon-only, horizontal */}
-        <div className="flex py-3 items-center border-b border-white/10 bg-tenant-navy md:hidden">
+        <div className="bg-tenant-navy flex items-center border-b border-white/10 py-3 md:hidden">
           <Sidebar role={profile.role} orientation="horizontal" />
         </div>
 
