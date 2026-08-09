@@ -53,6 +53,7 @@ run against the real Supabase project (they create and clean up their own data).
 | Per-tenant branding (logo + name + color theme), Aetarix platform brand | live |
 | Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
 | Finance module — private per-admin ledger, opt-in, PDF statements | live |
+| Embeddable apply form — `/{slug}/apply` + `/thank-you` iframe-able on a consultancy's own site, `website` lead source | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -82,6 +83,13 @@ Migrations `0001`–`0007` are applied to production.
   `noreply@ieneducation.com`.
 - **No Aetarix square mark.** The wordmark stands in everywhere; a square icon is
   needed for tight spaces and a favicon.
+- **Platform base domain move to `consultancy.aetarix.com`** (owner owns
+  `aetarix.com`, currently unused; base domain is `ien-crm.vercel.app`). Owner's
+  side: add the domain in Vercel, add `https://consultancy.aetarix.com/auth/confirm`
+  to Supabase Auth's allowed redirect URLs (**keep the old `vercel.app` one too**
+  until IEN's existing link is retired — see `GO_LIVE.md`), then update
+  `NEXT_PUBLIC_APP_URL`. No code change needed — this is a platform-wide domain,
+  unrelated to the per-tenant `form_domain`/`portal_domain` feature above.
 
 ### Accepted risks (owner's explicit decision)
 - **No database backups.** Supabase free tier. A hard delete or bad migration is

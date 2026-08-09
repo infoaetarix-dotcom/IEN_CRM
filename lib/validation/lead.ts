@@ -49,6 +49,7 @@ export const LEAD_SOURCES = [
   'linkedin',
   'youtube',
   'whatsapp',
+  'website',
   'direct',
   'other',
 ] as const;

@@ -54,6 +54,35 @@ it just won't route anywhere until DNS + Vercel are both in place. Likewise,
 adding it in Vercel without saving it in Super Admin leaves it 404ing (no org
 claims that host yet).
 
+## Embedding on a consultancy's own website
+
+`/{slug}/apply` and `/thank-you` are the one deliberate exception to the
+app's normal clickjacking lock: `next.config.mjs` omits `X-Frame-Options`
+and `frame-ancestors` for just those two routes (every other route, staff
+CRM included, stays `frame-ancestors 'none'` / `X-Frame-Options: DENY`).
+Safe to leave open to any origin — both pages are unauthenticated and
+already reachable by anyone with the URL, so framing them grants an
+attacker nothing they didn't already have.
+
+Give the consultancy an iframe snippet pointing at their own form (works
+whether they're using the base app domain, a `/{slug}/apply` link, or their
+`form_domain`):
+
+```html
+<iframe
+  src="https://consultancy.aetarix.com/ien/apply?utm_source=website"
+  style="width: 100%; height: 900px; border: 0"
+  title="Apply now"
+></iframe>
+```
+
+The `utm_source=website` query param is what tags leads submitted through
+the embed as coming from their site rather than a direct visit — see
+`lib/validation/lead.ts`'s `LEAD_SOURCES` (`'website'` added in migration
+`0020_website_lead_source.sql`). It has to be baked into the embed URL
+itself; there's no way to auto-detect "this request came from inside an
+iframe" server-side.
+
 ## Notes
 
 - A domain can only belong to one org at a time (enforced by a unique
