@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
 import { getPublicOrgBrand } from '@/lib/branding/org';
@@ -45,12 +44,6 @@ export default async function ThankYouPage({
         A confirmation email is on its way. One of our consultants will reach
         out within 24 hours to discuss your study-abroad plans.
       </p>
-      <Link
-        href="/"
-        className="mt-8 rounded-md border border-tenant-offwhite/30 px-6 py-3 text-sm font-medium text-tenant-offwhite transition hover:bg-tenant-offwhite/10"
-      >
-        Back to home
-      </Link>
     </main>
   );
 }
