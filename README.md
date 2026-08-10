@@ -96,9 +96,9 @@ merge once checks pass. See [`docs/HANDOFF.md`](docs/HANDOFF.md#branching--deplo
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | Architecture, conventions and rules (loaded by Claude Code) |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | Current state, open items, roadmap |
-| [`MULTI_TENANCY.md`](MULTI_TENANCY.md) | Tenancy and RLS model |
+| [`docs/MULTI_TENANCY.md`](docs/MULTI_TENANCY.md) | Tenancy and RLS model |
 | [`docs/GO_LIVE.md`](docs/GO_LIVE.md) | Production hardening checklist |
 | [`docs/FORM_SUBDOMAIN.md`](docs/FORM_SUBDOMAIN.md) | Form/CRM domain split |
-| [`TESTING_GUIDE.md`](TESTING_GUIDE.md) | Test strategy |
-| [`STAFF_GUIDE.md`](STAFF_GUIDE.md) | End-user guide for consultancy staff |
+| [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) | Test strategy |
+| [`docs/STAFF_GUIDE.md`](docs/STAFF_GUIDE.md) | End-user guide for consultancy staff |
 | `docs/superpowers/` | Specs and plans for upcoming phases |
