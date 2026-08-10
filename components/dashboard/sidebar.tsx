@@ -9,6 +9,7 @@ import {
   Mail,
   Link2,
   Wallet,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,13 @@ const NAV: NavItem[] = [
   { href: '/templates', label: 'Templates', icon: Mail, adminOnly: true },
   { href: '/form', label: 'Form', icon: Link2 },
   { href: '/finance', label: 'Finance', icon: Wallet, adminOnly: true, moduleKey: 'finance' },
+  {
+    href: '/activity',
+    label: 'Activity',
+    icon: Activity,
+    adminOnly: true,
+    moduleKey: 'activity_tracker',
+  },
 ];
 
 export function Sidebar({

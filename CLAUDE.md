@@ -123,7 +123,7 @@ Never leave `main` broken: the client is using it right now.
 
 - `README.md` — setup and commands.
 - `docs/HANDOFF.md` — current state, open items, roadmap. **Start here.**
-- `MULTI_TENANCY.md` — the tenancy model.
+- `docs/MULTI_TENANCY.md` — the tenancy model.
 - `docs/GO_LIVE.md`, `docs/FORM_SUBDOMAIN.md` — operational runbooks.
 - `docs/superpowers/` — specs and implementation plans for upcoming phases.
 - `supabase/migrations/` — schema history; read these to understand the data model.

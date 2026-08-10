@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { requireFinanceAccess } from '@/lib/finance/guard';
+import { requireActivityAccess } from '@/lib/activity/guard';
 import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { resolvePdfLogo } from '@/lib/branding/pdf-logo';
-import { StatementDocument } from '@/lib/finance/statement-pdf';
-import { extractLeadName, type FinanceEntry } from '@/lib/finance/types';
+import { ActivityReportDocument } from '@/lib/activity/report-pdf';
+import type { ActivityEntry } from '@/lib/activity/types';
 
 // @react-pdf/renderer needs real Node (fs, Buffer) — not Edge-compatible.
 export const runtime = 'nodejs';
@@ -49,34 +49,21 @@ function dateRangeFor(key: string): { from: string; to: string; label: string } 
 }
 
 export async function GET(request: NextRequest) {
-  const profile = await requireFinanceAccess();
+  const profile = await requireActivityAccess();
   const supabase = await createClient();
 
   const range = request.nextUrl.searchParams.get('range') ?? 'this_month';
   const { from, to, label } = dateRangeFor(range);
 
   const { data: rawEntries } = await supabase
-    .from('finance_entries')
-    .select(
-      'id, type, amount, category, payment_method, note, entry_date, lead_id, created_at, leads(full_name)',
-    )
-    .eq('user_id', profile.id)
-    .gte('entry_date', from)
-    .lte('entry_date', to)
-    .order('entry_date', { ascending: false });
+    .from('activity_entries')
+    .select('id, category, title, description, activity_date, created_at')
+    .eq('organization_id', profile.organization_id)
+    .gte('activity_date', from)
+    .lte('activity_date', to)
+    .order('activity_date', { ascending: false });
 
-  const entries: FinanceEntry[] = (rawEntries ?? []).map((e) => ({
-    id: e.id,
-    type: e.type,
-    amount: Number(e.amount),
-    category: e.category,
-    payment_method: e.payment_method,
-    note: e.note,
-    lead_id: e.lead_id,
-    lead_name: extractLeadName(e.leads),
-    entry_date: e.entry_date,
-    created_at: e.created_at,
-  }));
+  const entries: ActivityEntry[] = rawEntries ?? [];
 
   const brand = await getOrgBrand(profile.organization_id);
   const theme = resolveTheme(brand.themeKey);
@@ -84,8 +71,6 @@ export async function GET(request: NextRequest) {
 
   const docProps = {
     entries,
-    fullName: profile.full_name,
-    role: profile.role,
     orgName: brand.legalName,
     navyHex: theme.tokens.navy,
     accentHex: theme.tokens.accent,
@@ -94,17 +79,14 @@ export async function GET(request: NextRequest) {
 
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await renderToBuffer(<StatementDocument {...docProps} logo={logo} />);
+    pdfBuffer = await renderToBuffer(<ActivityReportDocument {...docProps} logo={logo} />);
   } catch (err) {
-    // Something else in rendering failed (not the logo — that already has
-    // its own fallback above) — retry once with no image at all rather
-    // than fail the whole statement.
-    console.error('[finance statement] render failed, retrying without a logo', err);
-    pdfBuffer = await renderToBuffer(<StatementDocument {...docProps} logo={null} />);
+    console.error('[activity report] render failed, retrying without a logo', err);
+    pdfBuffer = await renderToBuffer(<ActivityReportDocument {...docProps} logo={null} />);
   }
 
-  const safeName = profile.full_name.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const filename = `${safeName || 'Statement'}-Finance-Statement-${range}.pdf`;
+  const safeName = brand.legalName.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const filename = `${safeName || 'Activity'}-Activity-Report-${range}.pdf`;
 
   return new Response(new Uint8Array(pdfBuffer), {
     headers: {
