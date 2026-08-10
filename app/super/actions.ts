@@ -445,3 +445,124 @@ This link can only be used once and expires shortly. If you weren't expecting th
 
   return { ok: true };
 }
+
+const activityEntrySchema = z.object({
+  category: z.string().trim().min(1, 'Choose or enter a category').max(80),
+  title: z.string().trim().min(1, 'Title is required').max(200),
+  description: z.string().trim().max(2000).optional(),
+  activity_date: z.string().min(1, 'Pick a date'),
+});
+
+/**
+ * Log a piece of work Aetarix did for a consultancy. Super-admin only —
+ * the org's own admin can only read these, never write (see
+ * 0021_activity_tracker.sql; RLS has no write policy for `authenticated`).
+ */
+export async function createActivityEntry(
+  orgId: string,
+  _prev: SuperResult,
+  formData: FormData,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const parsed = activityEntrySchema.safeParse({
+    category: formData.get('category') ?? '',
+    title: formData.get('title') ?? '',
+    description: (formData.get('description') as string) || undefined,
+    activity_date: formData.get('activity_date') ?? '',
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]!.message };
+  }
+  const d = parsed.data;
+
+  const service = createServiceClient();
+  const { data: entry, error } = await service
+    .from('activity_entries')
+    .insert({
+      organization_id: orgId,
+      created_by: superAdmin.id,
+      category: d.category,
+      title: d.title,
+      description: d.description || null,
+      activity_date: d.activity_date,
+    })
+    .select('id')
+    .single();
+  if (error || !entry) return { ok: false, error: 'Could not save this entry.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'activity_entry_created',
+    entity: 'activity_entry',
+    entityId: entry.id,
+    metadata: { category: d.category, title: d.title },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+export async function updateActivityEntry(
+  entryId: string,
+  orgId: string,
+  _prev: SuperResult,
+  formData: FormData,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const parsed = activityEntrySchema.safeParse({
+    category: formData.get('category') ?? '',
+    title: formData.get('title') ?? '',
+    description: (formData.get('description') as string) || undefined,
+    activity_date: formData.get('activity_date') ?? '',
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]!.message };
+  }
+  const d = parsed.data;
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from('activity_entries')
+    .update({
+      category: d.category,
+      title: d.title,
+      description: d.description || null,
+      activity_date: d.activity_date,
+    })
+    .eq('id', entryId);
+  if (error) return { ok: false, error: 'Could not update this entry.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'activity_entry_updated',
+    entity: 'activity_entry',
+    entityId: entryId,
+    metadata: { category: d.category, title: d.title },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+export async function deleteActivityEntry(entryId: string, orgId: string): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const service = createServiceClient();
+  const { error } = await service.from('activity_entries').delete().eq('id', entryId);
+  if (error) return { ok: false, error: 'Could not delete this entry.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'activity_entry_deleted',
+    entity: 'activity_entry',
+    entityId: entryId,
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}

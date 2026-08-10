@@ -1,11 +1,6 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import type { PdfLogo } from '@/lib/branding/pdf-logo';
 import type { FinanceEntry } from './types';
-
-/** Raw image bytes — never a bare URL/path string, see route.tsx for why. */
-export interface StatementLogo {
-  data: Buffer;
-  format: 'png' | 'jpg';
-}
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 9, fontFamily: 'Helvetica', color: '#111827' },
@@ -44,7 +39,7 @@ export function StatementDocument({
   fullName: string;
   role: string;
   orgName: string;
-  logo: StatementLogo | null;
+  logo: PdfLogo | null;
   navyHex: string;
   accentHex: string;
   rangeLabel: string;

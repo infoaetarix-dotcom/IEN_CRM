@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { AddEntryDialog } from '@/components/dashboard/finance/add-entry-dialog';
 import { EntriesTable } from '@/components/dashboard/finance/entries-table';
-import { DownloadStatementButton } from '@/components/dashboard/finance/download-statement-button';
+import { DownloadReportButton } from '@/components/dashboard/download-report-button';
 import { formatAmount, extractLeadName, type FinanceEntry } from '@/lib/finance/types';
 
 export const metadata = { title: 'Finance' };
@@ -86,7 +86,7 @@ export default async function FinancePage() {
         subtitle="Your own private income and expense ledger — no one else on your team sees this."
         action={
           <div className="flex flex-wrap gap-2">
-            <DownloadStatementButton />
+            <DownloadReportButton href="/api/finance/statement" label="Download statement" />
             <AddEntryDialog leads={leads ?? []} />
           </div>
         }

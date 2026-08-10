@@ -54,6 +54,7 @@ run against the real Supabase project (they create and clean up their own data).
 | Per-consultancy form (`/{slug}/apply`) + custom domains (Super Admin) | live |
 | Finance module — private per-admin ledger, opt-in, PDF statements | live |
 | Embeddable apply form — `/{slug}/apply` + `/thank-you` iframe-able on a consultancy's own site, `website` lead source | live |
+| Activity Tracker module — Aetarix-authored, opt-in, read-only for the consultancy | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -136,6 +137,19 @@ Deliberately scoped per-admin (not org-wide) so that when an "owner" role
 (see Deferred by design, above) eventually ships, it only needs one new
 read policy layered on top — no migration of existing entries, since every
 row already carries which admin it belongs to.
+
+**Activity Tracker module** *(done)*
+Opt-in (Super Admin → Package — modules, off by default), admin-only —
+agents never see it. **Asymmetric on purpose**, unlike Finance: Aetarix
+(Super Admin) is the only writer — logging entries per-consultancy from
+`/super/orgs/{id}` → Activity log (category, title, description, date) —
+and the consultancy's own admin gets a **read-only** report at `/activity`,
+with no create/edit/delete UI on their side at all. `activity_entries`'
+RLS grants `select` only to `authenticated`, scoped to the owning org's
+admins; there is no insert/update/delete policy for that role, so every
+write goes through `requireSuperAdmin()` + the service-role client
+(`app/super/actions.ts`) — a tenant literally cannot write to this table
+even if they tried to bypass the UI. Migration `0021_activity_tracker.sql`.
 
 **Phase D — per-consultancy form links** *(done)*
 `/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.

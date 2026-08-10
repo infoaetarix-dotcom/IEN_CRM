@@ -21,6 +21,7 @@ import {
 import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org-controls';
 import { OrgBranding } from '@/components/super/org-branding';
 import { OrgDomains } from '@/components/super/org-domains';
+import { OrgActivity } from '@/components/super/org-activity';
 import { SendResetButton } from '@/components/super/send-reset-button';
 import { brandFromOrg } from '@/lib/branding';
 
@@ -72,6 +73,16 @@ export default async function OrgDetail({
       return { ...s, email: data.user?.email ?? null };
     }),
   );
+
+  // activity_entries' RLS only grants read to the owning org's own admin —
+  // deliberately no super-admin bypass, so this cross-org read goes through
+  // the service role like the staff email lookups above.
+  const { data: activityEntries } = await service
+    .from('activity_entries')
+    .select('id, category, title, description, activity_date, created_at')
+    .eq('organization_id', id)
+    .order('activity_date', { ascending: false })
+    .order('created_at', { ascending: false });
 
   return (
     <div className="space-y-6">
@@ -145,6 +156,19 @@ export default async function OrgDetail({
               enabled={enabled.get(m.key) === true}
             />
           ))}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Activity log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
+            What you log here shows up as a read-only report in this consultancy&rsquo;s
+            own CRM, once Activity Tracker is checked on above.
+          </p>
+          <OrgActivity orgId={org.id} entries={activityEntries ?? []} />
         </CardContent>
       </Card>
 
