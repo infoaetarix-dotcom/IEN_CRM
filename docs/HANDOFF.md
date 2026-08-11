@@ -55,6 +55,7 @@ run against the real Supabase project (they create and clean up their own data).
 | Finance module — private per-admin ledger, opt-in, PDF statements | live |
 | Embeddable apply form — `/{slug}/apply` + `/thank-you` iframe-able on a consultancy's own site, `website` lead source | live |
 | Activity Tracker module — Aetarix-authored, opt-in, read-only for the consultancy | live |
+| Applications — one lead → many applications, core feature (no module toggle, admin + agent) | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
 
 Migrations `0001`–`0007` are applied to production.
@@ -150,6 +151,44 @@ admins; there is no insert/update/delete policy for that role, so every
 write goes through `requireSuperAdmin()` + the service-role client
 (`app/super/actions.ts`) — a tenant literally cannot write to this table
 even if they tried to bypass the UI. Migration `0021_activity_tracker.sql`.
+
+**Applications** *(done)*
+A core feature, not an opt-in module — no Super Admin toggle, open to admin
+and agent alike, same shared org-wide visibility `leads` already has
+(`applications_all` RLS mirrors `leads_read`/`leads_update`, including the
+`is_super_admin()` bypass). One lead → many applications: "Create
+application" from a lead's page copies a snapshot of that lead's current
+field values (same field set as the lead form, reusing `leadObject` from
+`lib/validation/lead.ts` directly rather than duplicating it) into a new
+application, plus two application-only additions — `passport_number` and a
+document library. It's a one-time copy: editing the application afterward
+never touches the original lead. Deleting a lead cascades to delete its
+applications (`lead_id ... on delete cascade`) — an application only exists
+in relation to its lead.
+
+Two create entry points, one shared detail page (`/applications/{id}`):
+from a lead's own page (lead fixed, pre-filled), or from the `/applications`
+tab (pick a lead via a lead-picker first, same combobox Finance uses for its
+optional lead link, generalized into `components/dashboard/lead-picker.tsx`
+so both a required and an optional variant share one component). The
+`/applications` table shows every application with both its **Lead #** and
+its own **Application #** — a lead with 3 applications shows 3 rows sharing
+one Lead # but 3 distinct Application #s (gapless MAX+1 trigger, identical
+mechanism to `lead_number`).
+
+Status reuses the exact same `lead_status` enum/labels/badges leads already
+use — same values, same `StatusChanger` pattern, so it looks and behaves
+identically, just scoped to `applications`.
+
+Documents are the one genuinely new pattern in this app: a **private**
+Storage bucket (`application-documents`) with **no** object-level policies
+at all — upload/download/replace/delete all go through a guarded server
+action using the service role (`app/(admin)/applications/actions.ts`),
+downloads via a short-lived signed URL from a route handler
+(`app/api/applications/documents/[id]/route.ts`), never a public URL. Any
+admin or agent in the org can replace or delete any document, not just the
+uploader — same shared-access philosophy as everything else here. Migration
+`0022_applications.sql`.
 
 **Phase D — per-consultancy form links** *(done)*
 `/{slug}/apply` ships — each consultancy has its own public intake URL (e.g.

@@ -25,7 +25,13 @@ export type AuditAction =
   | 'finance_entry_deleted'
   | 'activity_entry_created'
   | 'activity_entry_updated'
-  | 'activity_entry_deleted';
+  | 'activity_entry_deleted'
+  | 'application_created'
+  | 'application_updated'
+  | 'application_deleted'
+  | 'application_document_uploaded'
+  | 'application_document_replaced'
+  | 'application_document_deleted';
 
 export type AuditEntity =
   | 'lead'
@@ -33,7 +39,8 @@ export type AuditEntity =
   | 'profile'
   | 'organization'
   | 'finance_entry'
-  | 'activity_entry';
+  | 'activity_entry'
+  | 'application';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action

@@ -13,15 +13,19 @@ import {
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 
-/** Optional link from a finance entry to the lead it's associated with. */
+/** Searchable lead combobox — optional-link (Finance) or required-selection (Applications). */
 export function LeadPicker({
   leads,
   value,
   onChange,
+  placeholder = 'Not linked to a lead (optional)',
+  allowClear = true,
 }: {
   leads: { id: string; full_name: string }[];
   value: string;
   onChange: (id: string) => void;
+  placeholder?: string;
+  allowClear?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selected = leads.find((l) => l.id === value);
@@ -32,35 +36,35 @@ export function LeadPicker({
         <button
           type="button"
           role="combobox"
-          aria-controls="finance-lead-options"
+          aria-controls="lead-picker-options"
           aria-expanded={open}
           className={cn(
             'flex h-10 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             !selected && 'text-muted-foreground',
           )}
         >
-          <span className="truncate">
-            {selected ? selected.full_name : 'Not linked to a lead (optional)'}
-          </span>
+          <span className="truncate">{selected ? selected.full_name : placeholder}</span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search leads…" />
-          <CommandList id="finance-lead-options">
+          <CommandList id="lead-picker-options">
             <CommandEmpty>No lead found.</CommandEmpty>
             <CommandGroup>
-              <CommandItem
-                value="__none__"
-                onSelect={() => {
-                  onChange('');
-                  setOpen(false);
-                }}
-              >
-                <span className="text-muted-foreground">Not linked</span>
-                {!value && <Check className="ml-auto h-4 w-4 text-tenant-accent" />}
-              </CommandItem>
+              {allowClear && (
+                <CommandItem
+                  value="__none__"
+                  onSelect={() => {
+                    onChange('');
+                    setOpen(false);
+                  }}
+                >
+                  <span className="text-muted-foreground">Not linked</span>
+                  {!value && <Check className="ml-auto h-4 w-4 text-tenant-accent" />}
+                </CommandItem>
+              )}
               {leads.map((l) => (
                 <CommandItem
                   key={l.id}

@@ -184,28 +184,33 @@ const leadFields = {
     company: z.string().max(0).optional(),
 } as const;
 
-const priorRejectionOk = (d: {
+/**
+ * Exported (not just used internally) — the applications feature reuses this
+ * exact object plus these two cross-field checks, since an application's
+ * form is the lead form plus two extra fields (see lib/validation/application.ts).
+ */
+export const priorRejectionOk = (d: {
   prior_rejection?: boolean;
   prior_rejection_detail?: string;
 }) => !d.prior_rejection || (d.prior_rejection_detail ?? '').length > 0;
-const PRIOR_REJECTION_MSG = {
+export const PRIOR_REJECTION_MSG = {
   message: 'Please add a brief detail about the prior rejection',
   path: ['prior_rejection_detail'] as (string | number)[],
 };
 
-const gradeInRange = (d: { grade_value?: number; grading_system?: string }) => {
+export const gradeInRange = (d: { grade_value?: number; grading_system?: string }) => {
   if (d.grade_value == null || !d.grading_system) return true;
   if (d.grading_system === 'cgpa_4') return d.grade_value <= 4.0;
   if (d.grading_system === 'cgpa_5') return d.grade_value <= 5.0;
   if (d.grading_system === 'percentage') return d.grade_value <= 100;
   return true;
 };
-const GRADE_MSG = {
+export const GRADE_MSG = {
   message: 'Result is out of range for the selected grading system',
   path: ['grade_value'] as (string | number)[],
 };
 
-const leadObject = z.object(leadFields);
+export const leadObject = z.object(leadFields);
 
 export const leadSchema = leadObject
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
