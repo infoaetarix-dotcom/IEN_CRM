@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { LeadPicker } from './lead-picker';
+import { LeadPicker } from '@/components/dashboard/lead-picker';
 import {
   createFinanceEntry,
   updateFinanceEntry,

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { ageFromDob } from '@/lib/utils';
@@ -67,7 +67,7 @@ export default async function LeadDetailPage({
     .single();
   if (!lead) notFound();
 
-  const [notesRes, historyRes, messagesRes, profilesRes, templatesRes] =
+  const [notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes] =
     await Promise.all([
       supabase
         .from('lead_notes')
@@ -89,6 +89,11 @@ export default async function LeadDetailPage({
         .from('email_templates')
         .select('key, name, subject, body')
         .order('is_auto', { ascending: false }),
+      supabase
+        .from('applications')
+        .select('id, application_number, status')
+        .eq('lead_id', id)
+        .order('application_number', { ascending: true }),
     ]);
 
   const nameById = new Map(
@@ -288,6 +293,48 @@ export default async function LeadDetailPage({
           </Card>
 
           </LeadDetailsEditor>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="font-tenant-display">Applications</CardTitle>
+              <Link
+                href={`/applications/new?lead_id=${lead.id}`}
+                className="inline-flex h-8 items-center gap-1 rounded-md bg-tenant-accent px-2.5 text-xs text-white hover:bg-tenant-accent/90"
+              >
+                <Plus className="h-3.5 w-3.5" /> Create application
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {(applicationsRes.data ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No applications yet for this lead.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {(applicationsRes.data ?? []).map((a, i) => (
+                    <Link
+                      key={a.id}
+                      href={`/applications/${a.id}`}
+                      className="rounded-lg border border-tenant-ink/10 p-3 transition-colors hover:border-tenant-accent hover:bg-tenant-gray"
+                    >
+                      <p className="text-sm font-medium text-tenant-ink">
+                        Application {i + 1}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        #{a.application_number}
+                      </p>
+                      <Badge
+                        variant={STATUS_BADGE[a.status as LeadStatus]}
+                        className="mt-2"
+                      >
+                        {STATUS_LABELS[a.status as LeadStatus]}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>

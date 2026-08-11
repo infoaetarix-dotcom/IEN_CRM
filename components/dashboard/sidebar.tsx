@@ -10,6 +10,7 @@ import {
   Link2,
   Wallet,
   Activity,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/leads', label: 'Leads', icon: Users },
+  { href: '/applications', label: 'Applications', icon: FileText },
   { href: '/agents', label: 'Agents', icon: UserCog, adminOnly: true },
   { href: '/templates', label: 'Templates', icon: Mail, adminOnly: true },
   { href: '/form', label: 'Form', icon: Link2 },
