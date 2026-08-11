@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, Plus } from 'lucide-react';
+import { FileText, Plus, Pencil } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -53,6 +53,7 @@ export default async function ApplicationsPage() {
                 <TableHead>Target country / program</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,12 +87,21 @@ export default async function ApplicationsPage() {
                         year: 'numeric',
                       })}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/applications/${a.id}`}
+                        title="Edit"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-tenant-accent/20 bg-tenant-accent/10 text-tenant-accent transition-colors hover:bg-tenant-accent/20"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {(applications ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No applications yet — create one from a lead, or the button above.
                   </TableCell>
                 </TableRow>

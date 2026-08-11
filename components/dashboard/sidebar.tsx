@@ -64,7 +64,12 @@ export function Sidebar({
         'flex gap-1',
         orientation === 'vertical'
           ? 'flex-col items-center p-3'
-          : 'flex-1 items-center justify-around p-2',
+          // More tabs than fit should scroll horizontally, not shrink or
+          // wrap — items below are flex-none so they keep their size, and
+          // min-w-0 is what actually lets a flex child shrink enough for
+          // overflow-x-auto to kick in instead of pushing the row wider
+          // than the viewport.
+          : 'min-w-0 flex-1 items-center overflow-x-auto px-3',
       )}
     >
       {items.map((item) => {
@@ -78,7 +83,7 @@ export function Sidebar({
             title={item.label}
             aria-label={item.label}
             className={cn(
-              'flex h-11 w-11 items-center justify-center rounded-lg transition-colors',
+              'flex h-11 w-11 flex-none items-center justify-center rounded-lg transition-colors',
               active
                 ? 'bg-tenant-accent text-white'
                 : 'text-tenant-offwhite/70 hover:bg-white/10 hover:text-tenant-offwhite',

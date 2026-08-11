@@ -10,7 +10,11 @@ import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/displa
 import { CODE_LABELS } from '@/lib/form-options';
 import { ApplicationDetailToggle } from '@/components/dashboard/applications/application-detail-toggle';
 import type { ApplicationFormValues } from '@/components/dashboard/applications/application-form';
-import { ApplicationStatusChanger, DeleteApplicationButton } from '@/components/dashboard/applications/application-controls';
+import {
+  ApplicationStatusChanger,
+  ApplicationNoteComposer,
+  DeleteApplicationButton,
+} from '@/components/dashboard/applications/application-controls';
 import { DocumentsPanel } from '@/components/dashboard/applications/documents-panel';
 import type { ApplicationDocument } from '@/lib/applications/types';
 
@@ -53,14 +57,24 @@ export default async function ApplicationDetailPage({
     .single();
   if (!app) notFound();
 
-  const [{ data: lead }, { data: rawDocuments }] = await Promise.all([
-    supabase.from('leads').select('id, full_name, lead_number').eq('id', app.lead_id).single(),
-    supabase
-      .from('application_documents')
-      .select('id, file_name, file_size, uploaded_by, created_at')
-      .eq('application_id', id)
-      .order('created_at', { ascending: false }),
-  ]);
+  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }] =
+    await Promise.all([
+      supabase.from('leads').select('id, full_name, lead_number').eq('id', app.lead_id).single(),
+      supabase
+        .from('application_documents')
+        .select('id, file_name, file_size, uploaded_by, created_at')
+        .eq('application_id', id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('application_notes')
+        .select('id, body, author_id, created_at')
+        .eq('application_id', id)
+        .order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, full_name, email'),
+    ]);
+
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
 
   const documents: ApplicationDocument[] = rawDocuments ?? [];
   const age = ageFromDob(app.date_of_birth);
@@ -223,6 +237,35 @@ export default async function ApplicationDetailPage({
             </CardHeader>
             <CardContent>
               <DocumentsPanel applicationId={app.id} documents={documents} />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-tenant-display">Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ApplicationNoteComposer applicationId={app.id} />
+              <div className="space-y-3">
+                {(notes ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No notes yet.</p>
+                )}
+                {(notes ?? []).map((n) => (
+                  <div
+                    key={n.id}
+                    className="rounded-md border border-tenant-ink/10 bg-tenant-gray p-3"
+                  >
+                    <p className="whitespace-pre-wrap text-sm">{n.body}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {nameById.get(n.author_id) ?? 'Unknown'}
+                      {emailById.get(n.author_id)
+                        ? ` (${emailById.get(n.author_id)})`
+                        : ''}{' '}
+                      · {fmtDateTime(n.created_at)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

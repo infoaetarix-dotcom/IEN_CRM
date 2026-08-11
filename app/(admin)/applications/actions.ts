@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser } from '@/lib/auth/guards';
@@ -360,5 +361,37 @@ export async function deleteDocument(documentId: string): Promise<ActionState> {
   });
 
   revalidatePath(`/applications/${doc.application_id}`);
+  return { ok: true };
+}
+
+const noteSchema = z.string().trim().min(1, 'Note cannot be empty').max(2000);
+
+/** Append a note. RLS (application_notes_insert) enforces author + org access — same pattern as lead notes. */
+export async function addApplicationNote(
+  applicationId: string,
+  body: string,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = noteSchema.safeParse(body);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('application_notes').insert({
+    application_id: applicationId,
+    organization_id: user.organization_id,
+    author_id: user.id,
+    body: parsed.data,
+  });
+  if (error) return { ok: false, error: 'Could not add note (access denied?).' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: user.organization_id,
+    action: 'note_added',
+    entity: 'application',
+    entityId: applicationId,
+  });
+
+  revalidatePath(`/applications/${applicationId}`);
   return { ok: true };
 }
