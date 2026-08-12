@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { LinkCard } from '@/components/dashboard/form-link-card';
+import { SocialSourceLinks } from '@/components/dashboard/social-source-links';
 
 export const metadata = { title: 'Application form' };
 
@@ -41,6 +42,12 @@ export default async function FormPage() {
           description="Set up by Aetarix — works exactly the same as the default link above, on your own domain."
         />
       )}
+
+      <SocialSourceLinks
+        baseUrl={customFormUrl ?? defaultFormUrl}
+        label={customFormUrl ? 'Share by platform (your custom domain)' : 'Share by platform'}
+      />
+
       {portalUrl && (
         <LinkCard
           label="Your portal link"
