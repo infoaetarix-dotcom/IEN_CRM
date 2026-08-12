@@ -7,7 +7,7 @@ import { resolveTheme } from '@/lib/branding/themes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { SourceBar, PipelineBar, VolumeLine } from '@/components/charts/dashboard-charts';
+import { SourceBar, PipelineBar, VolumeLine } from '@/components/charts/dashboard-charts-lazy';
 import {
   buildSourceData,
   buildPipelineData,
@@ -51,7 +51,24 @@ function MetricCard({
 export default async function DashboardPage() {
   const profile = await requireUser();
   const supabase = await createClient();
-  const brand = await getOrgBrand(profile.organization_id);
+
+  // Independent reads (brand lookup + two org-scoped queries) — fired together
+  // instead of one-after-another so the page waits for the slowest of the
+  // three round-trips, not their sum.
+  const [brand, { data: leads }, { data: contactedHistory }] = await Promise.all([
+    getOrgBrand(profile.organization_id),
+    supabase
+      .from('leads')
+      .select('id, full_name, status, utm_source, created_at')
+      .is('archived_at', null)
+      .order('created_at', { ascending: false }),
+    // First 'contacted' status change per lead, for response-rate.
+    supabase
+      .from('lead_status_history')
+      .select('lead_id, changed_at')
+      .eq('to_status', 'contacted')
+      .order('changed_at', { ascending: true }),
+  ]);
   const theme = resolveTheme(brand.themeKey);
 
   const now = new Date();
@@ -60,20 +77,8 @@ export default async function DashboardPage() {
   const last30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // RLS scopes these to the caller's organization (shared across admin + agents).
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, full_name, status, utm_source, created_at')
-    .is('archived_at', null)
-    .order('created_at', { ascending: false });
-
   const all = leads ?? [];
 
-  // First 'contacted' status change per lead, for response-rate.
-  const { data: contactedHistory } = await supabase
-    .from('lead_status_history')
-    .select('lead_id, changed_at')
-    .eq('to_status', 'contacted')
-    .order('changed_at', { ascending: true });
   const firstContact = new Map<string, string>();
   for (const h of contactedHistory ?? []) {
     if (!firstContact.has(h.lead_id)) firstContact.set(h.lead_id, h.changed_at);

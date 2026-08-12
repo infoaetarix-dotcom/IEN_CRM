@@ -60,15 +60,12 @@ export default async function LeadDetailPage({
   await requireUser();
   const supabase = await createClient();
 
-  const { data: lead } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (!lead) notFound();
-
-  const [notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes] =
+  // Independent reads — the lead row itself doesn't gate any of the others
+  // (they all just filter by the route's `id`), so every query fires together
+  // instead of the lead row blocking the rest.
+  const [leadRes, notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes] =
     await Promise.all([
+      supabase.from('leads').select('*').eq('id', id).single(),
       supabase
         .from('lead_notes')
         .select('id, body, author_id, created_at')
@@ -95,6 +92,9 @@ export default async function LeadDetailPage({
         .eq('lead_id', id)
         .order('application_number', { ascending: true }),
     ]);
+
+  const lead = leadRes.data;
+  if (!lead) notFound();
 
   const nameById = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name]),

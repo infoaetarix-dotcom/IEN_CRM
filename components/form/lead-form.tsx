@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import {
   startLead,
@@ -18,11 +19,29 @@ import { Button } from '@/components/ui/button';
 import { Turnstile } from '@/components/form/turnstile';
 import { EmailField } from '@/components/form/email-field';
 import { PhoneField } from '@/components/form/phone-field';
-import { DobField } from '@/components/form/dob-field';
 import { CountryField } from '@/components/form/country-field';
-import { EducationField } from '@/components/form/education-field';
-import { ProgramField } from '@/components/form/program-field';
 import { cn } from '@/lib/utils';
+
+/** Field skeleton matching the Input/trigger height, to avoid layout shift while a lazy field loads. */
+function FieldSkeleton() {
+  return <div className="h-10 w-full animate-pulse rounded-md border border-input bg-tenant-gray" aria-hidden />;
+}
+
+// Deferred to when step 2/3 is actually reached — react-day-picker (+ date-fns)
+// and the qualification/program pickers add real weight that most visitors on
+// step 1 never need to download.
+const DobField = dynamic(() => import('@/components/form/dob-field').then((m) => m.DobField), {
+  ssr: false,
+  loading: FieldSkeleton,
+});
+const EducationField = dynamic(
+  () => import('@/components/form/education-field').then((m) => m.EducationField),
+  { ssr: false, loading: FieldSkeleton },
+);
+const ProgramField = dynamic(
+  () => import('@/components/form/program-field').then((m) => m.ProgramField),
+  { ssr: false, loading: FieldSkeleton },
+);
 import {
   GRADING_SYSTEMS,
   ENGLISH_TESTS,
@@ -150,6 +169,13 @@ export function LeadForm({
 }) {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
+  // Highest step reached so far — step 2/3's fields (and their lazy chunks)
+  // mount only once actually visited, and stay mounted after that so
+  // navigating back to a previous step doesn't lose what was typed there.
+  const [maxStep, setMaxStep] = useState(1);
+  useEffect(() => {
+    setMaxStep((m) => Math.max(m, step));
+  }, [step]);
   const [lead, setLead] = useState({ id: '', token: '' });
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
@@ -306,6 +332,7 @@ export function LeadForm({
         </div>
 
         {/* ================= STEP 2 ================= */}
+        {maxStep >= 2 && (
         <div className={step === 2 ? 'space-y-6' : 'hidden'}>
           <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-5 shadow-sm sm:p-8">
             <StepHeading
@@ -484,8 +511,10 @@ export function LeadForm({
             </Button>
           </div>
         </div>
+        )}
 
         {/* ================= STEP 3 ================= */}
+        {maxStep >= 3 && (
         <div className={step === 3 ? 'space-y-6' : 'hidden'}>
           <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-5 shadow-sm sm:p-8">
             <StepHeading
@@ -630,6 +659,7 @@ export function LeadForm({
             </Button>
           </div>
         </div>
+        )}
       </form>
     </div>
   );
