@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Source_Serif_4, Playfair_Display } from 'next/font/google';
+import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import './globals.css';
 
 const sans = Inter({
@@ -27,7 +28,13 @@ export const metadata: Metadata = {
   title: 'Aetarix CRM',
   description: 'Study-abroad and student-visa consultancy.',
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Aetarix CRM' },
 };
+
+// Aetarix default navy — the installed app's per-tenant color (see
+// app/manifest.ts) overrides this once installed; this is just the browser
+// chrome tint while visiting normally, before any org context is known.
+export const viewport = { themeColor: '#0B1220' };
 
 export default function RootLayout({
   children,
@@ -36,7 +43,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable} ${display.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <RegisterServiceWorker />
+      </body>
     </html>
   );
 }
