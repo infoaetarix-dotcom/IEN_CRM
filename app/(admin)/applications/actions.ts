@@ -12,11 +12,24 @@ import {
   DOCUMENT_MAX_BYTES,
   DOCUMENT_TYPES,
 } from '@/lib/validation/application';
+import type { ApplicationFormValues } from '@/lib/applications/types';
+import { leadToApplicationDefaults } from '@/lib/applications/types';
 
 export interface ActionState {
   ok: boolean;
   error?: string;
   applicationId?: string;
+}
+
+/** Fetch a lead's data pre-shaped as application defaults — used by the create-application dialog once a lead is picked. */
+export async function getLeadDefaultsForApplication(
+  leadId: string,
+): Promise<{ ok: true; values: ApplicationFormValues } | { ok: false; error: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).single();
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+  return { ok: true, values: leadToApplicationDefaults(lead) };
 }
 
 const g = (f: FormData, k: string) => (f.get(k) ?? '') as string;
