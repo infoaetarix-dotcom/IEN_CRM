@@ -266,7 +266,7 @@ export function LeadForm({
             </div>
             <div>
               <Label htmlFor="target_country">
-                Destination country
+                Select preferred country for study
                 <Required />
               </Label>
               <div className="mt-1.5">
