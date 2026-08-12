@@ -48,7 +48,7 @@ export function ProgramField({ error }: { error?: string }) {
             id="program_field"
             value={field}
             onChange={(e) => setField(e.target.value)}
-            placeholder="Field of study, e.g. Computer Science"
+            placeholder="e.g. Computer Science"
           />
         </div>
       </div>

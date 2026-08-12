@@ -29,7 +29,7 @@ type Country = { code: string; name: string };
 export function CountryField({
   error,
   name = 'target_country',
-  placeholder = 'Select a country',
+  placeholder = 'Search or select a country',
 }: {
   error?: string;
   name?: string;

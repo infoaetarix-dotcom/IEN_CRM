@@ -19,7 +19,7 @@ export function EducationField({ error }: { error?: string }) {
   return (
     <div className="space-y-2">
       <Select value={choice} onChange={(e) => setChoice(e.target.value)}>
-        <option value="">Select a level</option>
+        <option value="">Select your education level</option>
         {EDUCATION_OPTIONS.map((o) => (
           <option key={o} value={o}>
             {o}
