@@ -44,7 +44,6 @@ export default async function LeadsPage({
   searchParams: SearchParams;
 }) {
   const profile = await requireUser();
-  const brand = await getOrgBrand(profile.organization_id);
   const sp = await searchParams;
 
   const q = str(sp.q);
@@ -81,14 +80,14 @@ export default async function LeadsPage({
   });
 
   const offset = (page - 1) * PAGE_SIZE;
-  const { data: leads, count } = await query
-    .order(sortCol, { ascending: dir === 'asc' })
-    .range(offset, offset + PAGE_SIZE - 1);
 
-  // Name map for Created By / Archived by lookups.
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name, role, is_active');
+  // Independent reads — brand, the page of leads, and the staff name map
+  // don't depend on each other, so they're fired together.
+  const [brand, { data: leads, count }, { data: profiles }] = await Promise.all([
+    getOrgBrand(profile.organization_id),
+    query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
+    supabase.from('profiles').select('id, full_name, role, is_active'),
+  ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
   const total = count ?? 0;

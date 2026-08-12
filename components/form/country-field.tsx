@@ -29,11 +29,15 @@ type Country = { code: string; name: string };
 export function CountryField({
   error,
   name = 'target_country',
-  placeholder = 'Select a country',
+  placeholder = 'Search or select a country',
+  /** Pre-selected on first render — most applicants target the UK, so this
+   *  saves the common case a click. Still fully editable. */
+  defaultCountry = 'GB',
 }: {
   error?: string;
   name?: string;
   placeholder?: string;
+  defaultCountry?: string | null;
 }) {
   const countries = useMemo<Country[]>(
     () =>
@@ -47,7 +51,11 @@ export function CountryField({
   );
 
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Country | null>(null);
+  const [selected, setSelected] = useState<Country | null>(() => {
+    if (!defaultCountry) return null;
+    const name = (labels as Record<string, string>)[defaultCountry];
+    return name ? { code: defaultCountry, name } : null;
+  });
 
   const Flag = selected
     ? (flags as Record<string, React.ComponentType<{ title?: string }>>)[

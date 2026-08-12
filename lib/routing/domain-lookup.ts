@@ -2,6 +2,23 @@ import 'server-only';
 
 import { normalizeHost } from './form-host';
 
+/**
+ * The platform's own base domain, parsed once per warm instance. A tenant's
+ * form_domain/portal_domain is by definition a *custom* domain distinct from
+ * this one, so a request that arrives on it can never match — resolveDomain
+ * skips its two DB round-trips entirely in that case. Today every request
+ * arrives on this domain (no custom domain is configured yet — see
+ * docs/FORM_SUBDOMAIN.md), so this fast path is what most requests take.
+ */
+const BASE_HOST = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_APP_URL;
+    return url ? normalizeHost(new URL(url).hostname) : '';
+  } catch {
+    return '';
+  }
+})();
+
 export interface DomainMatch {
   orgId: string;
   slug: string;
@@ -61,6 +78,7 @@ export async function resolveDomain(
 ): Promise<DomainMatch | null> {
   const host = normalizeHost(rawHost);
   if (!host) return null;
+  if (host === BASE_HOST) return null;
 
   const cached = cache.get(host);
   if (cached && cached.expiresAt > Date.now()) return cached.match;
