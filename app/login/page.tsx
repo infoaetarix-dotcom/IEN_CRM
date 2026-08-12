@@ -1,20 +1,12 @@
 import { Suspense } from 'react';
-import { cookies, headers } from 'next/headers';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LoginForm } from './login-form';
 import { AETARIX } from '@/lib/branding';
-import { getPublicOrgBrand } from '@/lib/branding/org';
+import { resolveVisitorBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
-import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
-
-async function resolveVisitorBrand() {
-  const [jar, h] = await Promise.all([cookies(), headers()]);
-  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
-  return orgSlug ? await getPublicOrgBrand(orgSlug) : null;
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await resolveVisitorBrand();

@@ -1,8 +1,10 @@
 import 'server-only';
 
 import { cache } from 'react';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { LAST_ORG_COOKIE } from '@/lib/auth/cookies';
 import { brandFromOrg, FALLBACK_BRAND, type OrgBrand } from './index';
 
 const BRAND_COLUMNS = 'name, legal_name, logo_url, theme_key';
@@ -40,3 +42,18 @@ export const getPublicOrgBrand = cache(
     return data ? brandFromOrg(data) : FALLBACK_BRAND;
   },
 );
+
+/**
+ * Best-guess brand for a visitor with no session yet — used by pre-auth
+ * surfaces (login, the PWA manifest) that can't read profile.organization_id.
+ * On a consultancy's own form_domain/portal_domain, middleware already knows
+ * which org that is and forwards it as the x-tenant-slug header; otherwise
+ * (the base app domain) this falls back to a "last org" cookie set on a
+ * previous successful sign-in. Returns null (never FALLBACK_BRAND) so callers
+ * can tell "no guess available" apart from a real org that failed to load.
+ */
+export async function resolveVisitorBrand(): Promise<OrgBrand | null> {
+  const [jar, h] = await Promise.all([cookies(), headers()]);
+  const orgSlug = h.get('x-tenant-slug') ?? jar.get(LAST_ORG_COOKIE)?.value;
+  return orgSlug ? await getPublicOrgBrand(orgSlug) : null;
+}

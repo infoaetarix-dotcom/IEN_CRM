@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { AETARIX } from '@/lib/branding';
+import { InstallAppButton } from '@/components/pwa/install-button';
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 // Google Form link for every "Book Demo" CTA — set NEXT_PUBLIC_BOOK_DEMO_URL
@@ -100,6 +101,20 @@ const BOARD_COLUMNS = [
   { label: 'Applied', cards: ['F. Noor', 'H. Patel'] },
 ] as const;
 
+const PWA_POINTS = [
+  'Launch instantly from your home screen or desktop — no browser tabs to hunt through.',
+  'One install works everywhere — phone, tablet, and desktop. No app store required.',
+  'Always the latest version. Nothing to manually update.',
+] as const;
+
+const MOCK_BARS = [38, 68, 52, 90, 62, 78] as const;
+
+const MOCK_ROWS = [
+  { initials: 'AR', name: 'A. Rahman', status: 'New' },
+  { initials: 'SK', name: 'S. Karim', status: 'Contacted' },
+  { initials: 'MI', name: 'M. Iqbal', status: 'Applied' },
+] as const;
+
 const HERO_ROWS = [
   {
     initials: 'AR',
@@ -132,6 +147,13 @@ const STATUS_STYLES: Record<string, string> = {
   Contacted: 'bg-marketing-cyan/10 text-marketing-cyan',
   Applied: 'bg-marketing-ink/10 text-marketing-ink/70',
   Converted: 'bg-marketing-blue text-white',
+};
+
+const STATUS_DOT: Record<string, string> = {
+  New: 'bg-marketing-blue',
+  Contacted: 'bg-marketing-cyan',
+  Applied: 'bg-marketing-ink/40',
+  Converted: 'bg-marketing-blue',
 };
 
 interface Tier {
@@ -528,6 +550,144 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Install as an app */}
+          <section
+            aria-labelledby="pwa-heading"
+            className="relative overflow-hidden border-t border-white/10 bg-marketing-navy px-6 py-20 text-marketing-offwhite sm:py-24"
+          >
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 [background:radial-gradient(55%_50%_at_15%_10%,rgba(6,182,212,0.18),transparent_65%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:linear-gradient(rgba(248,247,243,0.7)_1px,transparent_1px),linear-gradient(90deg,rgba(248,247,243,0.7)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(60%_55%_at_15%_10%,black,transparent)]"
+            />
+
+            <div className="relative mx-auto grid max-w-6xl items-center gap-16 pb-8 lg:grid-cols-2 lg:gap-12">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-marketing-cyan">
+                  Install the app
+                </p>
+                <h2
+                  id="pwa-heading"
+                  className="mt-3 font-display text-3xl font-semibold leading-tight sm:text-4xl"
+                >
+                  Your CRM, one tap away.
+                </h2>
+                <p className="mt-4 max-w-md text-base leading-relaxed text-marketing-offwhite/70">
+                  Install Aetarix as an app in seconds — straight from your
+                  browser, no app store, nothing to download from anywhere
+                  else.
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {PWA_POINTS.map((p) => (
+                    <li
+                      key={p}
+                      className="flex items-start gap-3 text-sm text-marketing-offwhite/80"
+                    >
+                      <CheckCircle2
+                        className="mt-0.5 h-5 w-5 flex-none text-marketing-cyan"
+                        aria-hidden="true"
+                      />
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8">
+                  <InstallAppButton />
+                  <p className="mt-3 text-xs text-marketing-offwhite/40">
+                    Free · No account needed to install
+                  </p>
+                </div>
+              </div>
+
+              {/* Illustrative device preview — sample data only */}
+              <div
+                aria-hidden="true"
+                className="relative mx-auto w-full max-w-sm pb-10 pr-6 lg:max-w-none lg:pr-10"
+              >
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-white text-marketing-ink shadow-2xl shadow-black/40">
+                  <div className="flex items-center gap-1.5 border-b border-marketing-ink/10 px-4 py-3">
+                    <span className="h-2.5 w-2.5 rounded-full bg-marketing-ink/15" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-marketing-ink/15" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-marketing-ink/15" />
+                    <span className="ml-3 text-xs font-medium text-marketing-ink/40">
+                      Dashboard
+                    </span>
+                  </div>
+                  <div className="flex">
+                    <div className="hidden w-12 flex-none flex-col items-center gap-4 border-r border-marketing-ink/10 py-4 sm:flex">
+                      {[LayoutDashboard, Users, UserCog, FileText].map((Icon, i) => (
+                        <span
+                          key={i}
+                          className={`flex h-7 w-7 items-center justify-center rounded-md ${
+                            i === 0
+                              ? 'bg-marketing-blue/10 text-marketing-blue'
+                              : 'text-marketing-ink/25'
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="min-w-0 flex-1 p-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        {['Leads', 'New today', 'Response'].map((label, i) => (
+                          <div
+                            key={label}
+                            className="rounded-lg bg-marketing-gray p-2.5"
+                          >
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-marketing-ink/40">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-marketing-ink">
+                              {[128, 14, '92%'][i]}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex h-16 items-end gap-1.5 rounded-lg bg-marketing-gray p-3">
+                        {MOCK_BARS.map((h, i) => (
+                          <span
+                            key={i}
+                            className="w-full rounded-t-sm bg-marketing-blue/70"
+                            style={{ height: `${h}%` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Phone, stacked on top of the desktop frame */}
+                <div className="absolute -bottom-2 -right-2 w-32 overflow-hidden rounded-[1.1rem] border-4 border-marketing-navy bg-white shadow-2xl shadow-black/40 sm:w-36 lg:-right-4">
+                  <div className="flex items-center justify-center border-b border-marketing-ink/10 py-1.5">
+                    <span className="h-1 w-8 rounded-full bg-marketing-ink/15" />
+                  </div>
+                  <div className="space-y-1.5 p-2">
+                    {MOCK_ROWS.map((row) => (
+                      <div
+                        key={row.name}
+                        className="flex items-center gap-1.5 rounded-md border border-marketing-ink/5 bg-marketing-gray/60 p-1.5"
+                      >
+                        <span className="flex h-4 w-4 flex-none items-center justify-center rounded-full bg-marketing-blue/10 text-[7px] font-semibold text-marketing-blue">
+                          {row.initials}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[8px] font-medium text-marketing-ink/70">
+                          {row.name}
+                        </span>
+                        <span
+                          className={`h-1.5 w-1.5 flex-none rounded-full ${STATUS_DOT[row.status]}`}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
