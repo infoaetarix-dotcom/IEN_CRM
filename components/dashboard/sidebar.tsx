@@ -9,6 +9,7 @@ import {
   Mail,
   Link2,
   Wallet,
+  Banknote,
   Activity,
   FileText,
   type LucideIcon,
@@ -31,7 +32,13 @@ const NAV: NavItem[] = [
   { href: '/agents', label: 'Agents', icon: UserCog, adminOnly: true },
   { href: '/templates', label: 'Templates', icon: Mail, adminOnly: true },
   { href: '/form', label: 'Form', icon: Link2 },
-  { href: '/finance', label: 'Finance', icon: Wallet, adminOnly: true, moduleKey: 'finance' },
+  { href: '/finance', label: 'My Finance', icon: Wallet, adminOnly: true, moduleKey: 'finance' },
+  {
+    href: '/student-finance',
+    label: 'Student Finance',
+    icon: Banknote,
+    moduleKey: 'student_finance',
+  },
   {
     href: '/activity',
     label: 'Activity',

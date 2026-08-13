@@ -1,14 +1,13 @@
-import { Wallet } from 'lucide-react';
-import { requireFinanceAccess } from '@/lib/finance/guard';
+import { Banknote } from 'lucide-react';
+import { requireStudentFinanceAccess } from '@/lib/finance/student-guard';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { Card, CardContent } from '@/components/ui/card';
-import { AddEntryDialog } from '@/components/dashboard/finance/add-entry-dialog';
-import { EntriesTable } from '@/components/dashboard/finance/entries-table';
-import { DownloadReportButton } from '@/components/dashboard/download-report-button';
-import { formatAmount, type FinanceEntry } from '@/lib/finance/types';
+import { AddStudentEntryDialog } from '@/components/dashboard/student-finance/add-entry-dialog';
+import { StudentEntriesTable } from '@/components/dashboard/student-finance/entries-table';
+import { formatAmount, extractLeadName, type StudentFinanceEntry } from '@/lib/finance/types';
 
-export const metadata = { title: 'My Finance' };
+export const metadata = { title: 'Student Finance' };
 
 function MetricCard({
   label,
@@ -41,26 +40,37 @@ function MetricCard({
   );
 }
 
-export default async function FinancePage() {
-  const profile = await requireFinanceAccess();
+export default async function StudentFinancePage() {
+  const profile = await requireStudentFinanceAccess();
   const supabase = await createClient();
 
-  const { data: rawEntries } = await supabase
-    .from('finance_entries')
-    .select('id, type, amount, category, payment_method, note, entry_date, created_at')
-    .eq('user_id', profile.id)
-    .order('entry_date', { ascending: false })
-    .order('created_at', { ascending: false });
+  // Independent reads — the org-wide entries list and the lead picker's
+  // options don't depend on each other, so they're fired together.
+  const [{ data: rawEntries }, { data: leads }] = await Promise.all([
+    supabase
+      .from('student_finance_entries')
+      .select(
+        'id, type, amount, category, payment_method, note, entry_date, lead_id, created_by, created_at, leads(full_name), profiles(full_name)',
+      )
+      .eq('organization_id', profile.organization_id)
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabase.from('leads').select('id, full_name').order('full_name'),
+  ]);
 
-  const entries: FinanceEntry[] = (rawEntries ?? []).map((e) => ({
+  const entries: StudentFinanceEntry[] = (rawEntries ?? []).map((e) => ({
     id: e.id,
     type: e.type,
     amount: Number(e.amount),
     category: e.category,
     payment_method: e.payment_method,
     note: e.note,
+    lead_id: e.lead_id,
+    lead_name: extractLeadName(e.leads),
     entry_date: e.entry_date,
     created_at: e.created_at,
+    created_by: e.created_by,
+    created_by_name: extractLeadName(e.profiles),
   }));
 
   const totalIncome = entries
@@ -74,15 +84,10 @@ export default async function FinancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={Wallet}
-        title="My Finance"
-        subtitle="Your own private income and expense ledger — no one else on your team sees this."
-        action={
-          <div className="flex flex-wrap gap-2">
-            <DownloadReportButton href="/api/finance/statement" label="Download statement" />
-            <AddEntryDialog />
-          </div>
-        }
+        icon={Banknote}
+        title="Student Finance"
+        subtitle="Shared with your whole team — every payment tied to a student, visible to every admin and agent."
+        action={<AddStudentEntryDialog leads={leads ?? []} />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,7 +103,7 @@ export default async function FinancePage() {
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardContent className="p-0">
-          <EntriesTable entries={entries} />
+          <StudentEntriesTable entries={entries} leads={leads ?? []} />
         </CardContent>
       </Card>
     </div>

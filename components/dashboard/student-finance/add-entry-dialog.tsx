@@ -16,32 +16,36 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { LeadPicker } from '@/components/dashboard/lead-picker';
 import {
-  createFinanceEntry,
-  updateFinanceEntry,
-  type FinanceActionState,
-} from '@/app/(admin)/finance/actions';
-import { FINANCE_CATEGORIES, FINANCE_PAYMENT_METHODS, type FinanceEntry } from '@/lib/finance/types';
+  createStudentFinanceEntry,
+  updateStudentFinanceEntry,
+  type StudentFinanceActionState,
+} from '@/app/(admin)/student-finance/actions';
+import { FINANCE_CATEGORIES, FINANCE_PAYMENT_METHODS, type StudentFinanceEntry } from '@/lib/finance/types';
 
-const init: FinanceActionState = { ok: false };
+const init: StudentFinanceActionState = { ok: false };
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
 /** "+ Add entry" by default, or an edit dialog when passed an existing entry + custom trigger. */
-export function AddEntryDialog({
+export function AddStudentEntryDialog({
+  leads,
   entry,
   trigger,
 }: {
-  entry?: FinanceEntry;
+  leads: { id: string; full_name: string }[];
+  entry?: StudentFinanceEntry;
   trigger?: ReactNode;
 }) {
   const router = useRouter();
   const isEdit = !!entry;
-  const action = isEdit ? updateFinanceEntry.bind(null, entry.id) : createFinanceEntry;
+  const action = isEdit ? updateStudentFinanceEntry.bind(null, entry.id) : createStudentFinanceEntry;
   const [state, formAction, pending] = useActionState(action, init);
   const [open, setOpen] = useState(false);
+  const [leadId, setLeadId] = useState(entry?.lead_id ?? '');
 
   // Depend on the whole state object, not state.ok: a second consecutive
   // successful "Add entry" also resolves to { ok: true }, which is === the
@@ -55,7 +59,13 @@ export function AddEntryDialog({
   }, [state, router]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next && !isEdit) setLeadId('');
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <button
@@ -71,9 +81,18 @@ export function AddEntryDialog({
           <DialogTitle className="font-tenant-display text-tenant-ink">
             {isEdit ? 'Edit entry' : 'Add entry'}
           </DialogTitle>
-          <DialogDescription>Only visible to you — no one else on your team sees this.</DialogDescription>
+          <DialogDescription>Shared with your whole team — every admin and agent can see and edit this.</DialogDescription>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
+          <div>
+            <Label>Student</Label>
+            <LeadPicker leads={leads} value={leadId} onChange={setLeadId} allowClear={false} placeholder="Select a student…" />
+            <input type="hidden" name="lead_id" value={leadId} />
+            {state.fieldErrors?.lead_id && (
+              <p className="mt-1 text-xs text-destructive">{state.fieldErrors.lead_id}</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="type">Type</Label>
@@ -104,12 +123,12 @@ export function AddEntryDialog({
             <Input
               id="category"
               name="category"
-              list="finance-categories"
+              list="student-finance-categories"
               defaultValue={entry?.category}
-              placeholder="e.g. Commission"
+              placeholder="e.g. Deposit"
               required
             />
-            <datalist id="finance-categories">
+            <datalist id="student-finance-categories">
               {FINANCE_CATEGORIES.map((c) => (
                 <option key={c} value={c} />
               ))}
@@ -157,7 +176,7 @@ export function AddEntryDialog({
             <Button
               type="submit"
               className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-              disabled={pending}
+              disabled={pending || !leadId}
             >
               {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Add entry'}
             </Button>

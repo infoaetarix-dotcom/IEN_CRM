@@ -13,6 +13,7 @@ import {
   DOCUMENT_TYPES,
 } from '@/lib/validation/application';
 import type { ApplicationFormValues } from '@/lib/applications/types';
+import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 import { leadToApplicationDefaults } from '@/lib/applications/types';
 
 export interface ActionState {
@@ -222,6 +223,105 @@ export async function deleteApplication(applicationId: string): Promise<ActionSt
 
   revalidatePath(`/leads/${existing.lead_id}`);
   revalidatePath('/applications');
+  return { ok: true };
+}
+
+/**
+ * Render a template with this application's own details (which can differ
+ * from the parent lead's — an application's contact fields are independently
+ * editable) — used by the row-level "Email" popup so picking a template
+ * fills in human-readable text, never raw {{full_name}}-style placeholders,
+ * into fields the sender can still edit before choosing to send.
+ */
+export async function getRenderedApplicationTemplate(
+  applicationId: string,
+  templateKey: string,
+): Promise<{ ok: true; subject: string; body: string } | { ok: false; error: string }> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { data: app } = await supabase
+    .from('applications')
+    .select('id, organization_id, full_name, target_country, program, institution')
+    .eq('id', applicationId)
+    .single();
+  if (!app) return { ok: false, error: 'Application not found or access denied.' };
+
+  const { data: tpl } = await supabase
+    .from('email_templates')
+    .select('subject, body')
+    .eq('organization_id', app.organization_id)
+    .eq('key', templateKey)
+    .single();
+  if (!tpl) return { ok: false, error: 'Template not found.' };
+
+  const vars = {
+    full_name: app.full_name,
+    program: app.program,
+    target_country: app.target_country,
+    institution: app.institution,
+  };
+  return {
+    ok: true,
+    subject: renderTemplate(tpl.subject, vars),
+    body: renderTemplate(tpl.body, vars),
+  };
+}
+
+/**
+ * Send a fully custom (or template-started, then edited) email from an
+ * application row. `messages` is keyed by lead_id, not application_id — every
+ * application already belongs to exactly one lead, so this logs against that
+ * lead, which is also where its message history already shows up.
+ */
+export async function sendCustomApplicationEmail(
+  applicationId: string,
+  payload: { to: string; subject: string; body: string; templateKey: string | null },
+): Promise<ActionState> {
+  const user = await requireUser();
+  const to = payload.to.trim();
+  if (!to) return { ok: false, error: 'Recipient email is required.' };
+  if (!payload.subject.trim()) return { ok: false, error: 'Subject is required.' };
+  if (!payload.body.trim()) return { ok: false, error: 'Message is required.' };
+
+  const supabase = await createClient();
+  const { data: app } = await supabase
+    .from('applications')
+    .select('id, lead_id, organization_id, full_name')
+    .eq('id', applicationId)
+    .single();
+  if (!app) return { ok: false, error: 'Application not found or access denied.' };
+
+  const res = await sendEmail({
+    leadId: app.lead_id,
+    organizationId: app.organization_id,
+    to,
+    toName: app.full_name,
+    subject: payload.subject,
+    body: payload.body,
+    templateKey: payload.templateKey,
+    sentBy: user.id,
+  });
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: app.organization_id,
+    action: res.ok ? 'message_sent' : 'message_failed',
+    entity: 'message',
+    entityId: res.messageId || null,
+    metadata: {
+      applicationId,
+      leadId: app.lead_id,
+      templateKey: payload.templateKey,
+      custom: true,
+      error: res.error,
+    },
+  });
+
+  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath('/applications');
+  revalidatePath(`/leads/${app.lead_id}`);
+  if (!res.ok) return { ok: false, error: res.error ?? 'Could not send email.' };
   return { ok: true };
 }
 

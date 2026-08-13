@@ -7,17 +7,34 @@ import {
   updateApplicationStatus,
   deleteApplication,
   addApplicationNote,
+  getRenderedApplicationTemplate,
+  sendCustomApplicationEmail,
 } from '@/app/(admin)/applications/actions';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
+import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { LEAD_STATUSES, STATUS_LABELS } from '@/lib/leads/display';
 
 /**
- * Edit + Delete for a row in the applications list — same inline-confirm
- * pattern as LeadRowActions on /leads, so the two tables behave identically.
+ * Edit / WhatsApp / Email / Delete for a row in the applications list — same
+ * inline-confirm pattern as LeadRowActions on /leads, so the two tables
+ * behave identically.
  */
-export function ApplicationRowActions({ applicationId }: { applicationId: string }) {
+export function ApplicationRowActions({
+  applicationId,
+  fullName,
+  email,
+  phone,
+  templates,
+}: {
+  applicationId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  templates: { key: string; name: string; subject: string; body: string }[];
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +52,14 @@ export function ApplicationRowActions({ applicationId }: { applicationId: string
       >
         <Pencil className="h-4 w-4" />
       </Button>
+      <SendWhatsAppDialog name={fullName} phone={phone} />
+      <SendEmailDialog
+        name={fullName}
+        email={email}
+        templates={templates}
+        resolveTemplate={(templateKey) => getRenderedApplicationTemplate(applicationId, templateKey)}
+        sendAction={(payload) => sendCustomApplicationEmail(applicationId, payload)}
+      />
       {!confirming ? (
         <Button
           size="icon"

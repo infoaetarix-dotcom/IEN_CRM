@@ -3,16 +3,17 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { requireFinanceAccess } from '@/lib/finance/guard';
+import { requireStudentFinanceAccess } from '@/lib/finance/student-guard';
 import { writeAuditLog } from '@/lib/audit';
 
-export interface FinanceActionState {
+export interface StudentFinanceActionState {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
 }
 
 const entrySchema = z.object({
+  lead_id: z.string().uuid('Choose which student this payment is for'),
   type: z.enum(['income', 'expense']),
   amount: z.coerce.number().positive('Enter an amount greater than zero'),
   category: z.string().trim().min(1, 'Choose or enter a category').max(80),
@@ -34,13 +35,19 @@ function fieldErrorsFrom(
 
 const g = (f: FormData, k: string) => (f.get(k) ?? '') as string;
 
-export async function createFinanceEntry(
-  _prev: FinanceActionState,
+/**
+ * Create/update/delete a shared Student Finance entry. Any active admin or
+ * agent in the org may use all three (shared-data model, same as leads and
+ * applications) — RLS (student_finance_entries_all) is the backstop.
+ */
+export async function createStudentFinanceEntry(
+  _prev: StudentFinanceActionState,
   formData: FormData,
-): Promise<FinanceActionState> {
-  const profile = await requireFinanceAccess();
+): Promise<StudentFinanceActionState> {
+  const profile = await requireStudentFinanceAccess();
 
   const parsed = entrySchema.safeParse({
+    lead_id: g(formData, 'lead_id'),
     type: g(formData, 'type'),
     amount: g(formData, 'amount'),
     category: g(formData, 'category'),
@@ -59,44 +66,44 @@ export async function createFinanceEntry(
 
   const supabase = await createClient();
   const { data: entry, error } = await supabase
-    .from('finance_entries')
+    .from('student_finance_entries')
     .insert({
       organization_id: profile.organization_id,
-      user_id: profile.id,
+      lead_id: d.lead_id,
       type: d.type,
       amount: d.amount,
       category: d.category,
       payment_method: d.payment_method || null,
       note: d.note || null,
       entry_date: d.entry_date,
+      created_by: profile.id,
     })
     .select('id')
     .single();
-  if (error || !entry) {
-    return { ok: false, error: 'Could not save this entry.' };
-  }
+  if (error || !entry) return { ok: false, error: 'Could not save this entry.' };
 
   await writeAuditLog({
     actorId: profile.id,
     organizationId: profile.organization_id,
-    action: 'finance_entry_created',
-    entity: 'finance_entry',
+    action: 'student_finance_entry_created',
+    entity: 'student_finance_entry',
     entityId: entry.id,
-    metadata: { type: d.type, amount: d.amount, category: d.category },
+    metadata: { lead_id: d.lead_id, type: d.type, amount: d.amount, category: d.category },
   });
 
-  revalidatePath('/finance');
+  revalidatePath('/student-finance');
   return { ok: true };
 }
 
-export async function updateFinanceEntry(
+export async function updateStudentFinanceEntry(
   entryId: string,
-  _prev: FinanceActionState,
+  _prev: StudentFinanceActionState,
   formData: FormData,
-): Promise<FinanceActionState> {
-  const profile = await requireFinanceAccess();
+): Promise<StudentFinanceActionState> {
+  const profile = await requireStudentFinanceAccess();
 
   const parsed = entrySchema.safeParse({
+    lead_id: g(formData, 'lead_id'),
     type: g(formData, 'type'),
     amount: g(formData, 'amount'),
     category: g(formData, 'category'),
@@ -115,8 +122,9 @@ export async function updateFinanceEntry(
 
   const supabase = await createClient();
   const { error } = await supabase
-    .from('finance_entries')
+    .from('student_finance_entries')
     .update({
+      lead_id: d.lead_id,
       type: d.type,
       amount: d.amount,
       category: d.category,
@@ -124,41 +132,41 @@ export async function updateFinanceEntry(
       note: d.note || null,
       entry_date: d.entry_date,
     })
-    .eq('id', entryId)
-    .eq('user_id', profile.id); // defense-in-depth alongside RLS
+    .eq('id', entryId);
   if (error) return { ok: false, error: 'Could not update this entry.' };
 
   await writeAuditLog({
     actorId: profile.id,
     organizationId: profile.organization_id,
-    action: 'finance_entry_updated',
-    entity: 'finance_entry',
+    action: 'student_finance_entry_updated',
+    entity: 'student_finance_entry',
     entityId: entryId,
-    metadata: { type: d.type, amount: d.amount, category: d.category },
+    metadata: { lead_id: d.lead_id, type: d.type, amount: d.amount, category: d.category },
   });
 
-  revalidatePath('/finance');
+  revalidatePath('/student-finance');
   return { ok: true };
 }
 
-export async function deleteFinanceEntry(entryId: string): Promise<FinanceActionState> {
-  const profile = await requireFinanceAccess();
+export async function deleteStudentFinanceEntry(
+  entryId: string,
+): Promise<StudentFinanceActionState> {
+  const profile = await requireStudentFinanceAccess();
 
   const { error } = await (await createClient())
-    .from('finance_entries')
+    .from('student_finance_entries')
     .delete()
-    .eq('id', entryId)
-    .eq('user_id', profile.id);
+    .eq('id', entryId);
   if (error) return { ok: false, error: 'Could not delete this entry.' };
 
   await writeAuditLog({
     actorId: profile.id,
     organizationId: profile.organization_id,
-    action: 'finance_entry_deleted',
-    entity: 'finance_entry',
+    action: 'student_finance_entry_deleted',
+    entity: 'student_finance_entry',
     entityId: entryId,
   });
 
-  revalidatePath('/finance');
+  revalidatePath('/student-finance');
   return { ok: true };
 }

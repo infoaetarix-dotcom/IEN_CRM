@@ -20,17 +20,23 @@ import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/displa
 export const metadata = { title: 'Applications' };
 
 export default async function ApplicationsPage() {
-  await requireUser();
+  const profile = await requireUser();
   const supabase = await createClient();
 
-  // Independent reads — the applications list and the lead picker's options
-  // don't depend on each other, so they're fired together.
-  const [{ data: applications }, { data: leads }] = await Promise.all([
+  // Independent reads — the applications list, the lead picker's options, and
+  // the org's email templates (for the row-level Email popup) don't depend
+  // on each other, so they're fired together.
+  const [{ data: applications }, { data: leads }, { data: templates }] = await Promise.all([
     supabase
       .from('applications')
-      .select('id, application_number, status, full_name, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
+      .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
       .order('created_at', { ascending: false }),
     supabase.from('leads').select('id, full_name').order('full_name'),
+    supabase
+      .from('email_templates')
+      .select('key, name, subject, body')
+      .eq('organization_id', profile.organization_id)
+      .order('is_auto', { ascending: false }),
   ]);
 
   return (
@@ -88,7 +94,13 @@ export default async function ApplicationsPage() {
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <ApplicationRowActions applicationId={a.id} />
+                      <ApplicationRowActions
+                        applicationId={a.id}
+                        fullName={a.full_name || leadRow?.full_name || '(no name)'}
+                        email={a.email}
+                        phone={a.phone}
+                        templates={templates ?? []}
+                      />
                     </TableCell>
                   </TableRow>
                 );

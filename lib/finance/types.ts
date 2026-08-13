@@ -7,10 +7,28 @@ export interface FinanceEntry {
   category: string;
   payment_method: string | null;
   note: string | null;
-  lead_id: string | null;
+  entry_date: string;
+  created_at: string;
+}
+
+/**
+ * A row in the shared Student Finance ledger — every admin and agent in the
+ * org sees the same entries (unlike FinanceEntry's private-per-admin model),
+ * and every entry is required to link to a student.
+ */
+export interface StudentFinanceEntry {
+  id: string;
+  type: FinanceEntryType;
+  amount: number;
+  category: string;
+  payment_method: string | null;
+  note: string | null;
+  lead_id: string;
   lead_name?: string | null;
   entry_date: string;
   created_at: string;
+  created_by: string | null;
+  created_by_name?: string | null;
 }
 
 /** Common presets shown in the category picker — the field also accepts free text. */

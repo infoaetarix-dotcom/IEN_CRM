@@ -291,6 +291,96 @@ export async function sendLeadEmail(
 }
 
 /**
+ * Render a template with this lead's real details — used by the row-level
+ * "Email" popup so picking a template fills in human-readable text (the
+ * actual name/program, never raw {{full_name}}-style placeholders) into
+ * fields the sender can still edit before choosing to send.
+ */
+export async function getRenderedLeadTemplate(
+  leadId: string,
+  templateKey: string,
+): Promise<{ ok: true; subject: string; body: string } | { ok: false; error: string }> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, organization_id, full_name, target_country, program, institution')
+    .eq('id', leadId)
+    .single();
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+
+  const { data: tpl } = await supabase
+    .from('email_templates')
+    .select('subject, body')
+    .eq('organization_id', lead.organization_id)
+    .eq('key', templateKey)
+    .single();
+  if (!tpl) return { ok: false, error: 'Template not found.' };
+
+  const vars = {
+    full_name: lead.full_name,
+    program: lead.program,
+    target_country: lead.target_country,
+    institution: lead.institution,
+  };
+  return {
+    ok: true,
+    subject: renderTemplate(tpl.subject, vars),
+    body: renderTemplate(tpl.body, vars),
+  };
+}
+
+/**
+ * Send a fully custom (or template-started, then edited) email from the row
+ * -level "Email" popup — unlike sendLeadEmail, the caller supplies the final
+ * subject/body directly rather than a template key to render server-side.
+ */
+export async function sendCustomLeadEmail(
+  leadId: string,
+  payload: { to: string; subject: string; body: string; templateKey: string | null },
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const to = payload.to.trim();
+  if (!to) return { ok: false, error: 'Recipient email is required.' };
+  if (!payload.subject.trim()) return { ok: false, error: 'Subject is required.' };
+  if (!payload.body.trim()) return { ok: false, error: 'Message is required.' };
+
+  const supabase = await createClient();
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, organization_id, full_name')
+    .eq('id', leadId)
+    .single();
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+
+  const res = await sendEmail({
+    leadId: lead.id,
+    organizationId: lead.organization_id,
+    to,
+    toName: lead.full_name,
+    subject: payload.subject,
+    body: payload.body,
+    templateKey: payload.templateKey,
+    sentBy: user.id,
+  });
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: lead.organization_id,
+    action: res.ok ? 'message_sent' : 'message_failed',
+    entity: 'message',
+    entityId: res.messageId || null,
+    metadata: { leadId, templateKey: payload.templateKey, custom: true, error: res.error },
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath('/leads');
+  if (!res.ok) return { ok: false, error: res.error ?? 'Could not send email.' };
+  return { ok: true };
+}
+
+/**
  * Update a lead's applicant-provided fields from the dashboard editor.
  * Access is enforced by RLS (leads_update: admin OR the assigned agent, within
  * org) — the update runs on the user-session client, so a non-permitted edit
