@@ -130,6 +130,11 @@ export function DocumentsPanel({
               <p className="truncate text-sm font-medium">{d.file_name}</p>
               <p className="text-xs text-muted-foreground">
                 {formatBytes(d.file_size)} · {new Date(d.created_at).toLocaleDateString('en-GB')}
+                {d.uploaded_by_student && (
+                  <span className="ml-2 rounded-full bg-tenant-accent2/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tenant-accent2">
+                    From student
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex flex-none items-center gap-1">

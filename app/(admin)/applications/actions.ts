@@ -14,7 +14,7 @@ import {
 } from '@/lib/validation/application';
 import type { ApplicationFormValues } from '@/lib/applications/types';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
-import { leadToApplicationDefaults } from '@/lib/applications/types';
+import { leadToApplicationDefaults, UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
 
 export interface ActionState {
   ok: boolean;
@@ -44,7 +44,7 @@ function fieldsFrom(formData: FormData) {
     city: g(formData, 'city'),
     district: g(formData, 'district'),
     target_country: g(formData, 'target_country'),
-    institution: g(formData, 'institution'),
+    university_id: g(formData, 'university_id'),
     program: g(formData, 'program'),
     intake_season: g(formData, 'intake_season'),
     intake_year: g(formData, 'intake_year'),
@@ -104,7 +104,9 @@ export async function createApplication(
     .insert(insert)
     .select('id')
     .single();
-  if (error || !application) return { ok: false, error: 'Could not create the application.' };
+  if (error || !application) {
+    return { ok: false, error: 'Could not create the application.' };
+  }
 
   await writeAuditLog({
     actorId: user.id,
@@ -242,7 +244,7 @@ export async function getRenderedApplicationTemplate(
 
   const { data: app } = await supabase
     .from('applications')
-    .select('id, organization_id, full_name, target_country, program, institution')
+    .select('id, organization_id, full_name, target_country, program, universities(name)')
     .eq('id', applicationId)
     .single();
   if (!app) return { ok: false, error: 'Application not found or access denied.' };
@@ -255,11 +257,16 @@ export async function getRenderedApplicationTemplate(
     .single();
   if (!tpl) return { ok: false, error: 'Template not found.' };
 
+  const university = Array.isArray(app.universities) ? app.universities[0] : app.universities;
   const vars = {
     full_name: app.full_name,
     program: app.program,
     target_country: app.target_country,
-    institution: app.institution,
+    // {{institution}} keeps its existing template placeholder name for
+    // compatibility with templates already written using it — the value
+    // now comes from the linked university (see 0027_universities.sql)
+    // instead of the retired free-text institution field.
+    institution: university?.name ?? null,
   };
   return {
     ok: true,
@@ -322,6 +329,41 @@ export async function sendCustomApplicationEmail(
   revalidatePath('/applications');
   revalidatePath(`/leads/${app.lead_id}`);
   if (!res.ok) return { ok: false, error: res.error ?? 'Could not send email.' };
+  return { ok: true };
+}
+
+// ---- Student upload link ----
+// document_upload_token/document_upload_expires_at (0029_application_upload_link.sql)
+// gate the public /upload/[token] page — regenerating rotates both together so
+// the old link stops working the instant a new one is issued.
+
+export async function regenerateUploadLink(applicationId: string): Promise<ActionState> {
+  const user = await requireUser();
+  const app = await assertApplicationAccess(applicationId);
+  if (!app) return { ok: false, error: 'Application not found or access denied.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('applications')
+    .update({
+      document_upload_token: crypto.randomUUID(),
+      document_upload_expires_at: new Date(
+        Date.now() + UPLOAD_LINK_TTL_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    })
+    .eq('id', applicationId);
+  if (error) return { ok: false, error: 'Could not regenerate the link.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: app.organization_id,
+    action: 'application_upload_link_regenerated',
+    entity: 'application',
+    entityId: applicationId,
+  });
+
+  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath('/applications');
   return { ok: true };
 }
 

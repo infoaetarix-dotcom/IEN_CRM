@@ -40,6 +40,15 @@ export function portalDomainDecision(params: {
 }): RouteDecision {
   const { orgId, pathname, user, appUrl } = params;
 
+  // The student document-upload page is public by design (see
+  // 0029_application_upload_link.sql) — it must stay reachable on a portal
+  // domain regardless of whether a staff session happens to be present, and
+  // never force-sign-out a mismatched/super-admin session just for opening
+  // the link a student was sent.
+  if (pathname.startsWith('/upload/')) {
+    return ALLOW;
+  }
+
   if (pathname.startsWith('/super')) {
     return { action: 'redirect', to: '/login' };
   }

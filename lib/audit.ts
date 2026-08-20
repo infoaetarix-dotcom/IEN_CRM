@@ -9,7 +9,6 @@ export type AuditAction =
   | 'message_failed'
   | 'lead_assigned'
   | 'lead_updated'
-  | 'lead_copied'
   | 'lead_archived'
   | 'lead_unarchived'
   | 'lead_deleted'
@@ -34,7 +33,11 @@ export type AuditAction =
   | 'application_deleted'
   | 'application_document_uploaded'
   | 'application_document_replaced'
-  | 'application_document_deleted';
+  | 'application_document_deleted'
+  | 'application_upload_link_regenerated'
+  | 'university_created'
+  | 'university_updated'
+  | 'university_deleted';
 
 export type AuditEntity =
   | 'lead'
@@ -44,7 +47,8 @@ export type AuditEntity =
   | 'finance_entry'
   | 'student_finance_entry'
   | 'activity_entry'
-  | 'application';
+  | 'application'
+  | 'university';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action

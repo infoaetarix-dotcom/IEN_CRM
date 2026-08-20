@@ -15,7 +15,7 @@ export default async function NewApplicationPage({
 }: {
   searchParams: Promise<{ lead_id?: string }>;
 }) {
-  await requireUser();
+  const profile = await requireUser();
   const { lead_id: leadId } = await searchParams;
   const supabase = await createClient();
 
@@ -38,11 +38,14 @@ export default async function NewApplicationPage({
     );
   }
 
-  const { data: lead } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', leadId)
-    .single();
+  const [{ data: lead }, { data: universities }] = await Promise.all([
+    supabase.from('leads').select('*').eq('id', leadId).single(),
+    supabase
+      .from('universities')
+      .select('id, name, country, created_at')
+      .eq('organization_id', profile.organization_id)
+      .order('name'),
+  ]);
   if (!lead) notFound();
 
   const initial = leadToApplicationDefaults(lead);
@@ -60,7 +63,7 @@ export default async function NewApplicationPage({
         title="New application"
         subtitle={`Pre-filled from ${lead.full_name || 'this lead'} — review and add a passport number before saving.`}
       />
-      <ApplicationForm leadId={leadId} initial={initial} />
+      <ApplicationForm leadId={leadId} initial={initial} universities={universities ?? []} />
     </div>
   );
 }

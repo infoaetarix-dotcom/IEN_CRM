@@ -12,6 +12,7 @@ import { rateLimit, clientIp } from '@/lib/security/rate-limit';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 import { writeAuditLog } from '@/lib/audit';
+import { notifyOrgStaff } from '@/lib/notifications/create';
 
 export interface StepState {
   ok: boolean;
@@ -143,6 +144,20 @@ export async function startLead(
     entity: 'lead',
     entityId: lead.id,
     metadata: { partial: true, source: normalizeSource(d.utm_source) },
+  });
+
+  // Best-effort — every active admin/agent gets a live in-app alert +
+  // email the moment the lead's contact info is captured (step 1), not
+  // only on full completion, so an abandoned-later-steps lead still gets
+  // noticed the same way progressive capture already saves it either way.
+  await notifyOrgStaff({
+    organizationId,
+    type: 'new_lead',
+    title: 'New lead',
+    body: `${d.full_name} just submitted your application form.`,
+    link: `/leads/${lead.id}`,
+    emailSubject: `New lead: ${d.full_name}`,
+    emailBody: `${d.full_name} just submitted your application form.\n\nEmail: ${d.email}\nPhone: ${d.phone}\n\nOpen it in your CRM: ${process.env.NEXT_PUBLIC_APP_URL}/leads/${lead.id}`,
   });
 
   return { ok: true, leadId: lead.id, submissionToken: lead.submission_token };

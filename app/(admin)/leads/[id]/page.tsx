@@ -21,6 +21,7 @@ import {
   type LeadEditState,
 } from '@/components/dashboard/lead-editor';
 import { LeadActions } from '@/components/dashboard/lead-archive-controls';
+import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
@@ -57,13 +58,13 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const profile = await requireUser();
   const supabase = await createClient();
 
   // Independent reads — the lead row itself doesn't gate any of the others
   // (they all just filter by the route's `id`), so every query fires together
   // instead of the lead row blocking the rest.
-  const [leadRes, notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes] =
+  const [leadRes, notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes, universitiesRes] =
     await Promise.all([
       supabase.from('leads').select('*').eq('id', id).single(),
       supabase
@@ -88,9 +89,14 @@ export default async function LeadDetailPage({
         .order('is_auto', { ascending: false }),
       supabase
         .from('applications')
-        .select('id, application_number, status')
+        .select('id, application_number, status, universities(name, country)')
         .eq('lead_id', id)
         .order('application_number', { ascending: true }),
+      supabase
+        .from('universities')
+        .select('id, name, country, created_at')
+        .eq('organization_id', profile.organization_id)
+        .order('name'),
     ]);
 
   const lead = leadRes.data;
@@ -297,12 +303,16 @@ export default async function LeadDetailPage({
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="font-tenant-display">Applications</CardTitle>
-              <Link
-                href={`/applications/new?lead_id=${lead.id}`}
-                className="inline-flex h-8 items-center gap-1 rounded-md bg-tenant-accent px-2.5 text-xs text-white hover:bg-tenant-accent/90"
-              >
-                <Plus className="h-3.5 w-3.5" /> Create application
-              </Link>
+              <CreateApplicationDialog
+                leads={[]}
+                universities={universitiesRes.data ?? []}
+                fixedLead={{ id: lead.id, full_name: lead.full_name || '(no name)' }}
+                trigger={
+                  <button className="inline-flex h-8 items-center gap-1 rounded-md bg-tenant-accent px-2.5 text-xs text-white hover:bg-tenant-accent/90">
+                    <Plus className="h-3.5 w-3.5" /> Create application
+                  </button>
+                }
+              />
             </CardHeader>
             <CardContent>
               {(applicationsRes.data ?? []).length === 0 ? (
@@ -311,26 +321,32 @@ export default async function LeadDetailPage({
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {(applicationsRes.data ?? []).map((a, i) => (
-                    <Link
-                      key={a.id}
-                      href={`/applications/${a.id}`}
-                      className="rounded-lg border border-tenant-ink/10 p-3 transition-colors hover:border-tenant-accent hover:bg-tenant-gray"
-                    >
-                      <p className="text-sm font-medium text-tenant-ink">
-                        Application {i + 1}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        #{a.application_number}
-                      </p>
-                      <Badge
-                        variant={STATUS_BADGE[a.status as LeadStatus]}
-                        className="mt-2"
+                  {(applicationsRes.data ?? []).map((a, i) => {
+                    const uni = Array.isArray(a.universities) ? a.universities[0] : a.universities;
+                    return (
+                      <Link
+                        key={a.id}
+                        href={`/applications/${a.id}`}
+                        className="rounded-lg border border-tenant-ink/10 p-3 transition-colors hover:border-tenant-accent hover:bg-tenant-gray"
                       >
-                        {STATUS_LABELS[a.status as LeadStatus]}
-                      </Badge>
-                    </Link>
-                  ))}
+                        <p className="text-sm font-medium text-tenant-ink">
+                          Application {i + 1}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          #{a.application_number}
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-tenant-accent">
+                          {uni ? `${uni.name} (${uni.country})` : 'No university set'}
+                        </p>
+                        <Badge
+                          variant={STATUS_BADGE[a.status as LeadStatus]}
+                          className="mt-2"
+                        >
+                          {STATUS_LABELS[a.status as LeadStatus]}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

@@ -20,7 +20,10 @@ const baseDirectives = [
   "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
   "frame-src https://challenges.cloudflare.com",
-  "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+  // wss:// is listed explicitly — browsers do NOT treat an https:// source as
+  // also covering wss:// to the same host, so Supabase Realtime's websocket
+  // (the notifications bell) was silently blocked without this.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
   "form-action 'self'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -60,6 +63,17 @@ const embeddableHeaders = buildHeaders({ embeddable: true });
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    // Next's default Server Action body limit is 1MB — well under
+    // DOCUMENT_MAX_BYTES (10MB, lib/validation/application.ts), so any real
+    // document upload (staff or the public student upload link) was
+    // silently rejected by the framework before ever reaching that check.
+    // Raised with headroom above 10MB for multipart overhead; the 10MB cap
+    // itself is still enforced inside the upload actions.
+    serverActions: {
+      bodySizeLimit: '12mb',
+    },
+  },
   async headers() {
     return [
       // Must precede the catch-all — Next.js applies every matching rule,

@@ -12,6 +12,7 @@ import {
   Banknote,
   Activity,
   FileText,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ const NAV: NavItem[] = [
     adminOnly: true,
     moduleKey: 'activity_tracker',
   },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function Sidebar({

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, GraduationCap } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { ageFromDob } from '@/lib/utils';
@@ -16,7 +16,10 @@ import {
   DeleteApplicationButton,
 } from '@/components/dashboard/applications/application-controls';
 import { DocumentsPanel } from '@/components/dashboard/applications/documents-panel';
+import { UploadLinkCard } from '@/components/dashboard/applications/upload-link-card';
 import type { ApplicationDocument } from '@/lib/applications/types';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
 function fmtDateTime(s: string) {
   return new Date(s).toLocaleString('en-GB', {
@@ -47,22 +50,22 @@ export default async function ApplicationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const profile = await requireUser();
   const supabase = await createClient();
 
   const { data: app } = await supabase
     .from('applications')
-    .select('*')
+    .select('*, universities(id, name, country)')
     .eq('id', id)
     .single();
   if (!app) notFound();
 
-  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }] =
+  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }, { data: universities }, { data: org }] =
     await Promise.all([
       supabase.from('leads').select('id, full_name, lead_number').eq('id', app.lead_id).single(),
       supabase
         .from('application_documents')
-        .select('id, file_name, file_size, uploaded_by, created_at')
+        .select('id, file_name, file_size, uploaded_by, uploaded_by_student, created_at')
         .eq('application_id', id)
         .order('created_at', { ascending: false }),
       supabase
@@ -71,7 +74,22 @@ export default async function ApplicationDetailPage({
         .eq('application_id', id)
         .order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name, email'),
+      supabase
+        .from('universities')
+        .select('id, name, country, created_at')
+        .eq('organization_id', profile.organization_id)
+        .order('name'),
+      supabase
+        .from('organizations')
+        .select('portal_domain')
+        .eq('id', profile.organization_id)
+        .single(),
     ]);
+
+  const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
+  const uploadUrl = `${uploadBaseUrl}/upload/${app.document_upload_token}`;
+
+  const university = Array.isArray(app.universities) ? app.universities[0] : app.universities;
 
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
@@ -87,7 +105,7 @@ export default async function ApplicationDetailPage({
     city: s(app.city),
     district: s(app.district),
     target_country: s(app.target_country),
-    institution: s(app.institution),
+    university_id: s(app.university_id),
     program: s(app.program),
     intake_season: s(app.intake_season),
     intake_year: s(app.intake_year),
@@ -119,7 +137,11 @@ export default async function ApplicationDetailPage({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <p className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.1em] text-tenant-accent">
+            <GraduationCap className="h-4 w-4" />
+            {university ? `${university.name} (${university.country})` : 'No university set'}
+          </p>
+          <div className="mt-1 flex items-center gap-3">
             <h1 className="font-tenant-display text-2xl font-semibold text-tenant-ink">
               {app.full_name || '(no name)'}
             </h1>
@@ -145,7 +167,12 @@ export default async function ApplicationDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <ApplicationDetailToggle leadId={app.lead_id} applicationId={app.id} initial={initial}>
+          <ApplicationDetailToggle
+            leadId={app.lead_id}
+            applicationId={app.id}
+            initial={initial}
+            universities={universities ?? []}
+          >
             <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
               <CardHeader>
                 <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
@@ -201,7 +228,10 @@ export default async function ApplicationDetailPage({
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <Field label="Target country" value={app.target_country} />
-                <Field label="Preferred institution" value={app.institution} />
+                <Field
+                  label="University"
+                  value={university ? `${university.name} (${university.country})` : null}
+                />
                 <Field label="Program" value={app.program} />
                 <Field
                   label="Intended intake"
@@ -282,6 +312,23 @@ export default async function ApplicationDetailPage({
                 </p>
                 <ApplicationStatusChanger applicationId={app.id} current={app.status} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-tenant-display">Student upload link</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Send this to the student — it opens a page where they can upload documents
+                for this application only, no login needed.
+              </p>
+              <UploadLinkCard
+                applicationId={app.id}
+                url={uploadUrl}
+                expiresAt={app.document_upload_expires_at}
+              />
             </CardContent>
           </Card>
 

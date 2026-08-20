@@ -45,6 +45,21 @@ export const FINANCE_CATEGORIES = [
   'Other',
 ] as const;
 
+/** Presets for the Student Finance category picker — per-student payments, distinct from the office-expense presets above. */
+export const STUDENT_FINANCE_CATEGORIES = [
+  'Consultancy Fee',
+  'University Fee',
+  'Visa Fee',
+  'Application Fee',
+  'Test/Exam Fee',
+  'Accommodation',
+  'Travel/Flight',
+  'Insurance',
+  'Documentation',
+  'Refund',
+  'Other',
+] as const;
+
 export const FINANCE_PAYMENT_METHODS = [
   'Cash',
   'Bank Transfer',

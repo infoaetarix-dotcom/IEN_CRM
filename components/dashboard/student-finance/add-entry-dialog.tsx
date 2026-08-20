@@ -22,7 +22,7 @@ import {
   updateStudentFinanceEntry,
   type StudentFinanceActionState,
 } from '@/app/(admin)/student-finance/actions';
-import { FINANCE_CATEGORIES, FINANCE_PAYMENT_METHODS, type StudentFinanceEntry } from '@/lib/finance/types';
+import { STUDENT_FINANCE_CATEGORIES, FINANCE_PAYMENT_METHODS, type StudentFinanceEntry } from '@/lib/finance/types';
 
 const init: StudentFinanceActionState = { ok: false };
 
@@ -125,11 +125,11 @@ export function AddStudentEntryDialog({
               name="category"
               list="student-finance-categories"
               defaultValue={entry?.category}
-              placeholder="e.g. Deposit"
+              placeholder="e.g. Consultancy Fee"
               required
             />
             <datalist id="student-finance-categories">
-              {FINANCE_CATEGORIES.map((c) => (
+              {STUDENT_FINANCE_CATEGORIES.map((c) => (
                 <option key={c} value={c} />
               ))}
             </datalist>

@@ -490,60 +490,6 @@ export async function unarchiveLead(leadId: string): Promise<ActionResult> {
 }
 
 /**
- * Duplicate a lead's full data into a new row (fresh id + lead_number).
- * The read is RLS-gated on the session client, same as every other action
- * here; the insert runs on the service role because `leads` has no
- * authenticated insert policy (the public wizard is the only client-side
- * insert path — see startLead). organization_id comes from the fetched row,
- * which RLS already guaranteed belongs to the caller's org, not from any
- * client input.
- */
-export async function copyLead(
-  leadId: string,
-): Promise<ActionResult & { newLeadId?: string }> {
-  const user = await requireUser();
-  const supabase = await createClient();
-
-  const { data: source, error: fetchErr } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', leadId)
-    .single();
-  if (fetchErr || !source) return { ok: false, error: 'Lead not found or access denied.' };
-
-  const {
-    id: _id,
-    lead_number: _leadNumber,
-    created_at: _createdAt,
-    updated_at: _updatedAt,
-    archived_at: _archivedAt,
-    archived_by: _archivedBy,
-    submission_token: _submissionToken,
-    ...copyable
-  } = source;
-
-  const service = createServiceClient();
-  const { data: created, error: insertErr } = await service
-    .from('leads')
-    .insert(copyable)
-    .select('id')
-    .single();
-  if (insertErr || !created) return { ok: false, error: 'Could not copy lead.' };
-
-  await writeAuditLog({
-    actorId: user.id,
-    organizationId: source.organization_id,
-    action: 'lead_copied',
-    entity: 'lead',
-    entityId: created.id,
-    metadata: { copied_from: leadId },
-  });
-
-  revalidatePath('/leads');
-  return { ok: true, newLeadId: created.id };
-}
-
-/**
  * Permanently delete a lead. Any active org member may delete any lead in
  * their org (shared-data model — see leads_delete RLS). Notes / status
  * history / messages cascade automatically (FK ON DELETE CASCADE). The audit
