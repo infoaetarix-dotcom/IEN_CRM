@@ -19,19 +19,22 @@ import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/displa
 
 export const metadata = { title: 'Applications' };
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
+
 export default async function ApplicationsPage() {
   const profile = await requireUser();
   const supabase = await createClient();
 
   // Independent reads — the applications list, the lead picker's and
-  // university picker's options, and the org's email templates (for the
-  // row-level Email popup) don't depend on each other, so they're fired
+  // university picker's options, the org's email templates (for the
+  // row-level Email popup), and the org's portal_domain (for building the
+  // student upload link) don't depend on each other, so they're fired
   // together.
-  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }] =
+  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }] =
     await Promise.all([
       supabase
         .from('applications')
-        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name), universities(name, country)')
+        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
         .order('created_at', { ascending: false }),
       supabase.from('leads').select('id, full_name').order('full_name'),
       supabase
@@ -44,7 +47,16 @@ export default async function ApplicationsPage() {
         .select('id, name, country, created_at')
         .eq('organization_id', profile.organization_id)
         .order('name'),
+      supabase
+        .from('organizations')
+        .select('portal_domain')
+        .eq('id', profile.organization_id)
+        .single(),
     ]);
+
+  // Same "portal domain if configured, else the base app domain" fallback
+  // the /form page already uses for the application-form link.
+  const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
 
   return (
     <div className="space-y-6">
@@ -112,6 +124,8 @@ export default async function ApplicationsPage() {
                         email={a.email}
                         phone={a.phone}
                         templates={templates ?? []}
+                        uploadUrl={`${uploadBaseUrl}/upload/${a.document_upload_token}`}
+                        uploadExpired={new Date(a.document_upload_expires_at) < new Date()}
                       />
                     </TableCell>
                   </TableRow>

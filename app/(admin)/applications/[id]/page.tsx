@@ -16,7 +16,10 @@ import {
   DeleteApplicationButton,
 } from '@/components/dashboard/applications/application-controls';
 import { DocumentsPanel } from '@/components/dashboard/applications/documents-panel';
+import { UploadLinkCard } from '@/components/dashboard/applications/upload-link-card';
 import type { ApplicationDocument } from '@/lib/applications/types';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
 function fmtDateTime(s: string) {
   return new Date(s).toLocaleString('en-GB', {
@@ -57,12 +60,12 @@ export default async function ApplicationDetailPage({
     .single();
   if (!app) notFound();
 
-  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }, { data: universities }] =
+  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }, { data: universities }, { data: org }] =
     await Promise.all([
       supabase.from('leads').select('id, full_name, lead_number').eq('id', app.lead_id).single(),
       supabase
         .from('application_documents')
-        .select('id, file_name, file_size, uploaded_by, created_at')
+        .select('id, file_name, file_size, uploaded_by, uploaded_by_student, created_at')
         .eq('application_id', id)
         .order('created_at', { ascending: false }),
       supabase
@@ -76,7 +79,15 @@ export default async function ApplicationDetailPage({
         .select('id, name, country, created_at')
         .eq('organization_id', profile.organization_id)
         .order('name'),
+      supabase
+        .from('organizations')
+        .select('portal_domain')
+        .eq('id', profile.organization_id)
+        .single(),
     ]);
+
+  const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
+  const uploadUrl = `${uploadBaseUrl}/upload/${app.document_upload_token}`;
 
   const university = Array.isArray(app.universities) ? app.universities[0] : app.universities;
 
@@ -301,6 +312,23 @@ export default async function ApplicationDetailPage({
                 </p>
                 <ApplicationStatusChanger applicationId={app.id} current={app.status} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-tenant-display">Student upload link</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Send this to the student — it opens a page where they can upload documents
+                for this application only, no login needed.
+              </p>
+              <UploadLinkCard
+                applicationId={app.id}
+                url={uploadUrl}
+                expiresAt={app.document_upload_expires_at}
+              />
             </CardContent>
           </Card>
 

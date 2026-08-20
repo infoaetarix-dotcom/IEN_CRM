@@ -15,12 +15,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
+import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
 import { LEAD_STATUSES, STATUS_LABELS } from '@/lib/leads/display';
 
 /**
- * Edit / WhatsApp / Email / Delete for a row in the applications list — same
- * inline-confirm pattern as LeadRowActions on /leads, so the two tables
- * behave identically.
+ * Edit / WhatsApp / Email / Copy upload link / Delete for a row in the
+ * applications list — same inline-confirm pattern as LeadRowActions on
+ * /leads, so the two tables behave identically.
  */
 export function ApplicationRowActions({
   applicationId,
@@ -28,12 +29,16 @@ export function ApplicationRowActions({
   email,
   phone,
   templates,
+  uploadUrl,
+  uploadExpired,
 }: {
   applicationId: string;
   fullName: string;
   email: string | null;
   phone: string | null;
   templates: { key: string; name: string; subject: string; body: string }[];
+  uploadUrl: string;
+  uploadExpired: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -60,6 +65,7 @@ export function ApplicationRowActions({
         resolveTemplate={(templateKey) => getRenderedApplicationTemplate(applicationId, templateKey)}
         sendAction={(payload) => sendCustomApplicationEmail(applicationId, payload)}
       />
+      <CopyUploadLinkButton url={uploadUrl} expired={uploadExpired} />
       {!confirming ? (
         <Button
           size="icon"

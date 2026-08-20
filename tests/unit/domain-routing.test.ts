@@ -100,6 +100,28 @@ describe('portalDomainDecision', () => {
     });
   });
 
+  it('always allows /upload/{token} — public by design, even for a mismatched or super-admin session', () => {
+    expect(
+      portalDomainDecision({ orgId, pathname: '/upload/abc-123', user: null, appUrl }),
+    ).toEqual({ action: 'allow' });
+    expect(
+      portalDomainDecision({
+        orgId,
+        pathname: '/upload/abc-123',
+        user: { organizationId: 'org-b', isSuperAdmin: false },
+        appUrl,
+      }),
+    ).toEqual({ action: 'allow' });
+    expect(
+      portalDomainDecision({
+        orgId,
+        pathname: '/upload/abc-123',
+        user: { organizationId: null, isSuperAdmin: true },
+        appUrl,
+      }),
+    ).toEqual({ action: 'allow' });
+  });
+
   it('falls back to a relative same-domain redirect when NEXT_PUBLIC_APP_URL is unset', () => {
     expect(
       portalDomainDecision({
