@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getUploadContext } from '@/lib/applications/upload-link';
 import { brandFromOrg, FALLBACK_BRAND } from '@/lib/branding';
 import { resolveTheme } from '@/lib/branding/themes';
 import { themeStyleVars } from '@/lib/branding/theme-style';
@@ -9,30 +10,29 @@ import { StudentUploadForm } from '@/components/public/student-upload-form';
 
 type Params = Promise<{ token: string }>;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export const metadata = { title: 'Upload your documents' };
-
 /**
  * Public, unauthenticated page reached only via an unguessable
  * document_upload_token (see 0029_application_upload_link.sql) — the token
  * alone resolves exactly one application, no login, no other application
  * data exposed beyond the applicant's name and target university (context
- * for a friendly header). Branded dynamically per-org, same mechanism as
- * the public apply form (app/(public)/[slug]/apply/page.tsx).
+ * for a friendly header). Branded dynamically per-org — including the
+ * browser tab icon here, same mechanism as the public apply form
+ * (app/(public)/[slug]/apply/page.tsx).
  */
+export async function generateMetadata({ params }: { params: Params }) {
+  const { token } = await params;
+  const app = await getUploadContext(token);
+  const orgRow = app ? (Array.isArray(app.organizations) ? app.organizations[0] : app.organizations) : null;
+  const brand = orgRow ? brandFromOrg(orgRow) : FALLBACK_BRAND;
+  return {
+    title: `Upload your documents — ${brand.legalName}`,
+    icons: brand.logoUrl ? { icon: brand.logoUrl } : undefined,
+  };
+}
+
 export default async function UploadPage({ params }: { params: Params }) {
   const { token } = await params;
-  if (!UUID_RE.test(token)) notFound();
-
-  const service = createServiceClient();
-  const { data: app } = await service
-    .from('applications')
-    .select(
-      'id, full_name, document_upload_expires_at, organizations(name, legal_name, logo_url, theme_key), universities(name, country)',
-    )
-    .eq('document_upload_token', token)
-    .maybeSingle();
+  const app = await getUploadContext(token);
   if (!app) notFound();
 
   const orgRow = Array.isArray(app.organizations) ? app.organizations[0] : app.organizations;
@@ -41,6 +41,7 @@ export default async function UploadPage({ params }: { params: Params }) {
   const theme = resolveTheme(brand.themeKey);
   const expired = new Date(app.document_upload_expires_at) < new Date();
 
+  const service = createServiceClient();
   const { data: documents } = await service
     .from('application_documents')
     .select('id, file_name, created_at')

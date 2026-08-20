@@ -60,6 +60,17 @@ const embeddableHeaders = buildHeaders({ embeddable: true });
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    // Next's default Server Action body limit is 1MB — well under
+    // DOCUMENT_MAX_BYTES (10MB, lib/validation/application.ts), so any real
+    // document upload (staff or the public student upload link) was
+    // silently rejected by the framework before ever reaching that check.
+    // Raised with headroom above 10MB for multipart overhead; the 10MB cap
+    // itself is still enforced inside the upload actions.
+    serverActions: {
+      bodySizeLimit: '12mb',
+    },
+  },
   async headers() {
     return [
       // Must precede the catch-all — Next.js applies every matching rule,
