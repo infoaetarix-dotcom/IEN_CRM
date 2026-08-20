@@ -113,7 +113,7 @@ export default async function ApplicationsPage() {
                         {STATUS_LABELS[a.status as LeadStatus]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-blue-500 font-semibold">
                       {a.created_by ? (nameById.get(a.created_by) ?? '—') : '—'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
