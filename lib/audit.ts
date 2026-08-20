@@ -9,7 +9,6 @@ export type AuditAction =
   | 'message_failed'
   | 'lead_assigned'
   | 'lead_updated'
-  | 'lead_copied'
   | 'lead_archived'
   | 'lead_unarchived'
   | 'lead_deleted'

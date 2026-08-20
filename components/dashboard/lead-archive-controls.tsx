@@ -2,12 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Archive, ArchiveRestore, Copy, Pencil, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Pencil, Trash2 } from 'lucide-react';
 import {
   archiveLead,
   unarchiveLead,
   deleteLead,
-  copyLead,
   getRenderedLeadTemplate,
   sendCustomLeadEmail,
 } from '@/app/(admin)/leads/actions';
@@ -120,11 +119,10 @@ export function LeadActions({
 }
 
 /**
- * Edit / Copy / WhatsApp / Email / Delete controls for a row in the
- * active-leads list. Any active org member may use all of these
- * (shared-data model) — Edit navigates via the router instead of a real
- * <a href>, so hovering the button doesn't preview the lead's raw UUID in
- * the browser's status bar.
+ * Edit / WhatsApp / Email / Delete controls for a row in the active-leads
+ * list. Any active org member may use all of these (shared-data model) —
+ * Edit navigates via the router instead of a real <a href>, so hovering the
+ * button doesn't preview the lead's raw UUID in the browser's status bar.
  */
 export function LeadRowActions({
   leadId,
@@ -162,16 +160,6 @@ export function LeadRowActions({
         resolveTemplate={(templateKey) => getRenderedLeadTemplate(leadId, templateKey)}
         sendAction={(payload) => sendCustomLeadEmail(leadId, payload)}
       />
-      <Button
-        size="icon"
-        variant="ghost"
-        className="h-8 w-8 rounded-lg border border-tenant-accent2/20 bg-tenant-accent2/10 text-tenant-accent2 hover:bg-tenant-accent2/20 hover:text-tenant-accent2"
-        title="Copy"
-        disabled={pending}
-        onClick={() => run(() => copyLead(leadId))}
-      >
-        <Copy className="h-4 w-4" />
-      </Button>
       {!confirming ? (
         <Button
           size="icon"
