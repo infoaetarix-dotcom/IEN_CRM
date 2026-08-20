@@ -31,7 +31,7 @@ export default async function ApplicationsPage() {
     await Promise.all([
       supabase
         .from('applications')
-        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
+        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name), universities(name, country)')
         .order('created_at', { ascending: false }),
       supabase.from('leads').select('id, full_name').order('full_name'),
       supabase
@@ -63,6 +63,7 @@ export default async function ApplicationsPage() {
                 <TableHead>Lead #</TableHead>
                 <TableHead>Application #</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>University</TableHead>
                 <TableHead>Target country / program</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
@@ -72,6 +73,7 @@ export default async function ApplicationsPage() {
             <TableBody>
               {(applications ?? []).map((a) => {
                 const leadRow = Array.isArray(a.leads) ? a.leads[0] : a.leads;
+                const university = Array.isArray(a.universities) ? a.universities[0] : a.universities;
                 return (
                   <TableRow key={a.id}>
                     <TableCell className="whitespace-nowrap">
@@ -85,6 +87,9 @@ export default async function ApplicationsPage() {
                       </Link>
                     </TableCell>
                     <TableCell>{a.full_name || leadRow?.full_name || '(no name)'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {university ? `${university.name} (${university.country})` : '—'}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {[a.target_country, a.program].filter(Boolean).join(' — ') || '—'}
                     </TableCell>
@@ -114,7 +119,7 @@ export default async function ApplicationsPage() {
               })}
               {(applications ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No applications yet — create one from a lead, or the button above.
                   </TableCell>
                 </TableRow>
