@@ -30,11 +30,11 @@ export default async function ApplicationsPage() {
   // row-level Email popup), and the org's portal_domain (for building the
   // student upload link) don't depend on each other, so they're fired
   // together.
-  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }] =
+  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }, { data: profiles }] =
     await Promise.all([
       supabase
         .from('applications')
-        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
+        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
         .order('created_at', { ascending: false }),
       supabase.from('leads').select('id, full_name').order('full_name'),
       supabase
@@ -52,11 +52,13 @@ export default async function ApplicationsPage() {
         .select('portal_domain')
         .eq('id', profile.organization_id)
         .single(),
+      supabase.from('profiles').select('id, full_name'),
     ]);
 
   // Same "portal domain if configured, else the base app domain" fallback
   // the /form page already uses for the application-form link.
   const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
   return (
     <div className="space-y-6">
@@ -78,6 +80,7 @@ export default async function ApplicationsPage() {
                 <TableHead>University</TableHead>
                 <TableHead>Target country / program</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Created by</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -110,6 +113,9 @@ export default async function ApplicationsPage() {
                         {STATUS_LABELS[a.status as LeadStatus]}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {a.created_by ? (nameById.get(a.created_by) ?? '—') : '—'}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {new Date(a.created_at).toLocaleDateString('en-GB', {
                         day: '2-digit',
@@ -133,7 +139,7 @@ export default async function ApplicationsPage() {
               })}
               {(applications ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     No applications yet — create one from a lead, or the button above.
                   </TableCell>
                 </TableRow>
