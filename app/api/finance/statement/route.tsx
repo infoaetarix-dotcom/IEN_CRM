@@ -6,7 +6,7 @@ import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { resolvePdfLogo } from '@/lib/branding/pdf-logo';
 import { StatementDocument } from '@/lib/finance/statement-pdf';
-import { extractLeadName, type FinanceEntry } from '@/lib/finance/types';
+import type { FinanceEntry } from '@/lib/finance/types';
 
 // @react-pdf/renderer needs real Node (fs, Buffer) — not Edge-compatible.
 export const runtime = 'nodejs';
@@ -57,9 +57,7 @@ export async function GET(request: NextRequest) {
 
   const { data: rawEntries } = await supabase
     .from('finance_entries')
-    .select(
-      'id, type, amount, category, payment_method, note, entry_date, lead_id, created_at, leads(full_name)',
-    )
+    .select('id, type, amount, category, payment_method, note, entry_date, created_at')
     .eq('user_id', profile.id)
     .gte('entry_date', from)
     .lte('entry_date', to)
@@ -72,8 +70,6 @@ export async function GET(request: NextRequest) {
     category: e.category,
     payment_method: e.payment_method,
     note: e.note,
-    lead_id: e.lead_id,
-    lead_name: extractLeadName(e.leads),
     entry_date: e.entry_date,
     created_at: e.created_at,
   }));

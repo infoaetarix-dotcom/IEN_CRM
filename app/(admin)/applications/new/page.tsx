@@ -4,12 +4,11 @@ import { ArrowLeft, FilePlus2 } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { ApplicationForm, type ApplicationFormValues } from '@/components/dashboard/applications/application-form';
+import { ApplicationForm } from '@/components/dashboard/applications/application-form';
 import { SelectLeadForApplication } from '@/components/dashboard/applications/select-lead-for-application';
+import { leadToApplicationDefaults } from '@/lib/applications/types';
 
 export const metadata = { title: 'New Application' };
-
-const s = (v: unknown) => (v == null ? '' : String(v));
 
 export default async function NewApplicationPage({
   searchParams,
@@ -46,34 +45,7 @@ export default async function NewApplicationPage({
     .single();
   if (!lead) notFound();
 
-  const initial: ApplicationFormValues = {
-    full_name: s(lead.full_name),
-    email: s(lead.email),
-    phone: s(lead.phone),
-    date_of_birth: lead.date_of_birth ? s(lead.date_of_birth).slice(0, 10) : '',
-    city: s(lead.city),
-    district: s(lead.district),
-    target_country: s(lead.target_country),
-    institution: s(lead.institution),
-    program: s(lead.program),
-    intake_season: s(lead.intake_season),
-    intake_year: s(lead.intake_year),
-    highest_education: s(lead.highest_education),
-    last_qualification: s(lead.last_qualification),
-    prior_institution: s(lead.prior_institution),
-    passing_year: s(lead.passing_year),
-    grading_system: s(lead.grading_system),
-    grade_value: s(lead.grade_value),
-    work_experience_years: s(lead.work_experience_years),
-    work_experience_detail: s(lead.work_experience_detail),
-    english_test: s(lead.english_test),
-    english_score: s(lead.english_score),
-    funding_source: s(lead.funding_source),
-    prior_rejection: lead.prior_rejection === true,
-    prior_rejection_detail: s(lead.prior_rejection_detail),
-    passport_number: '',
-    status: 'new',
-  };
+  const initial = leadToApplicationDefaults(lead);
 
   return (
     <div className="space-y-6">

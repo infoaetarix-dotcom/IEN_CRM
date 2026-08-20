@@ -26,34 +26,11 @@ import {
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
 
-export interface ApplicationFormValues {
-  full_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  city: string;
-  district: string;
-  target_country: string;
-  institution: string;
-  program: string;
-  intake_season: string;
-  intake_year: string;
-  highest_education: string;
-  last_qualification: string;
-  prior_institution: string;
-  passing_year: string;
-  grading_system: string;
-  grade_value: string;
-  work_experience_years: string;
-  work_experience_detail: string;
-  english_test: string;
-  english_score: string;
-  funding_source: string;
-  prior_rejection: boolean;
-  prior_rejection_detail: string;
-  passport_number: string;
-  status: string;
-}
+// Re-exported for existing import sites — the type itself lives in
+// lib/applications/types.ts so actions.ts (a server module) can reference it
+// without importing from this client component file.
+export type { ApplicationFormValues } from '@/lib/applications/types';
+import type { ApplicationFormValues } from '@/lib/applications/types';
 
 const init: ActionState = { ok: false };
 
@@ -76,12 +53,16 @@ export function ApplicationForm({
   applicationId,
   initial,
   onSaved,
+  onCancel,
 }: {
   leadId: string;
   applicationId?: string;
   initial: ApplicationFormValues;
   /** Edit mode only — called after a successful save, e.g. to flip a parent toggle back to read-only view. */
   onSaved?: () => void;
+  /** Create mode only — overrides the default Cancel behavior (navigating to
+   *  the parent lead), e.g. to close a dialog this form is rendered inside. */
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const isEdit = !!applicationId;
@@ -311,7 +292,11 @@ export function ApplicationForm({
           {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Create application'}
         </Button>
         {!isEdit && (
-          <Button type="button" variant="outline" onClick={() => router.push(`/leads/${leadId}`)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => (onCancel ? onCancel() : router.push(`/leads/${leadId}`))}
+          >
             Cancel
           </Button>
         )}

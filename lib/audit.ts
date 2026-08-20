@@ -23,6 +23,9 @@ export type AuditAction =
   | 'finance_entry_created'
   | 'finance_entry_updated'
   | 'finance_entry_deleted'
+  | 'student_finance_entry_created'
+  | 'student_finance_entry_updated'
+  | 'student_finance_entry_deleted'
   | 'activity_entry_created'
   | 'activity_entry_updated'
   | 'activity_entry_deleted'
@@ -39,6 +42,7 @@ export type AuditEntity =
   | 'profile'
   | 'organization'
   | 'finance_entry'
+  | 'student_finance_entry'
   | 'activity_entry'
   | 'application';
 

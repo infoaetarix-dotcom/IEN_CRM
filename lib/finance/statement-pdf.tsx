@@ -19,8 +19,7 @@ const styles = StyleSheet.create({
   colAmount: { width: '16%', textAlign: 'right', paddingRight: 8 },
   colCategory: { width: '16%', paddingRight: 6 },
   colPayment: { width: '14%', paddingRight: 6 },
-  colLead: { width: '14%', paddingRight: 6 },
-  colNote: { width: '16%' },
+  colNote: { width: '30%' },
   empty: { marginTop: 16, color: '#6B7280', textAlign: 'center' },
   footer: { position: 'absolute', bottom: 24, left: 32, right: 32, textAlign: 'center', fontSize: 7, color: '#9CA3AF' },
 });
@@ -93,7 +92,6 @@ export function StatementDocument({
           <Text style={styles.colAmount}>Amount</Text>
           <Text style={styles.colCategory}>Category</Text>
           <Text style={styles.colPayment}>Payment</Text>
-          <Text style={styles.colLead}>Lead</Text>
           <Text style={styles.colNote}>Note</Text>
         </View>
         {entries.map((e) => (
@@ -105,7 +103,6 @@ export function StatementDocument({
             </Text>
             <Text style={styles.colCategory}>{e.category}</Text>
             <Text style={styles.colPayment}>{e.payment_method ?? '—'}</Text>
-            <Text style={styles.colLead}>{e.lead_name ?? '—'}</Text>
             <Text style={styles.colNote}>{e.note ?? ''}</Text>
           </View>
         ))}

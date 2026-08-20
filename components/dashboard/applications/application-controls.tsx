@@ -2,15 +2,105 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   updateApplicationStatus,
   deleteApplication,
   addApplicationNote,
+  getRenderedApplicationTemplate,
+  sendCustomApplicationEmail,
 } from '@/app/(admin)/applications/actions';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
+import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { LEAD_STATUSES, STATUS_LABELS } from '@/lib/leads/display';
+
+/**
+ * Edit / WhatsApp / Email / Delete for a row in the applications list — same
+ * inline-confirm pattern as LeadRowActions on /leads, so the two tables
+ * behave identically.
+ */
+export function ApplicationRowActions({
+  applicationId,
+  fullName,
+  email,
+  phone,
+  templates,
+}: {
+  applicationId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  templates: { key: string; name: string; subject: string; body: string }[];
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 rounded-lg border border-tenant-accent/20 bg-tenant-accent/10 text-tenant-accent hover:bg-tenant-accent/20 hover:text-tenant-accent"
+        title="Edit"
+        disabled={pending}
+        onClick={() => router.push(`/applications/${applicationId}`)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <SendWhatsAppDialog name={fullName} phone={phone} />
+      <SendEmailDialog
+        name={fullName}
+        email={email}
+        templates={templates}
+        resolveTemplate={(templateKey) => getRenderedApplicationTemplate(applicationId, templateKey)}
+        sendAction={(payload) => sendCustomApplicationEmail(applicationId, payload)}
+      />
+      {!confirming ? (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-600"
+          title="Delete"
+          disabled={pending}
+          onClick={() => setConfirming(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ) : (
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={pending}
+            onClick={() => {
+              setError(null);
+              start(async () => {
+                const res = await deleteApplication(applicationId);
+                if (!res.ok) {
+                  setError(res.error ?? 'Could not delete this application.');
+                  setConfirming(false);
+                } else {
+                  router.refresh();
+                }
+              });
+            }}
+          >
+            {pending ? 'Deleting…' : 'Confirm'}
+          </Button>
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => setConfirming(false)}>
+            Cancel
+          </Button>
+        </div>
+      )}
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
+}
 
 export function ApplicationStatusChanger({
   applicationId,

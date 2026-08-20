@@ -8,8 +8,12 @@ import {
   unarchiveLead,
   deleteLead,
   copyLead,
+  getRenderedLeadTemplate,
+  sendCustomLeadEmail,
 } from '@/app/(admin)/leads/actions';
 import { Button } from '@/components/ui/button';
+import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
+import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 
 function useRun() {
   const router = useRouter();
@@ -116,12 +120,25 @@ export function LeadActions({
 }
 
 /**
- * Edit / Copy / Delete controls for a row in the active-leads list. Any
- * active org member may use all three (shared-data model) — Edit navigates
- * via the router instead of a real <a href>, so hovering the button doesn't
- * preview the lead's raw UUID in the browser's status bar.
+ * Edit / Copy / WhatsApp / Email / Delete controls for a row in the
+ * active-leads list. Any active org member may use all of these
+ * (shared-data model) — Edit navigates via the router instead of a real
+ * <a href>, so hovering the button doesn't preview the lead's raw UUID in
+ * the browser's status bar.
  */
-export function LeadRowActions({ leadId }: { leadId: string }) {
+export function LeadRowActions({
+  leadId,
+  fullName,
+  email,
+  phone,
+  templates,
+}: {
+  leadId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  templates: { key: string; name: string; subject: string; body: string }[];
+}) {
   const { pending, error, run, router } = useRun();
   const [confirming, setConfirming] = useState(false);
 
@@ -137,6 +154,14 @@ export function LeadRowActions({ leadId }: { leadId: string }) {
       >
         <Pencil className="h-4 w-4" />
       </Button>
+      <SendWhatsAppDialog name={fullName} phone={phone} />
+      <SendEmailDialog
+        name={fullName}
+        email={email}
+        templates={templates}
+        resolveTemplate={(templateKey) => getRenderedLeadTemplate(leadId, templateKey)}
+        sendAction={(payload) => sendCustomLeadEmail(leadId, payload)}
+      />
       <Button
         size="icon"
         variant="ghost"

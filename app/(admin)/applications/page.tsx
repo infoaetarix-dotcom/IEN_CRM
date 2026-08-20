@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, Plus, Pencil } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -13,18 +13,31 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
+import { ApplicationRowActions } from '@/components/dashboard/applications/application-controls';
 import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/display';
 
 export const metadata = { title: 'Applications' };
 
 export default async function ApplicationsPage() {
-  await requireUser();
+  const profile = await requireUser();
   const supabase = await createClient();
 
-  const { data: applications } = await supabase
-    .from('applications')
-    .select('id, application_number, status, full_name, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
-    .order('created_at', { ascending: false });
+  // Independent reads — the applications list, the lead picker's options, and
+  // the org's email templates (for the row-level Email popup) don't depend
+  // on each other, so they're fired together.
+  const [{ data: applications }, { data: leads }, { data: templates }] = await Promise.all([
+    supabase
+      .from('applications')
+      .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
+      .order('created_at', { ascending: false }),
+    supabase.from('leads').select('id, full_name').order('full_name'),
+    supabase
+      .from('email_templates')
+      .select('key, name, subject, body')
+      .eq('organization_id', profile.organization_id)
+      .order('is_auto', { ascending: false }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -32,14 +45,7 @@ export default async function ApplicationsPage() {
         icon={FileText}
         title="Applications"
         subtitle="Every application across your leads — each one belongs to exactly one lead."
-        action={
-          <Link
-            href="/applications/new"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent px-3 text-sm text-white hover:bg-tenant-accent/90"
-          >
-            <Plus className="h-4 w-4" /> Create application
-          </Link>
-        }
+        action={<CreateApplicationDialog leads={leads ?? []} />}
       />
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
@@ -88,13 +94,13 @@ export default async function ApplicationsPage() {
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link
-                        href={`/applications/${a.id}`}
-                        title="Edit"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-tenant-accent/20 bg-tenant-accent/10 text-tenant-accent transition-colors hover:bg-tenant-accent/20"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Link>
+                      <ApplicationRowActions
+                        applicationId={a.id}
+                        fullName={a.full_name || leadRow?.full_name || '(no name)'}
+                        email={a.email}
+                        phone={a.phone}
+                        templates={templates ?? []}
+                      />
                     </TableCell>
                   </TableRow>
                 );

@@ -81,12 +81,18 @@ export default async function LeadsPage({
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Independent reads — brand, the page of leads, and the staff name map
-  // don't depend on each other, so they're fired together.
-  const [brand, { data: leads, count }, { data: profiles }] = await Promise.all([
+  // Independent reads — brand, the page of leads, the staff name map, and
+  // the org's email templates (for the row-level Email popup) don't depend
+  // on each other, so they're fired together.
+  const [brand, { data: leads, count }, { data: profiles }, { data: templates }] = await Promise.all([
     getOrgBrand(profile.organization_id),
     query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
     supabase.from('profiles').select('id, full_name, role, is_active'),
+    supabase
+      .from('email_templates')
+      .select('key, name, subject, body')
+      .eq('organization_id', profile.organization_id)
+      .order('is_auto', { ascending: false }),
   ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
@@ -234,7 +240,13 @@ export default async function LeadsPage({
                 )}
                 {!showArchived && (
                   <TableCell className="text-right border">
-                    <LeadRowActions leadId={l.id} />
+                    <LeadRowActions
+                      leadId={l.id}
+                      fullName={l.full_name || '(no name)'}
+                      email={l.email}
+                      phone={l.phone}
+                      templates={templates ?? []}
+                    />
                   </TableCell>
                 )}
               </TableRow>

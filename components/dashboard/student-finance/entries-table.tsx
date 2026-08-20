@@ -12,14 +12,16 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { deleteFinanceEntry } from '@/app/(admin)/finance/actions';
-import { formatAmount, type FinanceEntry } from '@/lib/finance/types';
-import { AddEntryDialog } from './add-entry-dialog';
+import { deleteStudentFinanceEntry } from '@/app/(admin)/student-finance/actions';
+import { formatAmount, type StudentFinanceEntry } from '@/lib/finance/types';
+import { AddStudentEntryDialog } from './add-entry-dialog';
 
-export function EntriesTable({
+export function StudentEntriesTable({
   entries,
+  leads,
 }: {
-  entries: FinanceEntry[];
+  entries: StudentFinanceEntry[];
+  leads: { id: string; full_name: string }[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -29,7 +31,7 @@ export function EntriesTable({
     if (!confirm('Delete this entry? This cannot be undone.')) return;
     setDeletingId(id);
     start(async () => {
-      await deleteFinanceEntry(id);
+      await deleteStudentFinanceEntry(id);
       router.refresh();
     });
   }
@@ -39,10 +41,12 @@ export function EntriesTable({
       <TableHeader>
         <TableRow>
           <TableHead>Date</TableHead>
+          <TableHead>Student</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Amount</TableHead>
           <TableHead>Category</TableHead>
           <TableHead>Payment</TableHead>
+          <TableHead>Added by</TableHead>
           <TableHead>Note</TableHead>
           <TableHead />
         </TableRow>
@@ -57,6 +61,7 @@ export function EntriesTable({
                 year: 'numeric',
               })}
             </TableCell>
+            <TableCell className="font-medium">{e.lead_name ?? '—'}</TableCell>
             <TableCell>
               <Badge variant={e.type === 'income' ? 'success' : 'danger'}>
                 {e.type === 'income' ? 'Income' : 'Expense'}
@@ -69,12 +74,14 @@ export function EntriesTable({
             </TableCell>
             <TableCell>{e.category}</TableCell>
             <TableCell className="text-muted-foreground">{e.payment_method ?? '—'}</TableCell>
+            <TableCell className="text-muted-foreground">{e.created_by_name ?? '—'}</TableCell>
             <TableCell className="max-w-[220px] truncate text-muted-foreground">
               {e.note ?? '—'}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-1">
-                <AddEntryDialog
+                <AddStudentEntryDialog
+                  leads={leads}
                   entry={e}
                   trigger={
                     <button
@@ -101,7 +108,7 @@ export function EntriesTable({
         ))}
         {entries.length === 0 && (
           <TableRow>
-            <TableCell colSpan={7} className="text-center text-muted-foreground">
+            <TableCell colSpan={9} className="text-center text-muted-foreground">
               No entries yet — add your first one above.
             </TableCell>
           </TableRow>
