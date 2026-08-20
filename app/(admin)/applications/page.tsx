@@ -23,21 +23,28 @@ export default async function ApplicationsPage() {
   const profile = await requireUser();
   const supabase = await createClient();
 
-  // Independent reads — the applications list, the lead picker's options, and
-  // the org's email templates (for the row-level Email popup) don't depend
-  // on each other, so they're fired together.
-  const [{ data: applications }, { data: leads }, { data: templates }] = await Promise.all([
-    supabase
-      .from('applications')
-      .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
-      .order('created_at', { ascending: false }),
-    supabase.from('leads').select('id, full_name').order('full_name'),
-    supabase
-      .from('email_templates')
-      .select('key, name, subject, body')
-      .eq('organization_id', profile.organization_id)
-      .order('is_auto', { ascending: false }),
-  ]);
+  // Independent reads — the applications list, the lead picker's and
+  // university picker's options, and the org's email templates (for the
+  // row-level Email popup) don't depend on each other, so they're fired
+  // together.
+  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }] =
+    await Promise.all([
+      supabase
+        .from('applications')
+        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, lead_id, leads(lead_number, full_name)')
+        .order('created_at', { ascending: false }),
+      supabase.from('leads').select('id, full_name').order('full_name'),
+      supabase
+        .from('email_templates')
+        .select('key, name, subject, body')
+        .eq('organization_id', profile.organization_id)
+        .order('is_auto', { ascending: false }),
+      supabase
+        .from('universities')
+        .select('id, name, country, created_at')
+        .eq('organization_id', profile.organization_id)
+        .order('name'),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -45,7 +52,7 @@ export default async function ApplicationsPage() {
         icon={FileText}
         title="Applications"
         subtitle="Every application across your leads — each one belongs to exactly one lead."
-        action={<CreateApplicationDialog leads={leads ?? []} />}
+        action={<CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />}
       />
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">

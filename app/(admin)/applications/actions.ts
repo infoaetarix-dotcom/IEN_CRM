@@ -44,7 +44,7 @@ function fieldsFrom(formData: FormData) {
     city: g(formData, 'city'),
     district: g(formData, 'district'),
     target_country: g(formData, 'target_country'),
-    institution: g(formData, 'institution'),
+    university_id: g(formData, 'university_id'),
     program: g(formData, 'program'),
     intake_season: g(formData, 'intake_season'),
     intake_year: g(formData, 'intake_year'),
@@ -104,7 +104,9 @@ export async function createApplication(
     .insert(insert)
     .select('id')
     .single();
-  if (error || !application) return { ok: false, error: 'Could not create the application.' };
+  if (error || !application) {
+    return { ok: false, error: 'Could not create the application.' };
+  }
 
   await writeAuditLog({
     actorId: user.id,
@@ -242,7 +244,7 @@ export async function getRenderedApplicationTemplate(
 
   const { data: app } = await supabase
     .from('applications')
-    .select('id, organization_id, full_name, target_country, program, institution')
+    .select('id, organization_id, full_name, target_country, program, universities(name)')
     .eq('id', applicationId)
     .single();
   if (!app) return { ok: false, error: 'Application not found or access denied.' };
@@ -255,11 +257,16 @@ export async function getRenderedApplicationTemplate(
     .single();
   if (!tpl) return { ok: false, error: 'Template not found.' };
 
+  const university = Array.isArray(app.universities) ? app.universities[0] : app.universities;
   const vars = {
     full_name: app.full_name,
     program: app.program,
     target_country: app.target_country,
-    institution: app.institution,
+    // {{institution}} keeps its existing template placeholder name for
+    // compatibility with templates already written using it — the value
+    // now comes from the linked university (see 0027_universities.sql)
+    // instead of the retired free-text institution field.
+    institution: university?.name ?? null,
   };
   return {
     ok: true,

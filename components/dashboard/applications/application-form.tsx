@@ -14,6 +14,8 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { UniversityPicker } from '@/components/dashboard/university-picker';
+import type { University } from '@/lib/universities/types';
 import {
   EDUCATION_OPTIONS,
   DEGREE_OPTIONS,
@@ -52,12 +54,15 @@ export function ApplicationForm({
   leadId,
   applicationId,
   initial,
+  universities,
   onSaved,
   onCancel,
 }: {
   leadId: string;
   applicationId?: string;
   initial: ApplicationFormValues;
+  /** The org's Settings > Universities list, for the required University picker. */
+  universities: University[];
   /** Edit mode only — called after a successful save, e.g. to flip a parent toggle back to read-only view. */
   onSaved?: () => void;
   /** Create mode only — overrides the default Cancel behavior (navigating to
@@ -71,6 +76,7 @@ export function ApplicationForm({
     : createApplication.bind(null, leadId);
   const [state, formAction, pending] = useActionState(action, init);
   const [priorRejection, setPriorRejection] = useState(initial.prior_rejection);
+  const [universityId, setUniversityId] = useState(initial.university_id);
 
   useEffect(() => {
     if (state.ok) {
@@ -190,6 +196,15 @@ export function ApplicationForm({
           <CardTitle className="font-tenant-display">Study goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="sm:col-span-2">
+            <Label htmlFor="university_id">University</Label>
+            <UniversityPicker
+              universities={universities}
+              value={universityId}
+              onChange={setUniversityId}
+            />
+            <input type="hidden" id="university_id" name="university_id" value={universityId} />
+          </div>
           <div>
             <Label htmlFor="target_country">Target country</Label>
             <Select id="target_country" name="target_country" defaultValue={initial.target_country} disabled={pending}>
@@ -198,10 +213,6 @@ export function ApplicationForm({
                 <option key={c} value={c}>{c}</option>
               ))}
             </Select>
-          </div>
-          <div>
-            <Label htmlFor="institution">Preferred institution</Label>
-            <Input id="institution" name="institution" defaultValue={initial.institution} disabled={pending} />
           </div>
           <div>
             <Label htmlFor="program">Program</Label>
@@ -287,7 +298,7 @@ export function ApplicationForm({
         <Button
           type="submit"
           className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-          disabled={pending}
+          disabled={pending || !universityId}
         >
           {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Create application'}
         </Button>

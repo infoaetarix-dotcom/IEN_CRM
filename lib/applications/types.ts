@@ -14,7 +14,8 @@ export interface ApplicationFormValues {
   city: string;
   district: string;
   target_country: string;
-  institution: string;
+  /** Which university (Settings > Universities) this application is for — required. */
+  university_id: string;
   program: string;
   intake_season: string;
   intake_year: string;
@@ -48,7 +49,9 @@ export function leadToApplicationDefaults(lead: Record<string, unknown>): Applic
     city: str(lead.city),
     district: str(lead.district),
     target_country: str(lead.target_country),
-    institution: str(lead.institution),
+    // Leads have no university concept — that's specific to a formal
+    // application, always chosen fresh when one is created.
+    university_id: '',
     program: str(lead.program),
     intake_season: str(lead.intake_season),
     intake_year: str(lead.intake_year),

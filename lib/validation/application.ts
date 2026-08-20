@@ -17,7 +17,6 @@ const applicationFields = leadObject
     city: true,
     district: true,
     target_country: true,
-    institution: true,
     program: true,
     intake_season: true,
     intake_year: true,
@@ -39,25 +38,32 @@ const applicationFields = leadObject
   .extend({
     passport_number: z.string().trim().max(40).optional(),
     status: z.enum(LEAD_STATUSES).default('new'),
+    // Unlike everything else here, this is deliberately required — every
+    // application must be linked to a university from Settings (see
+    // 0027_universities.sql). It's a real application, not lead-stage
+    // guesswork, so "which university" isn't optional the way the rest of
+    // the copied-from-lead fields are.
+    university_id: z.string().uuid('Choose which university this application is for'),
   });
 
 /**
  * An application's form is the lead form (same fields, same option lists,
  * same per-field rules — reused directly from lib/validation/lead.ts rather
- * than duplicated) plus two application-only additions: passport_number and
- * status. Same exclusions as leadEditSchema: no consent/UTM/honeypot —
- * those are lead-acquisition specific and applications have no public form
- * at all.
+ * than duplicated) plus application-only additions: passport_number, status,
+ * and university_id. Same exclusions as leadEditSchema: no consent/UTM/
+ * honeypot — those are lead-acquisition specific and applications have no
+ * public form at all.
  *
- * Everything is `.partial()` — unlike leadEditSchema, nothing here is
- * required. A lead this copies from is very often incomplete (a phone-only
- * "quick query", an abandoned public-form submission, a lead nobody has
- * finished qualifying yet), and blocking "Create application" until every
- * field is backfilled would defeat the point of the copy-then-edit flow.
- * Same reasoning as quickLeadSchema (lib/validation/lead.ts) — whatever's
- * missing stays missing, whatever's present is still validated against the
- * same per-field rules (e.g. a phone number, if given, still has to be a
- * real one).
+ * Everything from the lead is `.partial()` — unlike leadEditSchema, none of
+ * it is required. A lead this copies from is very often incomplete (a
+ * phone-only "quick query", an abandoned public-form submission, a lead
+ * nobody has finished qualifying yet), and blocking "Create application"
+ * until every field is backfilled would defeat the point of the
+ * copy-then-edit flow. Same reasoning as quickLeadSchema
+ * (lib/validation/lead.ts) — whatever's missing stays missing, whatever's
+ * present is still validated against the same per-field rules (e.g. a phone
+ * number, if given, still has to be a real one). university_id is the one
+ * deliberate exception to "nothing is required" — see above.
  */
 export const applicationEditSchema = z.preprocess((raw) => {
   if (typeof raw !== 'object' || raw === null) return raw;

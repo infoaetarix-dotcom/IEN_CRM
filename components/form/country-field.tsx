@@ -33,11 +33,16 @@ export function CountryField({
   /** Pre-selected on first render — most applicants target the UK, so this
    *  saves the common case a click. Still fully editable. */
   defaultCountry = 'GB',
+  /** Pre-select by country name instead (e.g. editing a record that already
+   *  stores a plain name like "United Kingdom", not an ISO code) — takes
+   *  priority over defaultCountry when given. */
+  defaultCountryName,
 }: {
   error?: string;
   name?: string;
   placeholder?: string;
   defaultCountry?: string | null;
+  defaultCountryName?: string | null;
 }) {
   const countries = useMemo<Country[]>(
     () =>
@@ -52,6 +57,12 @@ export function CountryField({
 
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Country | null>(() => {
+    if (defaultCountryName) {
+      const match = Object.entries(labels as Record<string, string>).find(
+        ([, label]) => label.toLowerCase() === defaultCountryName.toLowerCase(),
+      );
+      if (match) return { code: match[0], name: match[1] };
+    }
     if (!defaultCountry) return null;
     const name = (labels as Record<string, string>)[defaultCountry];
     return name ? { code: defaultCountry, name } : null;

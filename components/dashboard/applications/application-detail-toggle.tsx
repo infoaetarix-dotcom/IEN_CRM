@@ -3,17 +3,20 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { ApplicationForm, type ApplicationFormValues } from './application-form';
+import type { University } from '@/lib/universities/types';
 
 /** Read-only cards (children) until "Edit details" is clicked, then swaps to the full form — same pattern as LeadDetailsEditor. */
 export function ApplicationDetailToggle({
   leadId,
   applicationId,
   initial,
+  universities,
   children,
 }: {
   leadId: string;
   applicationId: string;
   initial: ApplicationFormValues;
+  universities: University[];
   children: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
@@ -42,6 +45,7 @@ export function ApplicationDetailToggle({
         leadId={leadId}
         applicationId={applicationId}
         initial={initial}
+        universities={universities}
         onSaved={() => setEditing(false)}
       />
     </div>
