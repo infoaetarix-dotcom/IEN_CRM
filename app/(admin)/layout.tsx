@@ -10,6 +10,7 @@ import { themeStyleVars } from '@/lib/branding/theme-style';
 import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { AccountMenu } from '@/components/dashboard/account-menu';
+import { NotificationsBell } from '@/components/dashboard/notifications-bell';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -70,6 +71,13 @@ export default async function AdminLayout({
     .eq('enabled', true);
   const enabledModules = (orgModules ?? []).map((m) => m.module_key);
 
+  const { data: notifications } = await supabase
+    .from('notifications')
+    .select('id, type, title, body, link, read_at, created_at')
+    .eq('profile_id', profile.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
   return (
     <div
       id="tenant-theme-root"
@@ -107,6 +115,7 @@ export default async function AdminLayout({
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <NotificationsBell profileId={profile.id} initialNotifications={notifications ?? []} />
           <AccountMenu
             fullName={profile.full_name}
             email={profile.email}

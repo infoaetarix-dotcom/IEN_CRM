@@ -20,7 +20,10 @@ const baseDirectives = [
   "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
   "frame-src https://challenges.cloudflare.com",
-  "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+  // wss:// is listed explicitly — browsers do NOT treat an https:// source as
+  // also covering wss:// to the same host, so Supabase Realtime's websocket
+  // (the notifications bell) was silently blocked without this.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
   "form-action 'self'",
   "base-uri 'self'",
   "object-src 'none'",
