@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createQuery, type CreateQueryState } from '@/app/(admin)/leads/actions';
+import { createQuery, addNote, type CreateQueryState } from '@/app/(admin)/leads/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -23,6 +23,7 @@ import {
   PASSING_YEARS,
   INTAKE_YEARS,
 } from '@/lib/form-options';
+import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource, composeReferenceNote } from '@/lib/leads/display';
 
 const init: CreateQueryState = { ok: false };
 const SCORED_TESTS = ['ielts', 'toefl', 'pte', 'duolingo'];
@@ -47,14 +48,35 @@ export function QuickQueryForm({
   const router = useRouter();
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
+  const [source, setSource] = useState('');
+  const [refName, setRefName] = useState('');
+  const [refNote, setRefNote] = useState('');
   const [state, action, pending] = useActionState(createQuery, init);
   const err = state.fieldErrors ?? {};
+  // Guards the addNote side effect against StrictMode's dev-only double
+  // invocation of effects (which would otherwise log the reference note
+  // twice) — the effect body can run more than once, but only the first
+  // run for a given leadId is allowed to actually do anything.
+  const handledLeadRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (state.ok && state.leadId) {
-      onClose?.();
-      router.push(`/leads/${state.leadId}`);
+    if (state.ok && state.leadId && handledLeadRef.current !== state.leadId) {
+      handledLeadRef.current = state.leadId;
+      const leadId = state.leadId;
+      const noteBody = composeReferenceNote(refName, refNote);
+      const finish = () => {
+        onClose?.();
+        router.push(`/leads/${leadId}`);
+      };
+      if (noteBody) {
+        addNote(leadId, noteBody).then(finish);
+      } else {
+        finish();
+      }
     }
+    // Only the create result should re-trigger this — refName/refNote are
+    // read at the moment of success, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, router, onClose]);
 
   return (
@@ -88,7 +110,44 @@ export function QuickQueryForm({
           <Label htmlFor="target_country">Target country</Label>
           <CountryField error={err.target_country} />
         </div>
+          <div>
+            <Label htmlFor="utm_source">Source</Label>
+            <Select
+              id="utm_source"
+              name="utm_source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {LEAD_SOURCES.map((s) => (
+                <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+              ))}
+            </Select>
+          </div>
         </div>
+
+        {isReferenceSource(source) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="reference_name">Name</Label>
+              <Input
+                id="reference_name"
+                value={refName}
+                onChange={(e) => setRefName(e.target.value)}
+                placeholder="Who referred them"
+              />
+            </div>
+            <div>
+              <Label htmlFor="reference_note">Note</Label>
+              <Input
+                id="reference_note"
+                value={refNote}
+                onChange={(e) => setRefNote(e.target.value)}
+                placeholder="Optional detail"
+              />
+            </div>
+          </div>
+        )}
 
         <label className="flex items-start gap-3 text-sm">
           <Checkbox name="consent_given" className="mt-0.5" />

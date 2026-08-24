@@ -129,6 +129,7 @@ export default async function LeadDetailPage({
     city: s(lead.city),
     district: s(lead.district),
     target_country: s(lead.target_country),
+    utm_source: s(lead.utm_source),
     institution: s(lead.institution),
     program: s(lead.program),
     intake_season: s(lead.intake_season),
@@ -205,6 +206,7 @@ export default async function LeadDetailPage({
               <Field label="Email" value={lead.email} />
               <Field label="Phone" value={lead.phone} />
               <Field label="Target country" value={lead.target_country} />
+              <Field label="Source" value={SOURCE_LABELS[lead.utm_source as LeadSource]} />
               <Field
                 label="Consent"
                 value={

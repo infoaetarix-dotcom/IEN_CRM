@@ -263,9 +263,11 @@ export const step3Schema = leadObject
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG);
 
-// Dashboard lead editor — the applicant-provided fields staff may correct.
-// Excludes consent, UTM/tracking, and the honeypot (system/audit fields that
-// must never be hand-edited). Reuses the same field rules + cross-field checks.
+// Dashboard lead editor — the applicant-provided fields staff may correct,
+// plus utm_source (staff can reassign a lead's source manually — see
+// 0031_reference_lead_sources.sql). Still excludes consent, utm_medium/
+// utm_campaign, and the honeypot (system/audit fields that must never be
+// hand-edited). Reuses the same field rules + cross-field checks.
 export const leadEditSchema = leadObject
   .pick({
     full_name: true,
@@ -292,6 +294,7 @@ export const leadEditSchema = leadObject
     funding_source: true,
     prior_rejection: true,
     prior_rejection_detail: true,
+    utm_source: true,
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
   .refine(gradeInRange, GRADE_MSG);

@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
-import { isLeadStatus } from '@/lib/leads/display';
-import { leadEditSchema, quickLeadSchema, normalizeSource } from '@/lib/validation/lead';
+import { isLeadStatus, LEAD_SOURCES } from '@/lib/leads/display';
+import { leadEditSchema, quickLeadSchema } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 
 export interface ActionResult {
@@ -76,6 +76,7 @@ export async function createQuery(
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: formStr(formData, 'prior_rejection_detail'),
     consent_given: formData.get('consent_given') === 'on',
+    utm_source: formStr(formData, 'utm_source'),
   });
   if (!parsed.success) {
     return {
@@ -86,6 +87,14 @@ export async function createQuery(
   }
 
   const d = parsed.data;
+  // Staff picked this from a closed dropdown (see 0031_reference_lead_sources.sql)
+  // rather than an arbitrary public-form UTM param, so it's checked against the
+  // real source list directly instead of normalizeSource()'s public-form-only
+  // fallback-to-'other' behavior — 'direct' (the column default) if left unset.
+  const source =
+    d.utm_source && (LEAD_SOURCES as readonly string[]).includes(d.utm_source)
+      ? d.utm_source
+      : 'direct';
   const service = createServiceClient();
   const { data: lead, error } = await service
     .from('leads')
@@ -95,7 +104,7 @@ export async function createQuery(
       organization_id: user.organization_id,
       created_by: user.id,
       is_complete: true,
-      utm_source: normalizeSource(undefined),
+      utm_source: source,
     })
     .select('id, email, full_name, target_country, program, organization_id')
     .single();

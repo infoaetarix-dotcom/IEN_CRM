@@ -40,6 +40,8 @@ export const LEAD_SOURCES = [
   'whatsapp',
   'twitter',
   'website',
+  'personal_reference',
+  'old_student_reference',
   'direct',
   'other',
 ] as const;
@@ -53,9 +55,31 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   whatsapp: 'WhatsApp',
   twitter: 'Twitter / X',
   website: 'Website',
+  personal_reference: 'Personal reference',
+  old_student_reference: 'Old student reference',
   direct: 'Direct',
   other: 'Other',
 };
+
+/**
+ * The two staff-only sources that ask for who referred the lead — picking
+ * either one in the Create query dialog or the lead editor reveals a Name +
+ * Note pair that gets logged as a note (see composeReferenceNote) rather
+ * than stored as its own column.
+ */
+export const REFERENCE_SOURCES = ['personal_reference', 'old_student_reference'] as const;
+
+export function isReferenceSource(v: string): boolean {
+  return (REFERENCE_SOURCES as readonly string[]).includes(v);
+}
+
+/** Combine the reference Name + Note fields into one note body; '' if both are blank. */
+export function composeReferenceNote(name: string, note: string): string {
+  const parts: string[] = [];
+  if (name.trim()) parts.push(`Referred by: ${name.trim()}`);
+  if (note.trim()) parts.push(note.trim());
+  return parts.join('\n\n');
+}
 
 export function isLeadStatus(v: string): v is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(v);
