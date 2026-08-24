@@ -199,21 +199,12 @@ export default async function LeadDetailPage({
           >
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
+              <CardTitle className="font-tenant-display">Contact</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Email" value={lead.email} />
               <Field label="Phone" value={lead.phone} />
-              <Field
-                label="Date of birth"
-                value={
-                  lead.date_of_birth
-                    ? `${new Date(lead.date_of_birth).toLocaleDateString('en-GB')}${age != null ? ` (age ${age})` : ''}`
-                    : null
-                }
-              />
-              <Field label="City" value={lead.city} />
-              <Field label="District" value={lead.district} />
+              <Field label="Target country" value={lead.target_country} />
               <Field
                 label="Consent"
                 value={
@@ -227,15 +218,25 @@ export default async function LeadDetailPage({
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
+              <CardTitle className="font-tenant-display">Background</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Field label="Highest education" value={lead.highest_education} />
-              <Field label="Qualification" value={lead.last_qualification} />
-              <Field label="Institution attended" value={lead.prior_institution} />
+              <Field
+                label="Date of birth"
+                value={
+                  lead.date_of_birth
+                    ? `${new Date(lead.date_of_birth).toLocaleDateString('en-GB')}${age != null ? ` (age ${age})` : ''}`
+                    : null
+                }
+              />
+              <Field label="City" value={lead.city} />
+              <Field label="District" value={lead.district} />
+              <Field label="Highest education level" value={lead.highest_education} />
+              <Field label="Last qualification / field" value={lead.last_qualification} />
+              <Field label="Institution / board attended" value={lead.prior_institution} />
               <Field label="Passing year" value={lead.passing_year} />
               <Field
-                label="Result"
+                label="Result (CGPA / %)"
                 value={
                   lead.grade_value != null
                     ? `${lead.grade_value}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
@@ -255,12 +256,19 @@ export default async function LeadDetailPage({
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
-              <CardTitle className="font-tenant-display">Study goals</CardTitle>
+              <CardTitle className="font-tenant-display">Goals</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Field label="Target country" value={lead.target_country} />
-              <Field label="Preferred institution" value={lead.institution} />
-              <Field label="Program" value={lead.program} />
+              <Field label="Preferred institution (abroad)" value={lead.institution} />
+              <Field
+                label="How will they fund their studies?"
+                value={
+                  lead.funding_source
+                    ? (CODE_LABELS[lead.funding_source] ?? lead.funding_source)
+                    : null
+                }
+              />
+              <Field label="Program of interest" value={lead.program} />
               <Field
                 label="Intended intake"
                 value={
@@ -270,18 +278,10 @@ export default async function LeadDetailPage({
                 }
               />
               <Field
-                label="English test"
+                label="English proficiency test"
                 value={
                   lead.english_test
                     ? `${CODE_LABELS[lead.english_test] ?? lead.english_test}${lead.english_score != null ? ` — ${lead.english_score}` : ''}`
-                    : null
-                }
-              />
-              <Field
-                label="Funding"
-                value={
-                  lead.funding_source
-                    ? (CODE_LABELS[lead.funding_source] ?? lead.funding_source)
                     : null
                 }
               />
@@ -291,7 +291,7 @@ export default async function LeadDetailPage({
               />
               {lead.prior_rejection && (
                 <Field
-                  label="Rejection detail"
+                  label="Briefly, what happened?"
                   value={lead.prior_rejection_detail}
                 />
               )}

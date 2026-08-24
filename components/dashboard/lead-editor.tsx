@@ -172,28 +172,40 @@ export function LeadDetailsEditor({
         </p>
       )}
 
-      {/* Contact & location */}
+      {/* Contact */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
+          <CardTitle className="font-tenant-display">Contact</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Full name">{text('full_name')}</LField>
           <LField label="Email">{text('email', 'email')}</LField>
           <LField label="Phone">{text('phone', 'tel')}</LField>
-          <LField label="Date of birth">{text('date_of_birth', 'date')}</LField>
-          <LField label="City">{text('city')}</LField>
-          <LField label="District">{text('district')}</LField>
+          <LField label="Target country">
+            <Select
+              value={form.target_country}
+              disabled={pending}
+              onChange={(e) => set('target_country', e.target.value)}
+            >
+              <option value="">Select…</option>
+              {withCurrent(TARGET_COUNTRIES, form.target_country).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+          </LField>
         </CardContent>
       </Card>
 
-      {/* Prior education & experience */}
+      {/* Background */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
+          <CardTitle className="font-tenant-display">Background</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <LField label="Highest education">
+          <LField label="Date of birth">{text('date_of_birth', 'date')}</LField>
+          <LField label="City">{text('city')}</LField>
+          <LField label="District">{text('district')}</LField>
+          <LField label="Highest education level">
             <Select
               value={form.highest_education}
               disabled={pending}
@@ -205,7 +217,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Qualification">
+          <LField label="Last qualification / field">
             <Select
               value={form.last_qualification}
               disabled={pending}
@@ -217,7 +229,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Institution attended">{text('prior_institution')}</LField>
+          <LField label="Institution / board attended">{text('prior_institution')}</LField>
           <LField label="Passing year">
             <Select
               value={form.passing_year}
@@ -242,36 +254,36 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Result">{text('grade_value', 'number')}</LField>
+          <LField label="Result (CGPA / %)">{text('grade_value', 'number')}</LField>
           <LField label="Work experience (years)">
             {text('work_experience_years', 'number')}
           </LField>
-          <LField label="Work experience detail">
+          <LField label="Current / recent role">
             {text('work_experience_detail')}
           </LField>
         </CardContent>
       </Card>
 
-      {/* Study goals */}
+      {/* Goals */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Study goals</CardTitle>
+          <CardTitle className="font-tenant-display">Goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <LField label="Target country">
+          <LField label="Preferred institution (abroad)">{text('institution')}</LField>
+          <LField label="How will they fund their studies?">
             <Select
-              value={form.target_country}
+              value={form.funding_source}
               disabled={pending}
-              onChange={(e) => set('target_country', e.target.value)}
+              onChange={(e) => set('funding_source', e.target.value)}
             >
               <option value="">Select…</option>
-              {withCurrent(TARGET_COUNTRIES, form.target_country).map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {FUNDING_SOURCES.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
               ))}
             </Select>
           </LField>
-          <LField label="Preferred institution">{text('institution')}</LField>
-          <LField label="Program">{text('program')}</LField>
+          <LField label="Program of interest">{text('program')}</LField>
           <LField label="Intake season">
             <Select
               value={form.intake_season}
@@ -296,7 +308,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="English test">
+          <LField label="English proficiency test">
             <Select
               value={form.english_test}
               disabled={pending}
@@ -308,19 +320,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="English score">{text('english_score', 'number')}</LField>
-          <LField label="Funding source">
-            <Select
-              value={form.funding_source}
-              disabled={pending}
-              onChange={(e) => set('funding_source', e.target.value)}
-            >
-              <option value="">Select…</option>
-              {FUNDING_SOURCES.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </Select>
-          </LField>
+          <LField label="Overall score">{text('english_score', 'number')}</LField>
           <label className="flex items-center gap-2 self-end pb-2 text-sm">
             <Checkbox
               checked={form.prior_rejection}
@@ -330,7 +330,7 @@ export function LeadDetailsEditor({
             Prior visa rejection
           </label>
           {form.prior_rejection && (
-            <LField label="Rejection detail">
+            <LField label="Briefly, what happened?">
               <Textarea
                 rows={2}
                 value={form.prior_rejection_detail}
