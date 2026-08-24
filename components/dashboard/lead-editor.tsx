@@ -2,6 +2,7 @@
 
 import {
   useState,
+  useRef,
   useTransition,
   useId,
   cloneElement,
@@ -18,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   EDUCATION_OPTIONS,
-  DEGREE_OPTIONS,
   GRADING_SYSTEMS,
   ENGLISH_TESTS,
   INTAKE_SEASONS,
@@ -27,6 +27,7 @@ import {
   INTAKE_YEARS,
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
+import { ProgramField, splitProgram } from '@/components/form/program-field';
 
 /** Applicant-editable fields, all held as form strings (numbers coerce server-side). */
 export interface LeadEditState {
@@ -98,14 +99,23 @@ export function LeadDetailsEditor({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<LeadEditState>(initial);
+  // React state updates aren't guaranteed to have re-rendered (and re-bound
+  // the Save button's onClick to a fresh closure) by the time a very-quick
+  // click follows the last keystroke — a ref updated synchronously in the
+  // same call as setForm means save() always reads the true latest value,
+  // regardless of render timing.
+  const formRef = useRef(initial);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function set<K extends keyof LeadEditState>(k: K, v: LeadEditState[K]) {
-    setForm((f) => ({ ...f, [k]: v }));
+    const next = { ...formRef.current, [k]: v };
+    formRef.current = next;
+    setForm(next);
   }
 
   function cancel() {
+    formRef.current = initial;
     setForm(initial);
     setError(null);
     setEditing(false);
@@ -114,7 +124,7 @@ export function LeadDetailsEditor({
   function save() {
     setError(null);
     start(async () => {
-      const res = await updateLead(leadId, form);
+      const res = await updateLead(leadId, formRef.current);
       if (!res.ok) {
         setError(res.error ?? 'Could not save changes.');
       } else {
@@ -217,18 +227,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Last qualification / field">
-            <Select
-              value={form.last_qualification}
-              disabled={pending}
-              onChange={(e) => set('last_qualification', e.target.value)}
-            >
-              <option value="">Select…</option>
-              {withCurrent(DEGREE_OPTIONS, form.last_qualification).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
-          </LField>
+          <LField label="Last qualification / field">{text('last_qualification')}</LField>
           <LField label="Institution / board attended">{text('prior_institution')}</LField>
           <LField label="Passing year">
             <Select
@@ -283,7 +282,13 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Program of interest">{text('program')}</LField>
+          <LField label="Program of interest">
+            <ProgramField
+              defaultDegree={splitProgram(form.program).degree}
+              defaultField={splitProgram(form.program).field}
+              onChange={(v) => set('program', v)}
+            />
+          </LField>
           <LField label="Intake season">
             <Select
               value={form.intake_season}
