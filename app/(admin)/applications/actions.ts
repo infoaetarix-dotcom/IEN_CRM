@@ -90,7 +90,7 @@ export async function createApplication(
   const supabase = await createClient();
   const { data: lead } = await supabase
     .from('leads')
-    .select('id, organization_id')
+    .select('id, organization_id, status')
     .eq('id', leadId)
     .single();
   if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
@@ -118,9 +118,77 @@ export async function createApplication(
     metadata: { lead_id: leadId },
   });
 
+  // The lead's first application means it's reached the "application
+  // generated" stage — advance it automatically, same as a manual status
+  // change, unless it's already there or has been marked rejected. Best-
+  // effort and time-boxed: the application itself is already saved above,
+  // so a slow/stuck follow-up write here must never hold up the response
+  // the user is waiting on.
+  try {
+    await withTimeout(
+      advanceLeadToApplicationGenerated({
+        supabase,
+        leadId,
+        organizationId: lead.organization_id,
+        currentStatus: lead.status,
+        changedBy: user.id,
+      }),
+      5000,
+    );
+  } catch (err) {
+    console.error('[createApplication] auto status-advance skipped', err);
+  }
+
   revalidatePath(`/leads/${leadId}`);
   revalidatePath('/applications');
   return { ok: true, applicationId: application.id };
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
+async function advanceLeadToApplicationGenerated(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  leadId: string;
+  organizationId: string;
+  currentStatus: string;
+  changedBy: string;
+}) {
+  const { supabase, leadId, organizationId, currentStatus, changedBy } = params;
+  if (currentStatus !== 'raw_lead' && currentStatus !== 'document_processing') return;
+
+  const { count: appCount } = await supabase
+    .from('applications')
+    .select('id', { count: 'exact', head: true })
+    .eq('lead_id', leadId);
+  if (appCount !== 1) return;
+
+  const { error: statusErr } = await supabase
+    .from('leads')
+    .update({ status: 'application_generated' })
+    .eq('id', leadId);
+  if (statusErr) return;
+
+  const service = createServiceClient();
+  await service.from('lead_status_history').insert({
+    lead_id: leadId,
+    organization_id: organizationId,
+    from_status: currentStatus,
+    to_status: 'application_generated',
+    changed_by: changedBy,
+  });
+  await writeAuditLog({
+    actorId: changedBy,
+    organizationId,
+    action: 'status_change',
+    entity: 'lead',
+    entityId: leadId,
+    metadata: { from: currentStatus, to: 'application_generated', via: 'application_created' },
+  });
 }
 
 export async function updateApplication(

@@ -15,10 +15,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UniversityPicker } from '@/components/dashboard/university-picker';
+import { ProgramField, splitProgram } from '@/components/form/program-field';
 import type { University } from '@/lib/universities/types';
 import {
   EDUCATION_OPTIONS,
-  DEGREE_OPTIONS,
   GRADING_SYSTEMS,
   ENGLISH_TESTS,
   INTAKE_SEASONS,
@@ -89,9 +89,36 @@ export function ApplicationForm({
     }
   }, [state, router, isEdit, onSaved]);
 
+  const { degree: programDegree, field: programField } = splitProgram(initial.program);
+
   return (
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="status" defaultValue={initial.status} />
+
+      {isEdit && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Editing application details</p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onCancel?.()}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+              disabled={pending || !universityId}
+            >
+              {pending ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {state.error && (
         <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -101,7 +128,7 @@ export function ApplicationForm({
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
+          <CardTitle className="font-tenant-display">Contact</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
@@ -117,6 +144,27 @@ export function ApplicationForm({
             <Input id="phone" name="phone" type="tel" defaultValue={initial.phone} disabled={pending} />
           </div>
           <div>
+            <Label htmlFor="target_country">Target country</Label>
+            <Select id="target_country" name="target_country" defaultValue={initial.target_country} disabled={pending}>
+              <option value="">Select…</option>
+              {withCurrent(TARGET_COUNTRIES, initial.target_country).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="passport_number">Passport number</Label>
+            <Input id="passport_number" name="passport_number" defaultValue={initial.passport_number} disabled={pending} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-tenant-display">Background</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div>
             <Label htmlFor="date_of_birth">Date of birth</Label>
             <Input id="date_of_birth" name="date_of_birth" type="date" defaultValue={initial.date_of_birth} disabled={pending} />
           </div>
@@ -128,16 +176,8 @@ export function ApplicationForm({
             <Label htmlFor="district">District</Label>
             <Input id="district" name="district" defaultValue={initial.district} disabled={pending} />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
-            <Label htmlFor="highest_education">Highest education</Label>
+            <Label htmlFor="highest_education">Highest education level</Label>
             <Select id="highest_education" name="highest_education" defaultValue={initial.highest_education} disabled={pending}>
               <option value="">Select…</option>
               {withCurrent(EDUCATION_OPTIONS, initial.highest_education).map((o) => (
@@ -146,16 +186,17 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="last_qualification">Qualification</Label>
-            <Select id="last_qualification" name="last_qualification" defaultValue={initial.last_qualification} disabled={pending}>
-              <option value="">Select…</option>
-              {withCurrent(DEGREE_OPTIONS, initial.last_qualification).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <Label htmlFor="last_qualification">Last qualification / field</Label>
+            <Input
+              id="last_qualification"
+              name="last_qualification"
+              defaultValue={initial.last_qualification}
+              placeholder="e.g. BSc Computer Science"
+              disabled={pending}
+            />
           </div>
           <div>
-            <Label htmlFor="prior_institution">Institution attended</Label>
+            <Label htmlFor="prior_institution">Institution / board attended</Label>
             <Input id="prior_institution" name="prior_institution" defaultValue={initial.prior_institution} disabled={pending} />
           </div>
           <div>
@@ -177,7 +218,7 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="grade_value">Result</Label>
+            <Label htmlFor="grade_value">Result (CGPA / %)</Label>
             <Input id="grade_value" name="grade_value" type="number" step="0.01" defaultValue={initial.grade_value} disabled={pending} />
           </div>
           <div>
@@ -185,7 +226,7 @@ export function ApplicationForm({
             <Input id="work_experience_years" name="work_experience_years" type="number" defaultValue={initial.work_experience_years} disabled={pending} />
           </div>
           <div>
-            <Label htmlFor="work_experience_detail">Work experience detail</Label>
+            <Label htmlFor="work_experience_detail">Current / recent role</Label>
             <Input id="work_experience_detail" name="work_experience_detail" defaultValue={initial.work_experience_detail} disabled={pending} />
           </div>
         </CardContent>
@@ -193,7 +234,7 @@ export function ApplicationForm({
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Study goals</CardTitle>
+          <CardTitle className="font-tenant-display">Goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2">
@@ -206,17 +247,17 @@ export function ApplicationForm({
             <input type="hidden" id="university_id" name="university_id" value={universityId} />
           </div>
           <div>
-            <Label htmlFor="target_country">Target country</Label>
-            <Select id="target_country" name="target_country" defaultValue={initial.target_country} disabled={pending}>
+            <Label htmlFor="funding_source">How will they fund their studies?</Label>
+            <Select id="funding_source" name="funding_source" defaultValue={initial.funding_source} disabled={pending}>
               <option value="">Select…</option>
-              {withCurrent(TARGET_COUNTRIES, initial.target_country).map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {FUNDING_SOURCES.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="program">Program</Label>
-            <Input id="program" name="program" defaultValue={initial.program} disabled={pending} />
+          <div className="sm:col-span-3">
+            <Label htmlFor="program_degree">Program of interest</Label>
+            <ProgramField defaultDegree={programDegree} defaultField={programField} />
           </div>
           <div>
             <Label htmlFor="intake_season">Intake season</Label>
@@ -237,7 +278,7 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="english_test">English test</Label>
+            <Label htmlFor="english_test">English proficiency test</Label>
             <Select id="english_test" name="english_test" defaultValue={initial.english_test} disabled={pending}>
               <option value="">Select…</option>
               {ENGLISH_TESTS.map((t) => (
@@ -246,17 +287,8 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="english_score">English score</Label>
+            <Label htmlFor="english_score">Overall score</Label>
             <Input id="english_score" name="english_score" type="number" step="0.5" defaultValue={initial.english_score} disabled={pending} />
-          </div>
-          <div>
-            <Label htmlFor="funding_source">Funding source</Label>
-            <Select id="funding_source" name="funding_source" defaultValue={initial.funding_source} disabled={pending}>
-              <option value="">Select…</option>
-              {FUNDING_SOURCES.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </Select>
           </div>
           <label className="flex items-center gap-2 self-end pb-2 text-sm">
             <Checkbox
@@ -269,7 +301,7 @@ export function ApplicationForm({
           </label>
           {priorRejection && (
             <div className="sm:col-span-2">
-              <Label htmlFor="prior_rejection_detail">Rejection detail</Label>
+              <Label htmlFor="prior_rejection_detail">Briefly, what happened?</Label>
               <Textarea
                 id="prior_rejection_detail"
                 name="prior_rejection_detail"
@@ -282,27 +314,15 @@ export function ApplicationForm({
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-tenant-display">Application details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="passport_number">Passport number</Label>
-            <Input id="passport_number" name="passport_number" defaultValue={initial.passport_number} disabled={pending} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex gap-3">
-        <Button
-          type="submit"
-          className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-          disabled={pending || !universityId}
-        >
-          {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Create application'}
-        </Button>
-        {!isEdit && (
+      {!isEdit && (
+        <div className="flex gap-3">
+          <Button
+            type="submit"
+            className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+            disabled={pending || !universityId}
+          >
+            {pending ? 'Saving…' : 'Create application'}
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -310,8 +330,8 @@ export function ApplicationForm({
           >
             Cancel
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </form>
   );
 }
