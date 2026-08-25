@@ -55,18 +55,18 @@ export default async function DashboardPage() {
   // Independent reads (brand lookup + two org-scoped queries) — fired together
   // instead of one-after-another so the page waits for the slowest of the
   // three round-trips, not their sum.
-  const [brand, { data: leads }, { data: contactedHistory }] = await Promise.all([
+  const [brand, { data: leads }, { data: statusHistory }] = await Promise.all([
     getOrgBrand(profile.organization_id),
     supabase
       .from('leads')
       .select('id, full_name, status, utm_source, created_at')
       .is('archived_at', null)
       .order('created_at', { ascending: false }),
-    // First 'contacted' status change per lead, for response-rate.
+    // First status change per lead (any transition off the default
+    // raw_lead stage counts as "acted on"), for response-rate.
     supabase
       .from('lead_status_history')
       .select('lead_id, changed_at')
-      .eq('to_status', 'contacted')
       .order('changed_at', { ascending: true }),
   ]);
   const theme = resolveTheme(brand.themeKey);
@@ -80,15 +80,18 @@ export default async function DashboardPage() {
   const all = leads ?? [];
 
   const firstContact = new Map<string, string>();
-  for (const h of contactedHistory ?? []) {
+  for (const h of statusHistory ?? []) {
     if (!firstContact.has(h.lead_id)) firstContact.set(h.lead_id, h.changed_at);
   }
 
   const totalThisMonth = all.filter(
     (l) => new Date(l.created_at) >= startOfMonth,
   ).length;
+  // "Unworked" = still sitting in the default raw_lead stage — status has
+  // collapsed 'new'/'contacted' into one bucket (see 0034_lead_status_v2.sql),
+  // so this is the closest equivalent.
   const newToday = all.filter(
-    (l) => l.status === 'new' && new Date(l.created_at) >= startOfToday,
+    (l) => l.status === 'raw_lead' && new Date(l.created_at) >= startOfToday,
   ).length;
   const sourceData = buildSourceData(all);
   const pipelineData = buildPipelineData(all);

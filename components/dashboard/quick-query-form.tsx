@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createQuery, type CreateQueryState } from '@/app/(admin)/leads/actions';
+import { createQuery, uploadLeadDocument, type CreateQueryState } from '@/app/(admin)/leads/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -23,6 +23,7 @@ import {
   PASSING_YEARS,
   INTAKE_YEARS,
 } from '@/lib/form-options';
+import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
 const init: CreateQueryState = { ok: false };
 const SCORED_TESTS = ['ielts', 'toefl', 'pte', 'duolingo'];
@@ -47,15 +48,34 @@ export function QuickQueryForm({
   const router = useRouter();
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
+  const [source, setSource] = useState('');
+  const [document, setDocument] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(createQuery, init);
   const err = state.fieldErrors ?? {};
+  // Strict Mode invokes effects twice in dev — guard against uploading the
+  // same picked file twice for the same freshly created lead.
+  const uploadedForLeadId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (state.ok && state.leadId) {
+    if (!state.ok || !state.leadId) return;
+    if (uploadedForLeadId.current === state.leadId) return;
+    uploadedForLeadId.current = state.leadId;
+
+    if (!document) {
       onClose?.();
       router.push(`/leads/${state.leadId}`);
+      return;
     }
-  }, [state, router, onClose]);
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.set('file', document);
+    uploadLeadDocument(state.leadId, formData).finally(() => {
+      onClose?.();
+      router.push(`/leads/${state.leadId}`);
+    });
+  }, [state, router, onClose, document]);
 
   return (
     <form action={action} className="space-y-6">
@@ -88,7 +108,49 @@ export function QuickQueryForm({
           <Label htmlFor="target_country">Target country</Label>
           <CountryField error={err.target_country} />
         </div>
+          <div>
+            <Label htmlFor="utm_source">Source</Label>
+            <Select
+              id="utm_source"
+              name="utm_source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {LEAD_SOURCES.map((s) => (
+                <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="passport_number">Passport number</Label>
+            <Input id="passport_number" name="passport_number" placeholder="Optional" />
+          </div>
+          <div>
+            <Label htmlFor="document">Document</Label>
+            <input
+              type="file"
+              id="document"
+              accept="application/pdf,image/png,image/jpeg"
+              className="block w-full text-sm text-tenant-ink file:mr-3 file:rounded-md file:border-0 file:bg-tenant-gray file:px-3 file:py-1.5 file:text-sm"
+              onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">PDF, PNG, or JPG — up to 10MB. Optional.</p>
+          </div>
         </div>
+
+        {isReferenceSource(source) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="reference_name">Name</Label>
+              <Input id="reference_name" name="reference_name" placeholder="Who referred them" />
+            </div>
+            <div>
+              <Label htmlFor="reference_note">Note</Label>
+              <Input id="reference_note" name="reference_note" placeholder="Optional detail" />
+            </div>
+          </div>
+        )}
 
         <label className="flex items-start gap-3 text-sm">
           <Checkbox name="consent_given" className="mt-0.5" />
@@ -239,16 +301,16 @@ export function QuickQueryForm({
           type="submit"
           size="lg"
           className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-          disabled={pending}
+          disabled={pending || uploading}
         >
-          {pending ? 'Saving…' : 'Save'}
+          {uploading ? 'Uploading document…' : pending ? 'Saving…' : 'Save'}
         </Button>
         <Button
           type="button"
           variant="outline"
           size="lg"
           onClick={() => onClose?.()}
-          disabled={pending}
+          disabled={pending || uploading}
         >
           Cancel
         </Button>

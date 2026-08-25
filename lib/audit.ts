@@ -35,6 +35,9 @@ export type AuditAction =
   | 'application_document_replaced'
   | 'application_document_deleted'
   | 'application_upload_link_regenerated'
+  | 'lead_document_uploaded'
+  | 'lead_document_deleted'
+  | 'lead_upload_link_regenerated'
   | 'university_created'
   | 'university_updated'
   | 'university_deleted';

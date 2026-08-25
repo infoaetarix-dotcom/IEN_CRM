@@ -181,6 +181,12 @@ const leadFields = {
     utm_source: z.string().optional(),
     utm_medium: z.string().optional(),
     utm_campaign: z.string().optional(),
+    // Who referred this lead — only shown/editable when utm_source is
+    // personal_reference or old_student_reference (see lib/leads/display.ts).
+    reference_name: optText(160),
+    reference_note: optText(1000),
+    // Staff-facing only (Create query + lead editor) — no public form field.
+    passport_number: optText(40),
     // Honeypot — must stay empty. Bots fill it.
     company: z.string().max(0).optional(),
 } as const;
@@ -263,9 +269,11 @@ export const step3Schema = leadObject
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG);
 
-// Dashboard lead editor — the applicant-provided fields staff may correct.
-// Excludes consent, UTM/tracking, and the honeypot (system/audit fields that
-// must never be hand-edited). Reuses the same field rules + cross-field checks.
+// Dashboard lead editor — the applicant-provided fields staff may correct,
+// plus utm_source (staff can reassign a lead's source manually — see
+// 0031_reference_lead_sources.sql). Still excludes consent, utm_medium/
+// utm_campaign, and the honeypot (system/audit fields that must never be
+// hand-edited). Reuses the same field rules + cross-field checks.
 export const leadEditSchema = leadObject
   .pick({
     full_name: true,
@@ -292,6 +300,10 @@ export const leadEditSchema = leadObject
     funding_source: true,
     prior_rejection: true,
     prior_rejection_detail: true,
+    utm_source: true,
+    reference_name: true,
+    reference_note: true,
+    passport_number: true,
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
   .refine(gradeInRange, GRADE_MSG);

@@ -35,19 +35,13 @@ export function ApplicationDetailToggle({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
-          Cancel
-        </Button>
-      </div>
-      <ApplicationForm
-        leadId={leadId}
-        applicationId={applicationId}
-        initial={initial}
-        universities={universities}
-        onSaved={() => setEditing(false)}
-      />
-    </div>
+    <ApplicationForm
+      leadId={leadId}
+      applicationId={applicationId}
+      initial={initial}
+      universities={universities}
+      onSaved={() => setEditing(false)}
+      onCancel={() => setEditing(false)}
+    />
   );
 }

@@ -21,15 +21,15 @@ test('admin can sign in, see dashboard, open a lead and change its status', asyn
   await expect(page.getByRole('link', { name: /^Agents$/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /^Templates$/ })).toBeVisible();
 
-  // Open lead A directly and change status to Contacted.
+  // Open lead A directly and change status to Document processing.
   await page.goto(`/leads/${state().leadA}`);
   await expect(page.getByRole('heading', { name: /E2E Lead A/ })).toBeVisible();
   await page
     .locator('select')
     .first()
-    .selectOption('contacted');
+    .selectOption('document_processing');
   // Status history should record the change.
-  await expect(page.getByText(/Contacted/).first()).toBeVisible();
+  await expect(page.getByText(/Document processing/).first()).toBeVisible();
 
   // Sign out.
   await page.getByRole('button', { name: /sign out/i }).click();

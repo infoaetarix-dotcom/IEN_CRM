@@ -21,14 +21,18 @@ export async function notifyOrgStaff(params: {
   link?: string | null;
   emailSubject?: string;
   emailBody?: string;
+  /** Skip this profile — e.g. don't notify someone about their own note. */
+  excludeProfileId?: string;
 }): Promise<void> {
   try {
     const service = createServiceClient();
-    const { data: staff } = await service
+    let query = service
       .from('profiles')
       .select('id, email, full_name')
       .eq('organization_id', params.organizationId)
       .eq('is_active', true);
+    if (params.excludeProfileId) query = query.neq('id', params.excludeProfileId);
+    const { data: staff } = await query;
     if (!staff || staff.length === 0) return;
 
     await service.from('notifications').insert(

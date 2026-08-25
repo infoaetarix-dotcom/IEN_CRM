@@ -31,6 +31,7 @@ import { applyLeadFilters } from '@/lib/leads/filters';
 export const metadata = { title: 'Leads' };
 
 const PAGE_SIZE = 20;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -65,7 +66,7 @@ export default async function LeadsPage({
   let query = supabase
     .from('leads')
     .select(
-      'id, lead_number, full_name, email, phone, utm_source, status, created_by, created_at, is_complete, archived_at, archived_by',
+      'id, lead_number, full_name, email, phone, utm_source, status, created_by, created_at, is_complete, archived_at, archived_by, document_upload_token, document_upload_expires_at',
       { count: 'exact' },
     );
 
@@ -81,20 +82,30 @@ export default async function LeadsPage({
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Independent reads — brand, the page of leads, the staff name map, and
-  // the org's email templates (for the row-level Email popup) don't depend
-  // on each other, so they're fired together.
-  const [brand, { data: leads, count }, { data: profiles }, { data: templates }] = await Promise.all([
-    getOrgBrand(profile.organization_id),
-    query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
-    supabase.from('profiles').select('id, full_name, role, is_active'),
-    supabase
-      .from('email_templates')
-      .select('key, name, subject, body')
-      .eq('organization_id', profile.organization_id)
-      .order('is_auto', { ascending: false }),
-  ]);
+  // Independent reads — brand, the page of leads, the staff name map, the
+  // org's email templates (for the row-level Email popup), and the org's
+  // portal_domain (for building the document upload link) don't depend on
+  // each other, so they're fired together.
+  const [brand, { data: leads, count }, { data: profiles }, { data: templates }, { data: org }] =
+    await Promise.all([
+      getOrgBrand(profile.organization_id),
+      query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
+      supabase.from('profiles').select('id, full_name, role, is_active'),
+      supabase
+        .from('email_templates')
+        .select('key, name, subject, body')
+        .eq('organization_id', profile.organization_id)
+        .order('is_auto', { ascending: false }),
+      supabase
+        .from('organizations')
+        .select('portal_domain')
+        .eq('id', profile.organization_id)
+        .single(),
+    ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  // Same "portal domain if configured, else the base app domain" fallback
+  // applications' table uses for the student upload link.
+  const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -246,6 +257,8 @@ export default async function LeadsPage({
                       email={l.email}
                       phone={l.phone}
                       templates={templates ?? []}
+                      uploadUrl={`${uploadBaseUrl}/upload/lead/${l.document_upload_token}`}
+                      uploadExpired={new Date(l.document_upload_expires_at) < new Date()}
                     />
                   </TableCell>
                 )}

@@ -2,6 +2,7 @@
 
 import {
   useState,
+  useRef,
   useTransition,
   useId,
   cloneElement,
@@ -18,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   EDUCATION_OPTIONS,
-  DEGREE_OPTIONS,
   GRADING_SYSTEMS,
   ENGLISH_TESTS,
   INTAKE_SEASONS,
@@ -27,6 +27,8 @@ import {
   INTAKE_YEARS,
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
+import { ProgramField, splitProgram } from '@/components/form/program-field';
+import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
 /** Applicant-editable fields, all held as form strings (numbers coerce server-side). */
 export interface LeadEditState {
@@ -37,6 +39,10 @@ export interface LeadEditState {
   city: string;
   district: string;
   target_country: string;
+  utm_source: string;
+  reference_name: string;
+  reference_note: string;
+  passport_number: string;
   institution: string;
   program: string;
   intake_season: string;
@@ -98,14 +104,23 @@ export function LeadDetailsEditor({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<LeadEditState>(initial);
+  // React state updates aren't guaranteed to have re-rendered (and re-bound
+  // the Save button's onClick to a fresh closure) by the time a very-quick
+  // click follows the last keystroke — a ref updated synchronously in the
+  // same call as setForm means save() always reads the true latest value,
+  // regardless of render timing.
+  const formRef = useRef(initial);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function set<K extends keyof LeadEditState>(k: K, v: LeadEditState[K]) {
-    setForm((f) => ({ ...f, [k]: v }));
+    const next = { ...formRef.current, [k]: v };
+    formRef.current = next;
+    setForm(next);
   }
 
   function cancel() {
+    formRef.current = initial;
     setForm(initial);
     setError(null);
     setEditing(false);
@@ -114,13 +129,13 @@ export function LeadDetailsEditor({
   function save() {
     setError(null);
     start(async () => {
-      const res = await updateLead(leadId, form);
+      const res = await updateLead(leadId, formRef.current);
       if (!res.ok) {
         setError(res.error ?? 'Could not save changes.');
-      } else {
-        setEditing(false);
-        router.refresh();
+        return;
       }
+      setEditing(false);
+      router.refresh();
     });
   }
 
@@ -172,28 +187,58 @@ export function LeadDetailsEditor({
         </p>
       )}
 
-      {/* Contact & location */}
+      {/* Contact */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Contact &amp; location</CardTitle>
+          <CardTitle className="font-tenant-display">Contact</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <LField label="Full name">{text('full_name')}</LField>
           <LField label="Email">{text('email', 'email')}</LField>
           <LField label="Phone">{text('phone', 'tel')}</LField>
-          <LField label="Date of birth">{text('date_of_birth', 'date')}</LField>
-          <LField label="City">{text('city')}</LField>
-          <LField label="District">{text('district')}</LField>
+          <LField label="Target country">
+            <Select
+              value={form.target_country}
+              disabled={pending}
+              onChange={(e) => set('target_country', e.target.value)}
+            >
+              <option value="">Select…</option>
+              {withCurrent(TARGET_COUNTRIES, form.target_country).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+          </LField>
+          <LField label="Source">
+            <Select
+              value={form.utm_source}
+              disabled={pending}
+              onChange={(e) => set('utm_source', e.target.value)}
+            >
+              {LEAD_SOURCES.map((s) => (
+                <option key={s} value={s}>{SOURCE_LABELS[s]}</option>
+              ))}
+            </Select>
+          </LField>
+          <LField label="Passport number">{text('passport_number')}</LField>
+          {isReferenceSource(form.utm_source) && (
+            <>
+              <LField label="Name">{text('reference_name')}</LField>
+              <LField label="Note">{text('reference_note')}</LField>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Prior education & experience */}
+      {/* Background */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Prior education &amp; experience</CardTitle>
+          <CardTitle className="font-tenant-display">Background</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <LField label="Highest education">
+          <LField label="Date of birth">{text('date_of_birth', 'date')}</LField>
+          <LField label="City">{text('city')}</LField>
+          <LField label="District">{text('district')}</LField>
+          <LField label="Highest education level">
             <Select
               value={form.highest_education}
               disabled={pending}
@@ -205,19 +250,8 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Qualification">
-            <Select
-              value={form.last_qualification}
-              disabled={pending}
-              onChange={(e) => set('last_qualification', e.target.value)}
-            >
-              <option value="">Select…</option>
-              {withCurrent(DEGREE_OPTIONS, form.last_qualification).map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
-          </LField>
-          <LField label="Institution attended">{text('prior_institution')}</LField>
+          <LField label="Last qualification / field">{text('last_qualification')}</LField>
+          <LField label="Institution / board attended">{text('prior_institution')}</LField>
           <LField label="Passing year">
             <Select
               value={form.passing_year}
@@ -242,36 +276,44 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Result">{text('grade_value', 'number')}</LField>
+          <LField label="Result (CGPA / %)">{text('grade_value', 'number')}</LField>
           <LField label="Work experience (years)">
             {text('work_experience_years', 'number')}
           </LField>
-          <LField label="Work experience detail">
+          <LField label="Current / recent role">
             {text('work_experience_detail')}
           </LField>
         </CardContent>
       </Card>
 
-      {/* Study goals */}
+      {/* Goals */}
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Study goals</CardTitle>
+          <CardTitle className="font-tenant-display">Goals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <LField label="Target country">
+          <LField label="Preferred institution (abroad)">{text('institution')}</LField>
+          <LField label="How will they fund their studies?">
             <Select
-              value={form.target_country}
+              value={form.funding_source}
               disabled={pending}
-              onChange={(e) => set('target_country', e.target.value)}
+              onChange={(e) => set('funding_source', e.target.value)}
             >
               <option value="">Select…</option>
-              {withCurrent(TARGET_COUNTRIES, form.target_country).map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {FUNDING_SOURCES.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
               ))}
             </Select>
           </LField>
-          <LField label="Preferred institution">{text('institution')}</LField>
-          <LField label="Program">{text('program')}</LField>
+          <div className="col-span-2 sm:col-span-3">
+            <LField label="Program of interest">
+              <ProgramField
+                defaultDegree={splitProgram(form.program).degree}
+                defaultField={splitProgram(form.program).field}
+                onChange={(v) => set('program', v)}
+              />
+            </LField>
+          </div>
           <LField label="Intake season">
             <Select
               value={form.intake_season}
@@ -296,7 +338,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="English test">
+          <LField label="English proficiency test">
             <Select
               value={form.english_test}
               disabled={pending}
@@ -308,19 +350,7 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="English score">{text('english_score', 'number')}</LField>
-          <LField label="Funding source">
-            <Select
-              value={form.funding_source}
-              disabled={pending}
-              onChange={(e) => set('funding_source', e.target.value)}
-            >
-              <option value="">Select…</option>
-              {FUNDING_SOURCES.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </Select>
-          </LField>
+          <LField label="Overall score">{text('english_score', 'number')}</LField>
           <label className="flex items-center gap-2 self-end pb-2 text-sm">
             <Checkbox
               checked={form.prior_rejection}
@@ -330,7 +360,7 @@ export function LeadDetailsEditor({
             Prior visa rejection
           </label>
           {form.prior_rejection && (
-            <LField label="Rejection detail">
+            <LField label="Briefly, what happened?">
               <Textarea
                 rows={2}
                 value={form.prior_rejection_detail}

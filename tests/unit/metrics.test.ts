@@ -8,9 +8,9 @@ import {
 } from '@/lib/leads/metrics';
 
 const leads: LeadRow[] = [
-  { status: 'new', utm_source: 'instagram', created_at: '2026-06-20T08:00:00Z' },
-  { status: 'contacted', utm_source: 'instagram', created_at: '2026-06-20T09:00:00Z' },
-  { status: 'accepted', utm_source: 'facebook', created_at: '2026-06-19T09:00:00Z' },
+  { status: 'raw_lead', utm_source: 'instagram', created_at: '2026-06-20T08:00:00Z' },
+  { status: 'document_processing', utm_source: 'instagram', created_at: '2026-06-20T09:00:00Z' },
+  { status: 'application_generated', utm_source: 'facebook', created_at: '2026-06-19T09:00:00Z' },
 ];
 
 describe('buildSourceData', () => {
@@ -24,10 +24,10 @@ describe('buildSourceData', () => {
 });
 
 describe('buildPipelineData', () => {
-  it('includes all six statuses with zeros', () => {
+  it('includes all four statuses with zeros', () => {
     const d = buildPipelineData(leads);
-    expect(d).toHaveLength(6);
-    expect(d.find((x) => x.label === 'New')!.value).toBe(1);
+    expect(d).toHaveLength(4);
+    expect(d.find((x) => x.label === 'Raw lead')!.value).toBe(1);
     expect(d.find((x) => x.label === 'Rejected')!.value).toBe(0);
   });
 });

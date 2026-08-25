@@ -36,7 +36,10 @@ test('admin edits a lead inline and the change persists', async ({ page }) => {
   await page.getByLabel('City').fill(newCity);
   await page.getByLabel('Target country').selectOption('Canada');
   await page.getByLabel('Highest education').selectOption("Bachelor's degree");
-  await page.getByLabel('Qualification').selectOption('BSc');
+  // 'Qualification' alone is now ambiguous — it substring-matches both
+  // "Last qualification / field" and ProgramField's "Qualification type".
+  // This was testing the latter (BSc is a DEGREE_OPTIONS value).
+  await page.getByLabel('Qualification type').selectOption('BSc');
   await page.getByLabel('Institution attended').fill('Test University');
   await page.getByLabel('Passing year').selectOption('2022');
   await page.getByLabel('Grading system').selectOption('cgpa_4');

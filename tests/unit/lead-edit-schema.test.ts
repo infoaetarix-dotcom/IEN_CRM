@@ -66,18 +66,22 @@ describe('leadEditSchema', () => {
     ).toBe(true);
   });
 
-  it('strips non-editable keys (consent, utm, status) instead of trusting them', () => {
+  it('strips non-editable keys (consent, status) instead of trusting them', () => {
     const r = leadEditSchema.safeParse({
       ...valid,
       consent_given: true,
-      utm_source: 'instagram',
       status: 'won',
     });
     expect(r.success).toBe(true);
     if (r.success) {
       expect('consent_given' in r.data).toBe(false);
-      expect('utm_source' in r.data).toBe(false);
       expect('status' in r.data).toBe(false);
     }
+  });
+
+  it('accepts utm_source — staff may reassign a lead\'s source manually', () => {
+    const r = leadEditSchema.safeParse({ ...valid, utm_source: 'personal_reference' });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.utm_source).toBe('personal_reference');
   });
 });

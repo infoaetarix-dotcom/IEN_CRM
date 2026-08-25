@@ -6,7 +6,7 @@ import {
   gradeInRange,
   GRADE_MSG,
 } from './lead';
-import { LEAD_STATUSES } from '@/lib/leads/display';
+import { APPLICATION_STATUSES } from '@/lib/leads/display';
 
 const applicationFields = leadObject
   .pick({
@@ -37,7 +37,7 @@ const applicationFields = leadObject
   .partial()
   .extend({
     passport_number: z.string().trim().max(40).optional(),
-    status: z.enum(LEAD_STATUSES).default('new'),
+    status: z.enum(APPLICATION_STATUSES).default('new'),
     // Unlike everything else here, this is deliberately required — every
     // application must be linked to a university from Settings (see
     // 0027_universities.sql). It's a real application, not lead-stage
