@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
-import { isLeadStatus } from '@/lib/leads/display';
+import { isApplicationStatus } from '@/lib/leads/display';
 import {
   applicationEditSchema,
   DOCUMENT_MAX_BYTES,
@@ -15,6 +15,7 @@ import {
 import type { ApplicationFormValues } from '@/lib/applications/types';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 import { leadToApplicationDefaults, UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
+import { notifyOrgStaff } from '@/lib/notifications/create';
 
 export interface ActionState {
   ok: boolean;
@@ -169,7 +170,7 @@ export async function updateApplicationStatus(
   toStatus: string,
 ): Promise<ActionState> {
   const user = await requireUser();
-  if (!isLeadStatus(toStatus)) return { ok: false, error: 'Invalid status.' };
+  if (!isApplicationStatus(toStatus)) return { ok: false, error: 'Invalid status.' };
 
   const supabase = await createClient();
   const { data: existing } = await supabase
@@ -546,6 +547,18 @@ export async function addApplicationNote(
     entity: 'application',
     entityId: applicationId,
   });
+
+  if (user.organization_id) {
+    const { data: app } = await supabase.from('applications').select('full_name').eq('id', applicationId).maybeSingle();
+    await notifyOrgStaff({
+      organizationId: user.organization_id,
+      type: 'note_added',
+      title: 'Note added',
+      body: `${user.full_name} added a note on ${app?.full_name || 'an application'}.`,
+      link: `/applications/${applicationId}`,
+      excludeProfileId: user.id,
+    });
+  }
 
   revalidatePath(`/applications/${applicationId}`);
   return { ok: true };

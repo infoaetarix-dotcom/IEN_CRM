@@ -9,6 +9,9 @@ import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus, LEAD_SOURCES } from '@/lib/leads/display';
 import { leadEditSchema, quickLeadSchema } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
+import { notifyOrgStaff } from '@/lib/notifications/create';
+import { DOCUMENT_MAX_BYTES, DOCUMENT_TYPES } from '@/lib/validation/application';
+import { UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
 
 export interface ActionResult {
   ok: boolean;
@@ -77,6 +80,9 @@ export async function createQuery(
     prior_rejection_detail: formStr(formData, 'prior_rejection_detail'),
     consent_given: formData.get('consent_given') === 'on',
     utm_source: formStr(formData, 'utm_source'),
+    reference_name: formStr(formData, 'reference_name'),
+    reference_note: formStr(formData, 'reference_note'),
+    passport_number: formStr(formData, 'passport_number'),
   });
   if (!parsed.success) {
     return {
@@ -236,6 +242,18 @@ export async function addNote(
     entity: 'lead',
     entityId: leadId,
   });
+
+  if (user.organization_id) {
+    const { data: lead } = await supabase.from('leads').select('full_name').eq('id', leadId).maybeSingle();
+    await notifyOrgStaff({
+      organizationId: user.organization_id,
+      type: 'note_added',
+      title: 'Note added',
+      body: `${user.full_name} added a note on ${lead?.full_name || 'a lead'}.`,
+      link: `/leads/${leadId}`,
+      excludeProfileId: user.id,
+    });
+  }
 
   revalidatePath(`/leads/${leadId}`);
   return { ok: true };
@@ -530,5 +548,145 @@ export async function deleteLead(leadId: string): Promise<ActionResult> {
   if (error) return { ok: false, error: 'Could not delete lead.' };
 
   revalidatePath('/leads');
+  return { ok: true };
+}
+
+// ---- Student upload link ----
+// A parallel system to applications' own upload link (see
+// 0033_lead_documents.sql) — document_upload_token/document_upload_expires_at
+// gate the public /upload/lead/[token] page; regenerating rotates both
+// together so the old link stops working the instant a new one is issued.
+
+export async function regenerateLeadUploadLink(leadId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, organization_id')
+    .eq('id', leadId)
+    .single();
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      document_upload_token: crypto.randomUUID(),
+      document_upload_expires_at: new Date(
+        Date.now() + UPLOAD_LINK_TTL_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    })
+    .eq('id', leadId);
+  if (error) return { ok: false, error: 'Could not regenerate the link.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: lead.organization_id,
+    action: 'lead_upload_link_regenerated',
+    entity: 'lead',
+    entityId: leadId,
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath('/leads');
+  return { ok: true };
+}
+
+// ---- Documents ----
+// Storage is a private bucket with no client-side/authenticated object
+// policies at all (see 0033_lead_documents.sql) — every operation on the
+// actual file bytes goes through the service role here, gated by
+// requireUser() + an RLS-scoped read confirming the lead belongs to the
+// caller's org first. The lead_documents row itself uses normal org RLS, so
+// it's fine to read/write via the session client.
+
+function sanitizeDocFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9.\-_]+/g, '-').replace(/^-+|-+$/g, '') || 'file';
+}
+
+async function assertLeadAccess(leadId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('leads')
+    .select('id, organization_id')
+    .eq('id', leadId)
+    .single();
+  return data;
+}
+
+export async function uploadLeadDocument(
+  leadId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const lead = await assertLeadAccess(leadId);
+  if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: 'Choose a file to upload.' };
+  }
+  if (file.size > DOCUMENT_MAX_BYTES) {
+    return { ok: false, error: 'File is too large (10MB max).' };
+  }
+  if (!(DOCUMENT_TYPES as readonly string[]).includes(file.type)) {
+    return { ok: false, error: 'Only PDF, PNG, or JPG files are allowed.' };
+  }
+
+  const service = createServiceClient();
+  const path = `${lead.organization_id}/${leadId}/${Date.now()}-${sanitizeDocFileName(file.name)}`;
+  const { error: uploadErr } = await service.storage
+    .from('lead-documents')
+    .upload(path, file, { contentType: file.type });
+  if (uploadErr) return { ok: false, error: 'Could not upload the file.' };
+
+  const { error: insertErr } = await service.from('lead_documents').insert({
+    lead_id: leadId,
+    organization_id: lead.organization_id,
+    file_name: file.name,
+    storage_path: path,
+    file_size: file.size,
+    uploaded_by: user.id,
+  });
+  if (insertErr) return { ok: false, error: 'Could not save the document record.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: lead.organization_id,
+    action: 'lead_document_uploaded',
+    entity: 'lead',
+    entityId: leadId,
+    metadata: { file_name: file.name },
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+export async function deleteLeadDocument(documentId: string): Promise<ActionResult> {
+  const user = await requireUser();
+
+  const supabase = await createClient();
+  const { data: doc } = await supabase
+    .from('lead_documents')
+    .select('id, lead_id, organization_id, storage_path')
+    .eq('id', documentId)
+    .single();
+  if (!doc) return { ok: false, error: 'Document not found or access denied.' };
+
+  const service = createServiceClient();
+  await service.storage.from('lead-documents').remove([doc.storage_path]);
+  const { error } = await service.from('lead_documents').delete().eq('id', documentId);
+  if (error) return { ok: false, error: 'Could not delete the document.' };
+
+  await writeAuditLog({
+    actorId: user.id,
+    organizationId: doc.organization_id,
+    action: 'lead_document_deleted',
+    entity: 'lead',
+    entityId: doc.lead_id,
+    metadata: { file_name: doc.storage_path },
+  });
+
+  revalidatePath(`/leads/${doc.lead_id}`);
   return { ok: true };
 }

@@ -10,7 +10,7 @@ import {
   type ReactElement,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateLead, addNote } from '@/app/(admin)/leads/actions';
+import { updateLead } from '@/app/(admin)/leads/actions';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -28,7 +28,7 @@ import {
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
 import { ProgramField, splitProgram } from '@/components/form/program-field';
-import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource, composeReferenceNote } from '@/lib/leads/display';
+import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
 /** Applicant-editable fields, all held as form strings (numbers coerce server-side). */
 export interface LeadEditState {
@@ -40,6 +40,9 @@ export interface LeadEditState {
   district: string;
   target_country: string;
   utm_source: string;
+  reference_name: string;
+  reference_note: string;
+  passport_number: string;
   institution: string;
   program: string;
   intake_season: string;
@@ -109,12 +112,6 @@ export function LeadDetailsEditor({
   const formRef = useRef(initial);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // Transient — not a lead column, so not part of LeadEditState/formRef.
-  // Filling these in when a reference source is picked logs a note (see
-  // composeReferenceNote) instead of being stored anywhere on the lead
-  // itself; they're blank on every entry into edit mode.
-  const [refName, setRefName] = useState('');
-  const [refNote, setRefNote] = useState('');
 
   function set<K extends keyof LeadEditState>(k: K, v: LeadEditState[K]) {
     const next = { ...formRef.current, [k]: v };
@@ -125,8 +122,6 @@ export function LeadDetailsEditor({
   function cancel() {
     formRef.current = initial;
     setForm(initial);
-    setRefName('');
-    setRefNote('');
     setError(null);
     setEditing(false);
   }
@@ -139,10 +134,6 @@ export function LeadDetailsEditor({
         setError(res.error ?? 'Could not save changes.');
         return;
       }
-      const noteBody = composeReferenceNote(refName, refNote);
-      if (noteBody) await addNote(leadId, noteBody);
-      setRefName('');
-      setRefNote('');
       setEditing(false);
       router.refresh();
     });
@@ -228,24 +219,11 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
+          <LField label="Passport number">{text('passport_number')}</LField>
           {isReferenceSource(form.utm_source) && (
             <>
-              <LField label="Name">
-                <Input
-                  value={refName}
-                  disabled={pending}
-                  onChange={(e) => setRefName(e.target.value)}
-                  placeholder="Who referred them"
-                />
-              </LField>
-              <LField label="Note">
-                <Input
-                  value={refNote}
-                  disabled={pending}
-                  onChange={(e) => setRefNote(e.target.value)}
-                  placeholder="Optional detail"
-                />
-              </LField>
+              <LField label="Name">{text('reference_name')}</LField>
+              <LField label="Note">{text('reference_note')}</LField>
             </>
           )}
         </CardContent>
@@ -327,13 +305,15 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
-          <LField label="Program of interest">
-            <ProgramField
-              defaultDegree={splitProgram(form.program).degree}
-              defaultField={splitProgram(form.program).field}
-              onChange={(v) => set('program', v)}
-            />
-          </LField>
+          <div className="col-span-2 sm:col-span-3">
+            <LField label="Program of interest">
+              <ProgramField
+                defaultDegree={splitProgram(form.program).degree}
+                defaultField={splitProgram(form.program).field}
+                onChange={(v) => set('program', v)}
+              />
+            </LField>
+          </div>
           <LField label="Intake season">
             <Select
               value={form.intake_season}

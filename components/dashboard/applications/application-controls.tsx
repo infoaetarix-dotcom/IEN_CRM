@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
-import { LEAD_STATUSES, STATUS_LABELS } from '@/lib/leads/display';
+import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS } from '@/lib/leads/display';
 
 /**
  * Edit / WhatsApp / Email / Copy upload link / Delete for a row in the
@@ -133,9 +133,9 @@ export function ApplicationStatusChanger({
           });
         }}
       >
-        {LEAD_STATUSES.map((s) => (
+        {APPLICATION_STATUSES.map((s) => (
           <option key={s} value={s}>
-            {STATUS_LABELS[s]}
+            {APPLICATION_STATUS_LABELS[s]}
           </option>
         ))}
       </Select>

@@ -1,7 +1,44 @@
 // Shared display metadata for lead status & source — keeps labels/colors
 // consistent across the table, detail page, and charts.
 
+/**
+ * A lead's own pipeline stage (leads.status, type `lead_stage` — see
+ * 0034_lead_status_v2.sql). Deliberately just 4 values: staff move a lead
+ * through them, not the finer-grained per-application status below.
+ */
 export const LEAD_STATUSES = [
+  'raw_lead',
+  'document_processing',
+  'application_generated',
+  'rejected',
+] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export const STATUS_LABELS: Record<LeadStatus, string> = {
+  raw_lead: 'Raw lead',
+  document_processing: 'Document processing',
+  application_generated: 'Application generated',
+  rejected: 'Rejected',
+};
+
+export const STATUS_BADGE: Record<
+  LeadStatus,
+  'info' | 'accent' | 'warning' | 'success' | 'danger' | 'neutral'
+> = {
+  raw_lead: 'info',
+  document_processing: 'warning',
+  application_generated: 'success',
+  rejected: 'danger',
+};
+
+/**
+ * An application's own status (applications.status, still the original
+ * `lead_status` enum) — a separate, unchanged set. Applications track a
+ * specific application's progress, not the lead's journey toward becoming
+ * one, so this was deliberately left alone when LEAD_STATUSES collapsed to
+ * 4 stages (see 0034_lead_status_v2.sql).
+ */
+export const APPLICATION_STATUSES = [
   'new',
   'contacted',
   'in_progress',
@@ -9,9 +46,9 @@ export const LEAD_STATUSES = [
   'rejected',
   'follow_up',
 ] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
-export const STATUS_LABELS: Record<LeadStatus, string> = {
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   new: 'New',
   contacted: 'Contacted',
   in_progress: 'In progress',
@@ -20,8 +57,8 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   follow_up: 'Follow-up',
 };
 
-export const STATUS_BADGE: Record<
-  LeadStatus,
+export const APPLICATION_STATUS_BADGE: Record<
+  ApplicationStatus,
   'info' | 'accent' | 'warning' | 'success' | 'danger' | 'neutral'
 > = {
   new: 'info',
@@ -31,6 +68,10 @@ export const STATUS_BADGE: Record<
   rejected: 'danger',
   follow_up: 'neutral',
 };
+
+export function isApplicationStatus(v: string): v is ApplicationStatus {
+  return (APPLICATION_STATUSES as readonly string[]).includes(v);
+}
 
 export const LEAD_SOURCES = [
   'instagram',
@@ -63,22 +104,14 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
 
 /**
  * The two staff-only sources that ask for who referred the lead — picking
- * either one in the Create query dialog or the lead editor reveals a Name +
- * Note pair that gets logged as a note (see composeReferenceNote) rather
- * than stored as its own column.
+ * either one in the Create query dialog or the lead editor reveals the
+ * persistent Name + Note fields (leads.reference_name/reference_note, see
+ * 0032_lead_reference_and_passport.sql).
  */
 export const REFERENCE_SOURCES = ['personal_reference', 'old_student_reference'] as const;
 
 export function isReferenceSource(v: string): boolean {
   return (REFERENCE_SOURCES as readonly string[]).includes(v);
-}
-
-/** Combine the reference Name + Note fields into one note body; '' if both are blank. */
-export function composeReferenceNote(name: string, note: string): string {
-  const parts: string[] = [];
-  if (name.trim()) parts.push(`Referred by: ${name.trim()}`);
-  if (note.trim()) parts.push(note.trim());
-  return parts.join('\n\n');
 }
 
 export function isLeadStatus(v: string): v is LeadStatus {

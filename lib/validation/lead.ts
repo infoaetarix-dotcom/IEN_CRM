@@ -181,6 +181,12 @@ const leadFields = {
     utm_source: z.string().optional(),
     utm_medium: z.string().optional(),
     utm_campaign: z.string().optional(),
+    // Who referred this lead — only shown/editable when utm_source is
+    // personal_reference or old_student_reference (see lib/leads/display.ts).
+    reference_name: optText(160),
+    reference_note: optText(1000),
+    // Staff-facing only (Create query + lead editor) — no public form field.
+    passport_number: optText(40),
     // Honeypot — must stay empty. Bots fill it.
     company: z.string().max(0).optional(),
 } as const;
@@ -295,6 +301,9 @@ export const leadEditSchema = leadObject
     prior_rejection: true,
     prior_rejection_detail: true,
     utm_source: true,
+    reference_name: true,
+    reference_note: true,
+    passport_number: true,
   })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
   .refine(gradeInRange, GRADE_MSG);

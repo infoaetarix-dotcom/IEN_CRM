@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import { ApplicationRowActions } from '@/components/dashboard/applications/application-controls';
-import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/display';
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_BADGE, type ApplicationStatus } from '@/lib/leads/display';
 
 export const metadata = { title: 'Applications' };
 
@@ -109,8 +109,8 @@ export default async function ApplicationsPage() {
                       {[a.target_country, a.program].filter(Boolean).join(' — ') || '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_BADGE[a.status as LeadStatus]}>
-                        {STATUS_LABELS[a.status as LeadStatus]}
+                      <Badge variant={APPLICATION_STATUS_BADGE[a.status as ApplicationStatus]}>
+                        {APPLICATION_STATUS_LABELS[a.status as ApplicationStatus]}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-blue-500 font-semibold">

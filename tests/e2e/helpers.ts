@@ -8,8 +8,12 @@ export function loadEnv(): Record<string, string> {
   const out: Record<string, string> = {};
   try {
     const raw = readFileSync(resolve(process.cwd(), '.env.local'), 'utf8');
+    // \r? before the end anchor: a CRLF-saved .env.local (the Windows
+    // default) would otherwise leave every value's regex match failing
+    // outright, since `.` never matches the trailing \r and bare `$`
+    // doesn't special-case it away like it does for a trailing \n.
     for (const line of raw.split('\n')) {
-      const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      const m = line.match(/^([A-Z0-9_]+)=(.*?)\r?$/);
       if (m) out[m[1]] = m[2].trim();
     }
   } catch {

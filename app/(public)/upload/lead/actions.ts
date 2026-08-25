@@ -18,32 +18,32 @@ function sanitizeFileName(name: string): string {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Upload one document to the application a token resolves to — the public
- * counterpart of uploadDocument() in app/(admin)/applications/actions.ts,
+ * Upload one document to the lead a token resolves to — the public
+ * counterpart of uploadLeadDocument() in app/(admin)/leads/actions.ts,
  * gated by document_upload_token + document_upload_expires_at instead of a
- * staff session (same substitution leads.submission_token makes for
- * anonymous public writes — see 0029_application_upload_link.sql).
+ * staff session (see 0033_lead_documents.sql). Parallel to, and separate
+ * from, applications' own uploadStudentDocument().
  */
-export async function uploadStudentDocument(
+export async function uploadLeadDocumentPublic(
   token: string,
   formData: FormData,
 ): Promise<UploadActionState> {
   if (!UUID_RE.test(token)) return { ok: false, error: 'Invalid link.' };
 
   const ip = await clientIp();
-  const limited = await rateLimit(`student-upload:${ip}`, 20, 10 * 60 * 1000);
+  const limited = await rateLimit(`lead-upload:${ip}`, 20, 10 * 60 * 1000);
   if (!limited.success) {
     return { ok: false, error: 'Too many uploads. Please try again shortly.' };
   }
 
   const service = createServiceClient();
-  const { data: app } = await service
-    .from('applications')
+  const { data: lead } = await service
+    .from('leads')
     .select('id, organization_id, full_name, document_upload_expires_at')
     .eq('document_upload_token', token)
     .maybeSingle();
-  if (!app) return { ok: false, error: 'This link is invalid.' };
-  if (new Date(app.document_upload_expires_at) < new Date()) {
+  if (!lead) return { ok: false, error: 'This link is invalid.' };
+  if (new Date(lead.document_upload_expires_at) < new Date()) {
     return { ok: false, error: 'This link has expired. Please ask your consultant for a new one.' };
   }
 
@@ -58,41 +58,41 @@ export async function uploadStudentDocument(
     return { ok: false, error: 'Only PDF, PNG, or JPG files are allowed.' };
   }
 
-  const path = `${app.organization_id}/${app.id}/${Date.now()}-${sanitizeFileName(file.name)}`;
+  const path = `${lead.organization_id}/${lead.id}/${Date.now()}-${sanitizeFileName(file.name)}`;
   const { error: uploadErr } = await service.storage
-    .from('application-documents')
+    .from('lead-documents')
     .upload(path, file, { contentType: file.type });
   if (uploadErr) return { ok: false, error: 'Could not upload the file.' };
 
-  const { error: insertErr } = await service.from('application_documents').insert({
-    application_id: app.id,
-    organization_id: app.organization_id,
+  const { error: insertErr } = await service.from('lead_documents').insert({
+    lead_id: lead.id,
+    organization_id: lead.organization_id,
     file_name: file.name,
     storage_path: path,
     file_size: file.size,
     uploaded_by: null,
-    uploaded_by_student: true,
+    uploaded_by_lead: true,
   });
   if (insertErr) return { ok: false, error: 'Could not save the document record.' };
 
   await writeAuditLog({
     actorId: null,
-    organizationId: app.organization_id,
-    action: 'application_document_uploaded',
-    entity: 'application',
-    entityId: app.id,
-    metadata: { file_name: file.name, source: 'student' },
+    organizationId: lead.organization_id,
+    action: 'lead_document_uploaded',
+    entity: 'lead',
+    entityId: lead.id,
+    metadata: { file_name: file.name, source: 'lead' },
   });
 
-  // In-app only, no email — students often upload several files in one
-  // sitting, and a bell notification per file is already visible enough
-  // without also sending a burst of emails for one visit.
+  // In-app only, no email — same reasoning as applications' document-upload
+  // notification: several files in one sitting shouldn't turn into an email
+  // burst for something less time-sensitive than a new lead.
   await notifyOrgStaff({
-    organizationId: app.organization_id,
-    type: 'document_uploaded',
+    organizationId: lead.organization_id,
+    type: 'lead_document_uploaded',
     title: 'Document uploaded',
-    body: `${app.full_name ?? 'A student'} uploaded ${file.name}.`,
-    link: `/applications/${app.id}`,
+    body: `${lead.full_name ?? 'A lead'} uploaded ${file.name}.`,
+    link: `/leads/${lead.id}`,
   });
 
   return { ok: true };

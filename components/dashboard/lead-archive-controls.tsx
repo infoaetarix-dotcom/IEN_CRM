@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
+import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
 
 function useRun() {
   const router = useRouter();
@@ -130,12 +131,16 @@ export function LeadRowActions({
   email,
   phone,
   templates,
+  uploadUrl,
+  uploadExpired,
 }: {
   leadId: string;
   fullName: string;
   email: string | null;
   phone: string | null;
   templates: { key: string; name: string; subject: string; body: string }[];
+  uploadUrl: string;
+  uploadExpired: boolean;
 }) {
   const { pending, error, run, router } = useRun();
   const [confirming, setConfirming] = useState(false);
@@ -160,6 +165,7 @@ export function LeadRowActions({
         resolveTemplate={(templateKey) => getRenderedLeadTemplate(leadId, templateKey)}
         sendAction={(payload) => sendCustomLeadEmail(leadId, payload)}
       />
+      <CopyUploadLinkButton url={uploadUrl} expired={uploadExpired} entity="lead" />
       {!confirming ? (
         <Button
           size="icon"

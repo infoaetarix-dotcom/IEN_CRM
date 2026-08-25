@@ -22,14 +22,23 @@ import {
 } from '@/components/dashboard/lead-editor';
 import { LeadActions } from '@/components/dashboard/lead-archive-controls';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
+import { LeadDocumentsPanel } from '@/components/dashboard/lead-documents-panel';
+import { LeadUploadLinkCard } from '@/components/dashboard/lead-upload-link-card';
 import {
   STATUS_LABELS,
   STATUS_BADGE,
+  APPLICATION_STATUS_LABELS,
+  APPLICATION_STATUS_BADGE,
   SOURCE_LABELS,
+  isReferenceSource,
   type LeadStatus,
+  type ApplicationStatus,
   type LeadSource,
 } from '@/lib/leads/display';
 import { CODE_LABELS } from '@/lib/form-options';
+import type { LeadDocument } from '@/lib/leads/types';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
 function fmtDateTime(s: string) {
   return new Date(s).toLocaleString('en-GB', {
@@ -64,43 +73,67 @@ export default async function LeadDetailPage({
   // Independent reads — the lead row itself doesn't gate any of the others
   // (they all just filter by the route's `id`), so every query fires together
   // instead of the lead row blocking the rest.
-  const [leadRes, notesRes, historyRes, messagesRes, profilesRes, templatesRes, applicationsRes, universitiesRes] =
-    await Promise.all([
-      supabase.from('leads').select('*').eq('id', id).single(),
-      supabase
-        .from('lead_notes')
-        .select('id, body, author_id, created_at')
-        .eq('lead_id', id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('lead_status_history')
-        .select('id, from_status, to_status, changed_by, changed_at')
-        .eq('lead_id', id)
-        .order('changed_at', { ascending: false }),
-      supabase
-        .from('messages')
-        .select('id, subject, status, template_key, sent_by, created_at, error_detail')
-        .eq('lead_id', id)
-        .order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, full_name, email, is_active'),
-      supabase
-        .from('email_templates')
-        .select('key, name, subject, body')
-        .order('is_auto', { ascending: false }),
-      supabase
-        .from('applications')
-        .select('id, application_number, status, universities(name, country)')
-        .eq('lead_id', id)
-        .order('application_number', { ascending: true }),
-      supabase
-        .from('universities')
-        .select('id, name, country, created_at')
-        .eq('organization_id', profile.organization_id)
-        .order('name'),
-    ]);
+  const [
+    leadRes,
+    notesRes,
+    historyRes,
+    messagesRes,
+    profilesRes,
+    templatesRes,
+    applicationsRes,
+    universitiesRes,
+    documentsRes,
+    orgRes,
+  ] = await Promise.all([
+    supabase.from('leads').select('*').eq('id', id).single(),
+    supabase
+      .from('lead_notes')
+      .select('id, body, author_id, created_at')
+      .eq('lead_id', id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('lead_status_history')
+      .select('id, from_status, to_status, changed_by, changed_at')
+      .eq('lead_id', id)
+      .order('changed_at', { ascending: false }),
+    supabase
+      .from('messages')
+      .select('id, subject, status, template_key, sent_by, created_at, error_detail')
+      .eq('lead_id', id)
+      .order('created_at', { ascending: false }),
+    supabase.from('profiles').select('id, full_name, email, is_active'),
+    supabase
+      .from('email_templates')
+      .select('key, name, subject, body')
+      .order('is_auto', { ascending: false }),
+    supabase
+      .from('applications')
+      .select('id, application_number, status, universities(name, country)')
+      .eq('lead_id', id)
+      .order('application_number', { ascending: true }),
+    supabase
+      .from('universities')
+      .select('id, name, country, created_at')
+      .eq('organization_id', profile.organization_id)
+      .order('name'),
+    supabase
+      .from('lead_documents')
+      .select('id, file_name, file_size, uploaded_by, uploaded_by_lead, created_at')
+      .eq('lead_id', id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('organizations')
+      .select('portal_domain')
+      .eq('id', profile.organization_id)
+      .single(),
+  ]);
 
   const lead = leadRes.data;
   if (!lead) notFound();
+
+  const documents: LeadDocument[] = documentsRes.data ?? [];
+  const uploadBaseUrl = orgRes.data?.portal_domain ? `https://${orgRes.data.portal_domain}` : APP_URL;
+  const uploadUrl = `${uploadBaseUrl}/upload/lead/${lead.document_upload_token}`;
 
   const nameById = new Map(
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name]),
@@ -130,6 +163,9 @@ export default async function LeadDetailPage({
     district: s(lead.district),
     target_country: s(lead.target_country),
     utm_source: s(lead.utm_source),
+    reference_name: s(lead.reference_name),
+    reference_note: s(lead.reference_note),
+    passport_number: s(lead.passport_number),
     institution: s(lead.institution),
     program: s(lead.program),
     intake_season: s(lead.intake_season),
@@ -207,6 +243,13 @@ export default async function LeadDetailPage({
               <Field label="Phone" value={lead.phone} />
               <Field label="Target country" value={lead.target_country} />
               <Field label="Source" value={SOURCE_LABELS[lead.utm_source as LeadSource]} />
+              <Field label="Passport number" value={lead.passport_number} />
+              {isReferenceSource(lead.utm_source) && (
+                <>
+                  <Field label="Name" value={lead.reference_name} />
+                  <Field label="Note" value={lead.reference_note} />
+                </>
+              )}
               <Field
                 label="Consent"
                 value={
@@ -341,16 +384,25 @@ export default async function LeadDetailPage({
                           {uni ? `${uni.name} (${uni.country})` : 'No university set'}
                         </p>
                         <Badge
-                          variant={STATUS_BADGE[a.status as LeadStatus]}
+                          variant={APPLICATION_STATUS_BADGE[a.status as ApplicationStatus]}
                           className="mt-2"
                         >
-                          {STATUS_LABELS[a.status as LeadStatus]}
+                          {APPLICATION_STATUS_LABELS[a.status as ApplicationStatus]}
                         </Badge>
                       </Link>
                     );
                   })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-tenant-display">Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LeadDocumentsPanel leadId={lead.id} documents={documents} />
             </CardContent>
           </Card>
 
@@ -397,6 +449,23 @@ export default async function LeadDetailPage({
                 </p>
                 <StatusChanger leadId={lead.id} current={lead.status} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-tenant-display">Document upload link</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Send this to the lead — it opens a page where they can upload documents,
+                no login needed.
+              </p>
+              <LeadUploadLinkCard
+                leadId={lead.id}
+                url={uploadUrl}
+                expiresAt={lead.document_upload_expires_at}
+              />
             </CardContent>
           </Card>
 

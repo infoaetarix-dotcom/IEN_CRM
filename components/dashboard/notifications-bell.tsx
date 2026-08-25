@@ -97,6 +97,7 @@ export function NotificationsBell({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          aria-label="Notifications"
           className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-tenant-offwhite transition-colors hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
         >
           <Bell className="h-4 w-4" />

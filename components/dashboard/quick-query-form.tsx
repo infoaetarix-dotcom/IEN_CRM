@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createQuery, addNote, type CreateQueryState } from '@/app/(admin)/leads/actions';
+import { createQuery, uploadLeadDocument, type CreateQueryState } from '@/app/(admin)/leads/actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -23,7 +23,7 @@ import {
   PASSING_YEARS,
   INTAKE_YEARS,
 } from '@/lib/form-options';
-import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource, composeReferenceNote } from '@/lib/leads/display';
+import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
 const init: CreateQueryState = { ok: false };
 const SCORED_TESTS = ['ielts', 'toefl', 'pte', 'duolingo'];
@@ -49,35 +49,33 @@ export function QuickQueryForm({
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
   const [source, setSource] = useState('');
-  const [refName, setRefName] = useState('');
-  const [refNote, setRefNote] = useState('');
+  const [document, setDocument] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(createQuery, init);
   const err = state.fieldErrors ?? {};
-  // Guards the addNote side effect against StrictMode's dev-only double
-  // invocation of effects (which would otherwise log the reference note
-  // twice) — the effect body can run more than once, but only the first
-  // run for a given leadId is allowed to actually do anything.
-  const handledLeadRef = useRef<string | null>(null);
+  // Strict Mode invokes effects twice in dev — guard against uploading the
+  // same picked file twice for the same freshly created lead.
+  const uploadedForLeadId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (state.ok && state.leadId && handledLeadRef.current !== state.leadId) {
-      handledLeadRef.current = state.leadId;
-      const leadId = state.leadId;
-      const noteBody = composeReferenceNote(refName, refNote);
-      const finish = () => {
-        onClose?.();
-        router.push(`/leads/${leadId}`);
-      };
-      if (noteBody) {
-        addNote(leadId, noteBody).then(finish);
-      } else {
-        finish();
-      }
+    if (!state.ok || !state.leadId) return;
+    if (uploadedForLeadId.current === state.leadId) return;
+    uploadedForLeadId.current = state.leadId;
+
+    if (!document) {
+      onClose?.();
+      router.push(`/leads/${state.leadId}`);
+      return;
     }
-    // Only the create result should re-trigger this — refName/refNote are
-    // read at the moment of success, not on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, router, onClose]);
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.set('file', document);
+    uploadLeadDocument(state.leadId, formData).finally(() => {
+      onClose?.();
+      router.push(`/leads/${state.leadId}`);
+    });
+  }, [state, router, onClose, document]);
 
   return (
     <form action={action} className="space-y-6">
@@ -124,27 +122,32 @@ export function QuickQueryForm({
               ))}
             </Select>
           </div>
+          <div>
+            <Label htmlFor="passport_number">Passport number</Label>
+            <Input id="passport_number" name="passport_number" placeholder="Optional" />
+          </div>
+          <div>
+            <Label htmlFor="document">Document</Label>
+            <input
+              type="file"
+              id="document"
+              accept="application/pdf,image/png,image/jpeg"
+              className="block w-full text-sm text-tenant-ink file:mr-3 file:rounded-md file:border-0 file:bg-tenant-gray file:px-3 file:py-1.5 file:text-sm"
+              onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">PDF, PNG, or JPG — up to 10MB. Optional.</p>
+          </div>
         </div>
 
         {isReferenceSource(source) && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="reference_name">Name</Label>
-              <Input
-                id="reference_name"
-                value={refName}
-                onChange={(e) => setRefName(e.target.value)}
-                placeholder="Who referred them"
-              />
+              <Input id="reference_name" name="reference_name" placeholder="Who referred them" />
             </div>
             <div>
               <Label htmlFor="reference_note">Note</Label>
-              <Input
-                id="reference_note"
-                value={refNote}
-                onChange={(e) => setRefNote(e.target.value)}
-                placeholder="Optional detail"
-              />
+              <Input id="reference_note" name="reference_note" placeholder="Optional detail" />
             </div>
           </div>
         )}
@@ -298,16 +301,16 @@ export function QuickQueryForm({
           type="submit"
           size="lg"
           className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-          disabled={pending}
+          disabled={pending || uploading}
         >
-          {pending ? 'Saving…' : 'Save'}
+          {uploading ? 'Uploading document…' : pending ? 'Saving…' : 'Save'}
         </Button>
         <Button
           type="button"
           variant="outline"
           size="lg"
           onClick={() => onClose?.()}
-          disabled={pending}
+          disabled={pending || uploading}
         >
           Cancel
         </Button>

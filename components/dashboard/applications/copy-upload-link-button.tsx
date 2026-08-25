@@ -4,8 +4,20 @@ import { useState } from 'react';
 import { Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-/** Copies the student document-upload link to the clipboard — icon-only, matches the other row-action buttons. */
-export function CopyUploadLinkButton({ url, expired }: { url: string; expired: boolean }) {
+/**
+ * Copies the student document-upload link to the clipboard — icon-only,
+ * matches the other row-action buttons. Shared by both the applications and
+ * leads tables; `entity` only changes the tooltip wording.
+ */
+export function CopyUploadLinkButton({
+  url,
+  expired,
+  entity = 'application',
+}: {
+  url: string;
+  expired: boolean;
+  entity?: 'application' | 'lead';
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -25,7 +37,7 @@ export function CopyUploadLinkButton({ url, expired }: { url: string; expired: b
       }
       title={
         expired
-          ? 'Upload link expired — copies the old link; open the application to regenerate'
+          ? `Upload link expired — copies the old link; open the ${entity} to regenerate`
           : 'Copy student upload link'
       }
       onClick={handleCopy}

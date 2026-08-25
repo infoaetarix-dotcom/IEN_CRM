@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ageFromDob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { STATUS_LABELS, STATUS_BADGE, type LeadStatus } from '@/lib/leads/display';
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_BADGE, type ApplicationStatus } from '@/lib/leads/display';
 import { CODE_LABELS } from '@/lib/form-options';
 import { ApplicationDetailToggle } from '@/components/dashboard/applications/application-detail-toggle';
 import type { ApplicationFormValues } from '@/components/dashboard/applications/application-form';
@@ -145,8 +145,8 @@ export default async function ApplicationDetailPage({
             <h1 className="font-tenant-display text-2xl font-semibold text-tenant-ink">
               {app.full_name || '(no name)'}
             </h1>
-            <Badge variant={STATUS_BADGE[app.status as LeadStatus]}>
-              {STATUS_LABELS[app.status as LeadStatus]}
+            <Badge variant={APPLICATION_STATUS_BADGE[app.status as ApplicationStatus]}>
+              {APPLICATION_STATUS_LABELS[app.status as ApplicationStatus]}
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">

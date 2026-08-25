@@ -1,4 +1,8 @@
-export type NotificationType = 'new_lead';
+export type NotificationType =
+  | 'new_lead'
+  | 'document_uploaded'
+  | 'lead_document_uploaded'
+  | 'note_added';
 
 export interface Notification {
   id: string;
