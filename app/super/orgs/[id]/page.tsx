@@ -22,6 +22,7 @@ import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org
 import { ChatbotConfig } from '@/components/super/chatbot-config';
 import { OrgBranding } from '@/components/super/org-branding';
 import { OrgDomains } from '@/components/super/org-domains';
+import { OrgSenderEmail } from '@/components/super/org-sender-email';
 import { OrgActivity } from '@/components/super/org-activity';
 import { SendResetButton } from '@/components/super/send-reset-button';
 import { brandFromOrg } from '@/lib/branding';
@@ -37,7 +38,7 @@ export default async function OrgDetail({
   const { data: org } = await supabase
     .from('organizations')
     .select(
-      'id, name, slug, status, created_at, legal_name, logo_url, theme_key, form_domain, portal_domain',
+      'id, name, slug, status, created_at, legal_name, logo_url, theme_key, form_domain, portal_domain, sender_email',
     )
     .eq('id', id)
     .single();
@@ -153,6 +154,15 @@ export default async function OrgDetail({
             formDomain={org.form_domain}
             portalDomain={org.portal_domain}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Email</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrgSenderEmail orgId={org.id} senderEmail={org.sender_email} />
         </CardContent>
       </Card>
 

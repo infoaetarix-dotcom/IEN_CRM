@@ -49,10 +49,11 @@ export async function notifyOrgStaff(params: {
     if (params.emailSubject && params.emailBody) {
       const { data: org } = await service
         .from('organizations')
-        .select('name, legal_name')
+        .select('name, legal_name, sender_email')
         .eq('id', params.organizationId)
         .single();
       const senderName = org ? brandFromOrg(org).legalName : undefined;
+      const senderEmail = org?.sender_email;
 
       await Promise.all(
         staff
@@ -64,6 +65,7 @@ export async function notifyOrgStaff(params: {
               subject: params.emailSubject!,
               body: params.emailBody!,
               senderName,
+              senderEmail,
             }),
           ),
       );
