@@ -13,11 +13,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function EmailField({
   error,
   required = true,
+  defaultValue = '',
 }: {
   error?: string;
   required?: boolean;
+  defaultValue?: string;
 }) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(defaultValue);
   const [touched, setTouched] = useState(false);
 
   const invalid = touched && value.length > 0 && !EMAIL_RE.test(value);

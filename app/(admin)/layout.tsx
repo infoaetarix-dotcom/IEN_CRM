@@ -11,6 +11,7 @@ import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { AccountMenu } from '@/components/dashboard/account-menu';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
+import { FloatingChatButton } from '@/components/dashboard/chatbot/floating-button';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -138,6 +139,8 @@ export default async function AdminLayout({
 
         <main className="min-w-0 flex-1 p-6">{children}</main>
       </div>
+
+      {enabledModules.includes('chatbot') && <FloatingChatButton />}
     </div>
   );
 }

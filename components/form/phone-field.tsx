@@ -13,11 +13,13 @@ import 'react-phone-number-input/style.css';
 export function PhoneField({
   error,
   defaultCountry = 'PK',
+  defaultValue,
 }: {
   error?: string;
   defaultCountry?: string;
+  defaultValue?: string;
 }) {
-  const [value, setValue] = useState<string | undefined>();
+  const [value, setValue] = useState<string | undefined>(defaultValue || undefined);
   const [touched, setTouched] = useState(false);
 
   const invalid = touched && !!value && !isValidPhoneNumber(value);

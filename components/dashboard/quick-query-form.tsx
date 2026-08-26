@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createQuery, uploadLeadDocument, type CreateQueryState } from '@/app/(admin)/leads/actions';
+import type { QuickLeadInput } from '@/lib/validation/lead';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -14,7 +15,7 @@ import { PhoneField } from '@/components/form/phone-field';
 import { DobField } from '@/components/form/dob-field';
 import { CountryField } from '@/components/form/country-field';
 import { EducationField } from '@/components/form/education-field';
-import { ProgramField } from '@/components/form/program-field';
+import { ProgramField, splitProgram } from '@/components/form/program-field';
 import {
   GRADING_SYSTEMS,
   ENGLISH_TESTS,
@@ -41,15 +42,19 @@ function FieldError({ message }: { message?: string }) {
 export function QuickQueryForm({
   consentName,
   onClose,
+  initial,
 }: {
   consentName: string;
   onClose?: () => void;
+  /** Pre-fill from AI-parsed pasted text — staff still reviews before saving. */
+  initial?: Partial<QuickLeadInput>;
 }) {
   const router = useRouter();
-  const [priorRejection, setPriorRejection] = useState(false);
-  const [englishTest, setEnglishTest] = useState('');
-  const [source, setSource] = useState('');
+  const [priorRejection, setPriorRejection] = useState(initial?.prior_rejection ?? false);
+  const [englishTest, setEnglishTest] = useState(initial?.english_test ?? '');
+  const [source, setSource] = useState(initial?.utm_source ?? '');
   const [document, setDocument] = useState<File | null>(null);
+  const { degree: initialDegree, field: initialField } = splitProgram(initial?.program ?? '');
   const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(createQuery, init);
   const err = state.fieldErrors ?? {};
@@ -93,20 +98,20 @@ export function QuickQueryForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
           <Label htmlFor="full_name">Full name</Label>
-          <Input id="full_name" name="full_name" autoComplete="name" />
+          <Input id="full_name" name="full_name" autoComplete="name" defaultValue={initial?.full_name} />
           <FieldError message={err.full_name} />
         </div>
           <div>
             <Label htmlFor="email">Email</Label>
-            <EmailField error={err.email} required={false} />
+            <EmailField error={err.email} required={false} defaultValue={initial?.email} />
           </div>
           <div>
             <Label htmlFor="phone">Phone</Label>
-            <PhoneField error={err.phone} />
+            <PhoneField error={err.phone} defaultValue={initial?.phone} />
           </div>
           <div>
           <Label htmlFor="target_country">Target country</Label>
-          <CountryField error={err.target_country} />
+          <CountryField error={err.target_country} defaultCountryName={initial?.target_country} />
         </div>
           <div>
             <Label htmlFor="utm_source">Source</Label>
@@ -124,7 +129,7 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="passport_number">Passport number</Label>
-            <Input id="passport_number" name="passport_number" placeholder="Optional" />
+            <Input id="passport_number" name="passport_number" placeholder="Optional" defaultValue={initial?.passport_number} />
           </div>
           <div>
             <Label htmlFor="document">Document</Label>
@@ -143,11 +148,11 @@ export function QuickQueryForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="reference_name">Name</Label>
-              <Input id="reference_name" name="reference_name" placeholder="Who referred them" />
+              <Input id="reference_name" name="reference_name" placeholder="Who referred them" defaultValue={initial?.reference_name} />
             </div>
             <div>
               <Label htmlFor="reference_note">Note</Label>
-              <Input id="reference_note" name="reference_note" placeholder="Optional detail" />
+              <Input id="reference_note" name="reference_note" placeholder="Optional detail" defaultValue={initial?.reference_note} />
             </div>
           </div>
         )}
@@ -168,32 +173,32 @@ export function QuickQueryForm({
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <Label htmlFor="date_of_birth">Date of birth</Label>
-            <DobField error={err.date_of_birth} />
+            <DobField error={err.date_of_birth} defaultValue={initial?.date_of_birth} />
           </div>
           <div>
             <Label htmlFor="city">City</Label>
-            <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" />
+            <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" defaultValue={initial?.city} />
             <FieldError message={err.city} />
           </div>
           <div>
             <Label htmlFor="district">District</Label>
-            <Input id="district" name="district" placeholder="e.g. Lahore" />
+            <Input id="district" name="district" placeholder="e.g. Lahore" defaultValue={initial?.district} />
           </div>
             <div>
             <Label htmlFor="highest_education">Highest education level</Label>
-            <EducationField error={err.highest_education} />
+            <EducationField error={err.highest_education} defaultValue={initial?.highest_education} />
           </div>
           <div>
             <Label htmlFor="last_qualification">Last qualification / field</Label>
-            <Input id="last_qualification" name="last_qualification" placeholder="e.g. BSc Computer Science" />
+            <Input id="last_qualification" name="last_qualification" placeholder="e.g. BSc Computer Science" defaultValue={initial?.last_qualification} />
           </div>
           <div>
             <Label htmlFor="prior_institution">Institution / board attended</Label>
-            <Input id="prior_institution" name="prior_institution" placeholder="Where they last studied" />
+            <Input id="prior_institution" name="prior_institution" placeholder="Where they last studied" defaultValue={initial?.prior_institution} />
           </div>
           <div>
             <Label htmlFor="passing_year">Passing year</Label>
-            <Select id="passing_year" name="passing_year" defaultValue="">
+            <Select id="passing_year" name="passing_year" defaultValue={initial?.passing_year ? String(initial.passing_year) : ''}>
               <option value="">Select year</option>
               {PASSING_YEARS.map((y) => (
                 <option key={y} value={y}>{y}</option>
@@ -202,7 +207,7 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="grading_system">Grading system</Label>
-            <Select id="grading_system" name="grading_system" defaultValue="">
+            <Select id="grading_system" name="grading_system" defaultValue={initial?.grading_system ?? ''}>
               <option value="">Select grading system</option>
               {GRADING_SYSTEMS.map((x) => (
                 <option key={x.value} value={x.value}>{x.label}</option>
@@ -211,16 +216,16 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="grade_value">Result (CGPA / %)</Label>
-            <Input id="grade_value" name="grade_value" type="number" step="0.01" min="0" inputMode="decimal" placeholder="e.g. 3.5 or 85" />
+            <Input id="grade_value" name="grade_value" type="number" step="0.01" min="0" inputMode="decimal" placeholder="e.g. 3.5 or 85" defaultValue={initial?.grade_value != null ? String(initial.grade_value) : undefined} />
             <FieldError message={err.grade_value} />
           </div>
            <div>
             <Label htmlFor="work_experience_years">Work experience (years)</Label>
-            <Input id="work_experience_years" name="work_experience_years" type="number" min="0" max="60" inputMode="numeric" />
+            <Input id="work_experience_years" name="work_experience_years" type="number" min="0" max="60" inputMode="numeric" defaultValue={initial?.work_experience_years != null ? String(initial.work_experience_years) : undefined} />
           </div>
           <div>
             <Label htmlFor="work_experience_detail">Current / recent role</Label>
-            <Input id="work_experience_detail" name="work_experience_detail" placeholder="Optional" />
+            <Input id="work_experience_detail" name="work_experience_detail" placeholder="Optional" defaultValue={initial?.work_experience_detail} />
           </div>
         </div>
 
@@ -234,11 +239,11 @@ export function QuickQueryForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="institution">Preferred institution (abroad)</Label>
-            <Input id="institution" name="institution" placeholder="University or college" />
+            <Input id="institution" name="institution" placeholder="University or college" defaultValue={initial?.institution} />
           </div>
           <div>
             <Label htmlFor="funding_source">How will they fund their studies?</Label>
-            <Select id="funding_source" name="funding_source" defaultValue="">
+            <Select id="funding_source" name="funding_source" defaultValue={initial?.funding_source ?? ''}>
               <option value="">Select funding source</option>
               {FUNDING_SOURCES.map((f) => (
                 <option key={f.value} value={f.value}>{f.label}</option>
@@ -248,19 +253,19 @@ export function QuickQueryForm({
         </div>
         <div>
           <Label htmlFor="program_degree">Program of interest</Label>
-          <ProgramField />
+          <ProgramField defaultDegree={initialDegree} defaultField={initialField} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="intake_season">Intended intake</Label>
             <div className="grid grid-cols-2 gap-2">
-              <Select id="intake_season" name="intake_season" defaultValue="">
+              <Select id="intake_season" name="intake_season" defaultValue={initial?.intake_season ?? ''}>
                 <option value="">Season</option>
                 {INTAKE_SEASONS.map((x) => (
                   <option key={x.value} value={x.value}>{x.label}</option>
                 ))}
               </Select>
-              <Select name="intake_year" defaultValue="" aria-label="Intake year">
+              <Select name="intake_year" defaultValue={initial?.intake_year ? String(initial.intake_year) : ''} aria-label="Intake year">
                 <option value="">Year</option>
                 {INTAKE_YEARS.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -281,7 +286,7 @@ export function QuickQueryForm({
         {SCORED_TESTS.includes(englishTest) && (
           <div className="sm:max-w-[50%]">
             <Label htmlFor="english_score">Overall score</Label>
-            <Input id="english_score" name="english_score" type="number" step="0.5" min="0" inputMode="decimal" placeholder="e.g. IELTS 6.5, TOEFL 90" />
+            <Input id="english_score" name="english_score" type="number" step="0.5" min="0" inputMode="decimal" placeholder="e.g. IELTS 6.5, TOEFL 90" defaultValue={initial?.english_score != null ? String(initial.english_score) : undefined} />
           </div>
         )}
         <label className="flex items-center gap-3 text-sm">
@@ -291,7 +296,7 @@ export function QuickQueryForm({
         {priorRejection && (
           <div>
             <Label htmlFor="prior_rejection_detail">Briefly, what happened?</Label>
-            <Textarea id="prior_rejection_detail" name="prior_rejection_detail" rows={3} placeholder="Country, year, and reason if known." />
+            <Textarea id="prior_rejection_detail" name="prior_rejection_detail" rows={3} placeholder="Country, year, and reason if known." defaultValue={initial?.prior_rejection_detail} />
           </div>
         )}
       </section>

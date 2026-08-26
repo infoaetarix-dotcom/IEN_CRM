@@ -368,6 +368,128 @@ export async function toggleModule(
   return { ok: true };
 }
 
+const chatbotProviderSchema = z.enum(['openai_compatible', 'claude']);
+
+/**
+ * Turn the AI Assistant on for a consultancy and store its provider + API
+ * key in one step — the exact flow requested: checking the module and
+ * saving credentials happen together, not as two separate actions. Stores
+ * into chatbot_settings via the service role (that table has no RLS policy
+ * for `authenticated` at all — only this super-admin-gated path, and the
+ * server-only code that reads it to make the actual LLM call, ever touch
+ * it). The org's own admins never see or set this themselves.
+ *
+ * `provider` is a wire-format family, not a fixed vendor list: for
+ * 'openai_compatible', `baseUrl` + `model` point at whichever vendor suits
+ * that client (OpenAI, Grok, Gemini, DeepSeek, a self-hosted proxy — any
+ * vendor speaking the OpenAI chat-completions format). 'claude' is the one
+ * genuine outlier and ignores `baseUrl`.
+ *
+ * `apiKey` may be '' to mean "keep the key already on file" (the UI leaves
+ * the field blank when one is already stored and only the provider/model
+ * or the enabled flag changed) — that path requires a row to already exist.
+ */
+export async function saveChatbotConfig(
+  orgId: string,
+  provider: string,
+  baseUrl: string,
+  model: string,
+  apiKey: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const providerParsed = chatbotProviderSchema.safeParse(provider);
+  if (!providerParsed.success) return { ok: false, error: 'Choose a provider.' };
+
+  const trimmedModel = model.trim();
+  if (!trimmedModel) return { ok: false, error: 'Enter a model name.' };
+
+  let normalizedBaseUrl: string | null = null;
+  if (providerParsed.data === 'openai_compatible') {
+    const urlParsed = z.string().trim().url().safeParse(baseUrl);
+    if (!urlParsed.success) {
+      return { ok: false, error: 'Enter a valid base URL, e.g. https://api.openai.com/v1' };
+    }
+    normalizedBaseUrl = urlParsed.data;
+  }
+
+  const service = createServiceClient();
+  const trimmedKey = apiKey.trim();
+
+  if (trimmedKey) {
+    if (trimmedKey.length < 10) return { ok: false, error: 'That API key looks too short.' };
+    const { error: settingsErr } = await service.from('chatbot_settings').upsert(
+      {
+        organization_id: orgId,
+        provider: providerParsed.data,
+        base_url: normalizedBaseUrl,
+        model: trimmedModel,
+        api_key: trimmedKey,
+      },
+      { onConflict: 'organization_id' },
+    );
+    if (settingsErr) return { ok: false, error: 'Could not save the API key.' };
+  } else {
+    const { data: existing } = await service
+      .from('chatbot_settings')
+      .select('organization_id')
+      .eq('organization_id', orgId)
+      .maybeSingle();
+    if (!existing) return { ok: false, error: 'Enter an API key.' };
+    const { error: settingsErr } = await service
+      .from('chatbot_settings')
+      .update({ provider: providerParsed.data, base_url: normalizedBaseUrl, model: trimmedModel })
+      .eq('organization_id', orgId);
+    if (settingsErr) return { ok: false, error: 'Could not update the settings.' };
+  }
+
+  const { error: moduleErr } = await service.from('organization_modules').upsert(
+    { organization_id: orgId, module_key: 'chatbot', enabled: true },
+    { onConflict: 'organization_id,module_key' },
+  );
+  if (moduleErr) return { ok: false, error: 'Saved the key, but could not enable the module.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'module_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { module: 'chatbot', enabled: true, provider: providerParsed.data, model: trimmedModel },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+/**
+ * Switch the AI Assistant off. Deliberately leaves the chatbot_settings row
+ * (provider + key) in place so re-enabling later doesn't require re-entry —
+ * disabling is just the module flag, same as any other module.
+ */
+export async function disableChatbot(orgId: string): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const service = createServiceClient();
+
+  const { error } = await service.from('organization_modules').upsert(
+    { organization_id: orgId, module_key: 'chatbot', enabled: false },
+    { onConflict: 'organization_id,module_key' },
+  );
+  if (error) return { ok: false, error: 'Could not disable the module.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'module_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { module: 'chatbot', enabled: false },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
 /**
  * Send a staff member a password-reset link. Super-admin only — staff no
  * longer have self-service "forgot password" (README-noted security

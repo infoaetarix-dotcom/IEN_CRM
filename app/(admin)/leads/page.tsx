@@ -63,6 +63,14 @@ export default async function LeadsPage({
 
   const supabase = await createClient();
 
+  const { data: chatbotModule } = await supabase
+    .from('organization_modules')
+    .select('enabled')
+    .eq('organization_id', profile.organization_id)
+    .eq('module_key', 'chatbot')
+    .maybeSingle();
+  const aiEnabled = chatbotModule?.enabled === true;
+
   let query = supabase
     .from('leads')
     .select(
@@ -145,7 +153,7 @@ export default async function LeadsPage({
         subtitle={`${total} total · manage your applicant pipeline`}
         action={
           <div className="flex flex-wrap items-center gap-3">
-            <CreateQueryDialog consentName={brand.legalName} />
+            <CreateQueryDialog consentName={brand.legalName} aiEnabled={aiEnabled} />
             <a
               href={exportHref}
               className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent text-white px-3 text-sm hover:bg-tenant-accent/90"

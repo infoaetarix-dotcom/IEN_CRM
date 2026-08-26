@@ -10,6 +10,7 @@ export interface SettingsActionState {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
+  universityId?: string;
 }
 
 // Same shape as target_country elsewhere (lib/validation/lead.ts) — the
@@ -80,7 +81,31 @@ export async function createUniversity(
   });
 
   revalidatePath('/settings');
-  return { ok: true };
+  return { ok: true, universityId: uni.id };
+}
+
+/**
+ * Read-only name search — used by the AI assistant's find_university tool to
+ * check whether a named university already exists before deciding to create
+ * one. Nothing in the human UI needed this before (UniversityPicker is fed
+ * the full list directly), so this is new rather than a reuse.
+ */
+export async function findUniversityByName(
+  query: string,
+): Promise<Array<{ id: string; name: string; country: string }>> {
+  const profile = await requireUser();
+  const q = query.trim();
+  if (!q) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('universities')
+    .select('id, name, country')
+    .eq('organization_id', profile.organization_id)
+    .ilike('name', `%${q}%`)
+    .order('name')
+    .limit(10);
+  return data ?? [];
 }
 
 export async function updateUniversity(

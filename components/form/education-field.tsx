@@ -9,9 +9,16 @@ import { EDUCATION_OPTIONS } from '@/lib/form-options';
  * Highest education select. Choosing "Other" reveals a free-text box; the final
  * value (selected label or the typed text) goes into the hidden input.
  */
-export function EducationField({ error }: { error?: string }) {
-  const [choice, setChoice] = useState('');
-  const [custom, setCustom] = useState('');
+export function EducationField({
+  error,
+  defaultValue = '',
+}: {
+  error?: string;
+  defaultValue?: string;
+}) {
+  const isKnown = (EDUCATION_OPTIONS as readonly string[]).includes(defaultValue);
+  const [choice, setChoice] = useState(isKnown ? defaultValue : defaultValue ? 'Other' : '');
+  const [custom, setCustom] = useState(isKnown ? '' : defaultValue);
 
   const isOther = choice === 'Other';
   const value = isOther ? custom : choice;

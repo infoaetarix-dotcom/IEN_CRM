@@ -53,7 +53,14 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   const range = request.nextUrl.searchParams.get('range') ?? 'this_month';
-  const { from, to, label } = dateRangeFor(range);
+  const fromParam = request.nextUrl.searchParams.get('from');
+  const toParam = request.nextUrl.searchParams.get('to');
+  // Explicit from/to (e.g. the AI assistant's "statement for 1 May to 30
+  // May") overrides the preset range entirely rather than snapping to it.
+  const { from, to, label } =
+    fromParam && toParam
+      ? { from: fromParam, to: toParam, label: `${fromParam} – ${toParam}` }
+      : dateRangeFor(range);
 
   const { data: rawEntries } = await supabase
     .from('finance_entries')
