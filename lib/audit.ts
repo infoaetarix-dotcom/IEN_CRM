@@ -40,7 +40,11 @@ export type AuditAction =
   | 'lead_upload_link_regenerated'
   | 'university_created'
   | 'university_updated'
-  | 'university_deleted';
+  | 'university_deleted'
+  | 'email_signature_created'
+  | 'email_signature_updated'
+  | 'email_signature_deleted'
+  | 'email_signature_default_changed';
 
 export type AuditEntity =
   | 'lead'
@@ -51,7 +55,8 @@ export type AuditEntity =
   | 'student_finance_entry'
   | 'activity_entry'
   | 'application'
-  | 'university';
+  | 'university'
+  | 'email_signature';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action

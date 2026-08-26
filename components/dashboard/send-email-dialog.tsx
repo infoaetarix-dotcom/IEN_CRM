@@ -17,10 +17,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
 type Template = { key: string; name: string; subject: string; body: string };
+type Signature = { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null };
 type ActionResult = { ok: boolean; error?: string };
 type TemplateResult =
   | { ok: true; subject: string; body: string }
   | { ok: false; error: string };
+
+/** Personal default first, then the shared default, then nothing selected. */
+function defaultSignatureId(signatures: Signature[]): string {
+  const personal = signatures.find((s) => s.profile_id !== null && s.is_default);
+  if (personal) return personal.id;
+  const shared = signatures.find((s) => s.profile_id === null && s.is_default);
+  return shared?.id ?? '';
+}
 
 /**
  * "Email" trigger + popup, usable from any row (lead or application) that
@@ -35,18 +44,21 @@ export function SendEmailDialog({
   name,
   email,
   templates,
+  signatures,
   resolveTemplate,
   sendAction,
 }: {
   name: string;
   email: string | null;
   templates: Template[];
+  signatures: Signature[];
   resolveTemplate: (templateKey: string) => Promise<TemplateResult>;
   sendAction: (payload: {
     to: string;
     subject: string;
     body: string;
     templateKey: string | null;
+    signatureId: string | null;
   }) => Promise<ActionResult>;
 }) {
   const [open, setOpen] = useState(false);
@@ -54,16 +66,21 @@ export function SendEmailDialog({
   const [templateKey, setTemplateKey] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [signatureId, setSignatureId] = useState(() => defaultSignatureId(signatures));
   const [resolving, startResolve] = useTransition();
   const [sending, startSend] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  const personalSignatures = signatures.filter((s) => s.profile_id !== null);
+  const sharedSignatures = signatures.filter((s) => s.profile_id === null);
 
   function reset() {
     setTo(email ?? '');
     setTemplateKey('');
     setSubject('');
     setBody('');
+    setSignatureId(defaultSignatureId(signatures));
     setError(null);
     setSent(false);
   }
@@ -92,6 +109,7 @@ export function SendEmailDialog({
         subject: subject.trim(),
         body: body.trim(),
         templateKey: templateKey || null,
+        signatureId: signatureId || null,
       });
       if (!res.ok) setError(res.error ?? 'Could not send email.');
       else setSent(true);
@@ -180,6 +198,35 @@ export function SendEmailDialog({
               className="mt-1.5"
             />
           </div>
+
+          {signatures.length > 0 && (
+            <div>
+              <Label htmlFor="send-email-signature">Signature</Label>
+              <Select
+                id="send-email-signature"
+                value={signatureId}
+                disabled={busy}
+                onChange={(e) => setSignatureId(e.target.value)}
+                className="mt-1.5"
+              >
+                <option value="">No signature</option>
+                {personalSignatures.length > 0 && (
+                  <optgroup label="Your signatures">
+                    {personalSignatures.map((s) => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {sharedSignatures.length > 0 && (
+                  <optgroup label="Shared">
+                    {sharedSignatures.map((s) => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </Select>
+            </div>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
           {sent && !error && <p className="text-sm text-emerald-700">Email sent.</p>}

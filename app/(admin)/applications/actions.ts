@@ -14,6 +14,7 @@ import {
 } from '@/lib/validation/application';
 import type { ApplicationFormValues } from '@/lib/applications/types';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
+import { getSignatureForSend } from '@/lib/email/signatures';
 import { leadToApplicationDefaults, UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
 import { notifyOrgStaff } from '@/lib/notifications/create';
 
@@ -352,7 +353,13 @@ export async function getRenderedApplicationTemplate(
  */
 export async function sendCustomApplicationEmail(
   applicationId: string,
-  payload: { to: string; subject: string; body: string; templateKey: string | null },
+  payload: {
+    to: string;
+    subject: string;
+    body: string;
+    templateKey: string | null;
+    signatureId?: string | null;
+  },
 ): Promise<ActionState> {
   const user = await requireUser();
   const to = payload.to.trim();
@@ -368,6 +375,12 @@ export async function sendCustomApplicationEmail(
     .single();
   if (!app) return { ok: false, error: 'Application not found or access denied.' };
 
+  // Re-resolved server-side, never trusted directly from the client — see
+  // getSignatureForSend's doc comment for why.
+  const signature = payload.signatureId
+    ? await getSignatureForSend(app.organization_id, user.id, payload.signatureId)
+    : null;
+
   const res = await sendEmail({
     leadId: app.lead_id,
     organizationId: app.organization_id,
@@ -377,6 +390,8 @@ export async function sendCustomApplicationEmail(
     body: payload.body,
     templateKey: payload.templateKey,
     sentBy: user.id,
+    signatureId: signature?.id ?? null,
+    signatureHtml: signature?.body_html ?? null,
   });
 
   await writeAuditLog({

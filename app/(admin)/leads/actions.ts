@@ -9,6 +9,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { isLeadStatus, LEAD_SOURCES } from '@/lib/leads/display';
 import { leadEditSchema, quickLeadSchema } from '@/lib/validation/lead';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
+import { getDefaultSharedSignature, getSignatureForSend } from '@/lib/email/signatures';
 import { notifyOrgStaff } from '@/lib/notifications/create';
 import { DOCUMENT_MAX_BYTES, DOCUMENT_TYPES } from '@/lib/validation/application';
 import { UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
@@ -134,6 +135,10 @@ export async function createQuery(
           program: lead.program,
           target_country: lead.target_country,
         };
+        // Automated template send (same as the public apply wizard's own
+        // welcome email), not a staff member composing something — uses
+        // the org's default shared signature rather than a personal one.
+        const signature = await getDefaultSharedSignature(lead.organization_id);
         await sendEmail({
           leadId: lead.id,
           organizationId: lead.organization_id,
@@ -143,6 +148,8 @@ export async function createQuery(
           body: renderTemplate(tpl.body, vars),
           templateKey: 'welcome',
           sentBy: user.id,
+          signatureId: signature?.id ?? null,
+          signatureHtml: signature?.body_html ?? null,
         });
       }
     } catch (err) {
@@ -266,6 +273,7 @@ export async function addNote(
 export async function sendLeadEmail(
   leadId: string,
   templateKey: string,
+  signatureId: string | null,
 ): Promise<ActionResult> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -292,6 +300,12 @@ export async function sendLeadEmail(
     institution: lead.institution,
   };
 
+  // Re-resolved server-side, never trusted directly from the client — see
+  // getSignatureForSend's doc comment for why.
+  const signature = signatureId
+    ? await getSignatureForSend(lead.organization_id, user.id, signatureId)
+    : null;
+
   const res = await sendEmail({
     leadId: lead.id,
     organizationId: lead.organization_id,
@@ -301,6 +315,8 @@ export async function sendLeadEmail(
     body: renderTemplate(tpl.body, vars),
     templateKey,
     sentBy: user.id,
+    signatureId: signature?.id ?? null,
+    signatureHtml: signature?.body_html ?? null,
   });
 
   await writeAuditLog({
@@ -365,7 +381,13 @@ export async function getRenderedLeadTemplate(
  */
 export async function sendCustomLeadEmail(
   leadId: string,
-  payload: { to: string; subject: string; body: string; templateKey: string | null },
+  payload: {
+    to: string;
+    subject: string;
+    body: string;
+    templateKey: string | null;
+    signatureId?: string | null;
+  },
 ): Promise<ActionResult> {
   const user = await requireUser();
   const to = payload.to.trim();
@@ -381,6 +403,12 @@ export async function sendCustomLeadEmail(
     .single();
   if (!lead) return { ok: false, error: 'Lead not found or access denied.' };
 
+  // Re-resolved server-side, never trusted directly from the client — see
+  // getSignatureForSend's doc comment for why.
+  const signature = payload.signatureId
+    ? await getSignatureForSend(lead.organization_id, user.id, payload.signatureId)
+    : null;
+
   const res = await sendEmail({
     leadId: lead.id,
     organizationId: lead.organization_id,
@@ -390,6 +418,8 @@ export async function sendCustomLeadEmail(
     body: payload.body,
     templateKey: payload.templateKey,
     sentBy: user.id,
+    signatureId: signature?.id ?? null,
+    signatureHtml: signature?.body_html ?? null,
   });
 
   await writeAuditLog({

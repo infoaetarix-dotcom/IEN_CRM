@@ -83,18 +83,33 @@ export function NoteComposer({ leadId }: { leadId: string }) {
   );
 }
 
+type Signature = { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null };
+
+/** Personal default first, then the shared default, then nothing selected. */
+function defaultSignatureId(signatures: Signature[]): string {
+  const personal = signatures.find((s) => s.profile_id !== null && s.is_default);
+  if (personal) return personal.id;
+  const shared = signatures.find((s) => s.profile_id === null && s.is_default);
+  return shared?.id ?? '';
+}
+
 export function EmailPanel({
   leadId,
   templates,
+  signatures = [],
 }: {
   leadId: string;
   templates: { key: string; name: string; subject: string; body: string }[];
+  signatures?: Signature[];
   leadVars?: Record<string, string | null>;
 }) {
   const { pending, error, run } = useAction();
   const [key, setKey] = useState(templates[0]?.key ?? '');
+  const [signatureId, setSignatureId] = useState(() => defaultSignatureId(signatures));
   const [sent, setSent] = useState(false);
   const selected = templates.find((t) => t.key === key);
+  const personalSignatures = signatures.filter((s) => s.profile_id !== null);
+  const sharedSignatures = signatures.filter((s) => s.profile_id === null);
 
   return (
     <div className="space-y-3">
@@ -112,6 +127,30 @@ export function EmailPanel({
           </option>
         ))}
       </Select>
+
+      {signatures.length > 0 && (
+        <Select
+          value={signatureId}
+          disabled={pending}
+          onChange={(e) => setSignatureId(e.target.value)}
+        >
+          <option value="">No signature</option>
+          {personalSignatures.length > 0 && (
+            <optgroup label="Your signatures">
+              {personalSignatures.map((s) => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </optgroup>
+          )}
+          {sharedSignatures.length > 0 && (
+            <optgroup label="Shared">
+              {sharedSignatures.map((s) => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </optgroup>
+          )}
+        </Select>
+      )}
 
       {selected && (
         <div className="rounded-md border border-tenant-ink/10 bg-tenant-gray p-3 text-sm">
@@ -136,7 +175,7 @@ export function EmailPanel({
         disabled={pending || !key}
         onClick={() =>
           run(async () => {
-            const res = await sendLeadEmail(leadId, key);
+            const res = await sendLeadEmail(leadId, key, signatureId || null);
             if (res.ok) setSent(true);
             return res;
           })

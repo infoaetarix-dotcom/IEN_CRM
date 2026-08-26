@@ -27,6 +27,7 @@ import {
   type LeadSource,
 } from '@/lib/leads/display';
 import { applyLeadFilters } from '@/lib/leads/filters';
+import { getSignaturesForSender } from '@/lib/email/signatures';
 
 export const metadata = { title: 'Leads' };
 
@@ -94,7 +95,7 @@ export default async function LeadsPage({
   // org's email templates (for the row-level Email popup), and the org's
   // portal_domain (for building the document upload link) don't depend on
   // each other, so they're fired together.
-  const [brand, { data: leads, count }, { data: profiles }, { data: templates }, { data: org }] =
+  const [brand, { data: leads, count }, { data: profiles }, { data: templates }, { data: org }, signatures] =
     await Promise.all([
       getOrgBrand(profile.organization_id),
       query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
@@ -109,6 +110,7 @@ export default async function LeadsPage({
         .select('portal_domain')
         .eq('id', profile.organization_id)
         .single(),
+      getSignaturesForSender(profile.organization_id!, profile.id),
     ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   // Same "portal domain if configured, else the base app domain" fallback
@@ -265,6 +267,7 @@ export default async function LeadsPage({
                       email={l.email}
                       phone={l.phone}
                       templates={templates ?? []}
+                      signatures={signatures}
                       uploadUrl={`${uploadBaseUrl}/upload/lead/${l.document_upload_token}`}
                       uploadExpired={new Date(l.document_upload_expires_at) < new Date()}
                     />
