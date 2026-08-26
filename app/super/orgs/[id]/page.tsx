@@ -19,6 +19,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { SuspendToggle, ModuleToggle, ThemeSelect } from '@/components/super/org-controls';
+import { ChatbotConfig } from '@/components/super/chatbot-config';
 import { OrgBranding } from '@/components/super/org-branding';
 import { OrgDomains } from '@/components/super/org-domains';
 import { OrgActivity } from '@/components/super/org-activity';
@@ -84,6 +85,19 @@ export default async function OrgDetail({
     .order('activity_date', { ascending: false })
     .order('created_at', { ascending: false });
 
+  // chatbot_settings has no RLS policy for `authenticated` at all — only
+  // ever read via the service role, and only ever from a super-admin-gated
+  // page like this one. The raw key never leaves this query — only its
+  // provider and last 4 characters (for a masked placeholder) go to the client.
+  const { data: chatbotSettings } = await service
+    .from('chatbot_settings')
+    .select('provider, api_key, base_url, model')
+    .eq('organization_id', id)
+    .maybeSingle();
+  const chatbotMaskedKey = chatbotSettings?.api_key
+    ? chatbotSettings.api_key.slice(-4)
+    : null;
+
   return (
     <div className="space-y-6">
       <Link
@@ -147,15 +161,30 @@ export default async function OrgDetail({
           <CardTitle className="font-display">Package — modules</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2">
-          {(modules ?? []).map((m) => (
-            <ModuleToggle
-              key={m.key}
-              orgId={org.id}
-              moduleKey={m.key}
-              moduleName={m.name}
-              enabled={enabled.get(m.key) === true}
-            />
-          ))}
+          {(modules ?? []).map((m) =>
+            m.key === 'chatbot' ? (
+              <ChatbotConfig
+                key={m.key}
+                orgId={org.id}
+                moduleName={m.name}
+                enabled={enabled.get(m.key) === true}
+                currentProvider={
+                  (chatbotSettings?.provider as 'openai_compatible' | 'claude' | undefined) ?? null
+                }
+                currentBaseUrl={chatbotSettings?.base_url ?? null}
+                currentModel={chatbotSettings?.model ?? null}
+                maskedKey={chatbotMaskedKey}
+              />
+            ) : (
+              <ModuleToggle
+                key={m.key}
+                orgId={org.id}
+                moduleKey={m.key}
+                moduleName={m.name}
+                enabled={enabled.get(m.key) === true}
+              />
+            ),
+          )}
         </CardContent>
       </Card>
 

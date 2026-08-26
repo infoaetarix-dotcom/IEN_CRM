@@ -16,8 +16,12 @@ import { cn } from '@/lib/utils';
  * dropdowns (so users can jump back decades quickly). Writes YYYY-MM-DD into a
  * hidden input the form action reads.
  */
-export function DobField({ error }: { error?: string }) {
-  const [date, setDate] = useState<Date | undefined>();
+export function DobField({ error, defaultValue }: { error?: string; defaultValue?: string }) {
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (!defaultValue) return undefined;
+    const d = new Date(defaultValue);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  });
   const [open, setOpen] = useState(false);
 
   const now = new Date();
