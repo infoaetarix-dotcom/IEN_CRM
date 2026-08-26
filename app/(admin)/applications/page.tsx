@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import { ApplicationRowActions } from '@/components/dashboard/applications/application-controls';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_BADGE, type ApplicationStatus } from '@/lib/leads/display';
+import { getSignaturesForSender } from '@/lib/email/signatures';
 
 export const metadata = { title: 'Applications' };
 
@@ -30,7 +31,7 @@ export default async function ApplicationsPage() {
   // row-level Email popup), and the org's portal_domain (for building the
   // student upload link) don't depend on each other, so they're fired
   // together.
-  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }, { data: profiles }] =
+  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }, { data: profiles }, signatures] =
     await Promise.all([
       supabase
         .from('applications')
@@ -53,6 +54,7 @@ export default async function ApplicationsPage() {
         .eq('id', profile.organization_id)
         .single(),
       supabase.from('profiles').select('id, full_name'),
+      getSignaturesForSender(profile.organization_id!, profile.id),
     ]);
 
   // Same "portal domain if configured, else the base app domain" fallback
@@ -130,6 +132,7 @@ export default async function ApplicationsPage() {
                         email={a.email}
                         phone={a.phone}
                         templates={templates ?? []}
+                        signatures={signatures}
                         uploadUrl={`${uploadBaseUrl}/upload/${a.document_upload_token}`}
                         uploadExpired={new Date(a.document_upload_expires_at) < new Date()}
                       />

@@ -5,12 +5,20 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
+import { sanitizeSignatureHtml } from '@/lib/email/signatures';
 
 export interface SettingsActionState {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
   universityId?: string;
+}
+
+export interface SignatureActionState {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+  signatureId?: string;
 }
 
 // Same shape as target_country elsewhere (lib/validation/lead.ts) — the
@@ -162,6 +170,189 @@ export async function deleteUniversity(universityId: string): Promise<SettingsAc
     action: 'university_deleted',
     entity: 'university',
     entityId: universityId,
+  });
+
+  revalidatePath('/settings');
+  return { ok: true };
+}
+
+const signatureSchema = z.object({
+  title: z.string().trim().min(1, 'Enter a title').max(100),
+  body_html: z
+    .string()
+    .trim()
+    .min(1, 'Signature cannot be empty')
+    .refine((html) => html.replace(/<[^>]*>/g, '').trim().length > 0, 'Signature cannot be empty'),
+});
+
+/**
+ * Create/update/delete an email signature and change which one is default.
+ * Any active admin or agent may create/edit/delete EITHER a personal
+ * signature (profile_id = themselves) or a shared "Common" one (profile_id
+ * null) — shared-data model, same as universities above. RLS
+ * (email_signatures_all) is the backstop.
+ */
+export async function createEmailSignature(
+  _prev: SignatureActionState,
+  formData: FormData,
+): Promise<SignatureActionState> {
+  const profile = await requireUser();
+
+  const kindParsed = z.enum(['personal', 'shared']).safeParse(g(formData, 'kind'));
+  if (!kindParsed.success) return { ok: false, error: 'Choose personal or shared.' };
+
+  const parsed = signatureSchema.safeParse({
+    title: g(formData, 'title'),
+    body_html: g(formData, 'body_html'),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'Please correct the highlighted fields.',
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  }
+
+  const isShared = kindParsed.data === 'shared';
+  const supabase = await createClient();
+
+  // The first signature in this group (this person's own, or the org's
+  // shared pool) automatically becomes the default — see 0037's partial
+  // unique indexes for the invariant this relies on.
+  let countQuery = supabase
+    .from('email_signatures')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', profile.organization_id);
+  countQuery = isShared ? countQuery.is('profile_id', null) : countQuery.eq('profile_id', profile.id);
+  const { count } = await countQuery;
+
+  const { data: sig, error } = await supabase
+    .from('email_signatures')
+    .insert({
+      organization_id: profile.organization_id,
+      profile_id: isShared ? null : profile.id,
+      title: parsed.data.title,
+      body_html: sanitizeSignatureHtml(parsed.data.body_html),
+      is_default: (count ?? 0) === 0,
+      created_by: profile.id,
+    })
+    .select('id')
+    .single();
+  if (error || !sig) return { ok: false, error: 'Could not save this signature.' };
+
+  await writeAuditLog({
+    actorId: profile.id,
+    organizationId: profile.organization_id,
+    action: 'email_signature_created',
+    entity: 'email_signature',
+    entityId: sig.id,
+    metadata: { title: parsed.data.title, shared: isShared },
+  });
+
+  revalidatePath('/settings');
+  return { ok: true, signatureId: sig.id };
+}
+
+export async function updateEmailSignature(
+  signatureId: string,
+  _prev: SignatureActionState,
+  formData: FormData,
+): Promise<SignatureActionState> {
+  const profile = await requireUser();
+
+  const parsed = signatureSchema.safeParse({
+    title: g(formData, 'title'),
+    body_html: g(formData, 'body_html'),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'Please correct the highlighted fields.',
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('email_signatures')
+    .update({ title: parsed.data.title, body_html: sanitizeSignatureHtml(parsed.data.body_html) })
+    .eq('id', signatureId);
+  if (error) return { ok: false, error: 'Could not update this signature.' };
+
+  await writeAuditLog({
+    actorId: profile.id,
+    organizationId: profile.organization_id,
+    action: 'email_signature_updated',
+    entity: 'email_signature',
+    entityId: signatureId,
+    metadata: { title: parsed.data.title },
+  });
+
+  revalidatePath('/settings');
+  return { ok: true };
+}
+
+export async function deleteEmailSignature(signatureId: string): Promise<SignatureActionState> {
+  const profile = await requireUser();
+
+  const { error } = await (await createClient())
+    .from('email_signatures')
+    .delete()
+    .eq('id', signatureId);
+  if (error) return { ok: false, error: 'Could not delete this signature.' };
+
+  await writeAuditLog({
+    actorId: profile.id,
+    organizationId: profile.organization_id,
+    action: 'email_signature_deleted',
+    entity: 'email_signature',
+    entityId: signatureId,
+  });
+
+  revalidatePath('/settings');
+  return { ok: true };
+}
+
+/**
+ * Switches which signature is default within its own group (personal for
+ * whoever owns it, or the org's shared pool) — two sequential updates
+ * rather than one, since the partial unique indexes in 0037 are checked
+ * per-statement: unset the current default first, then set the new one.
+ */
+export async function setDefaultSignature(signatureId: string): Promise<SignatureActionState> {
+  const profile = await requireUser();
+  const supabase = await createClient();
+
+  const { data: target } = await supabase
+    .from('email_signatures')
+    .select('id, profile_id, organization_id')
+    .eq('id', signatureId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: 'Signature not found or access denied.' };
+
+  let unsetQuery = supabase
+    .from('email_signatures')
+    .update({ is_default: false })
+    .eq('organization_id', target.organization_id)
+    .eq('is_default', true);
+  unsetQuery = target.profile_id
+    ? unsetQuery.eq('profile_id', target.profile_id)
+    : unsetQuery.is('profile_id', null);
+  const { error: unsetErr } = await unsetQuery;
+  if (unsetErr) return { ok: false, error: 'Could not update the default signature.' };
+
+  const { error: setErr } = await supabase
+    .from('email_signatures')
+    .update({ is_default: true })
+    .eq('id', signatureId);
+  if (setErr) return { ok: false, error: 'Could not update the default signature.' };
+
+  await writeAuditLog({
+    actorId: profile.id,
+    organizationId: profile.organization_id,
+    action: 'email_signature_default_changed',
+    entity: 'email_signature',
+    entityId: signatureId,
   });
 
   revalidatePath('/settings');

@@ -11,6 +11,7 @@ import { verifyTurnstile } from '@/lib/security/turnstile';
 import { rateLimit, clientIp } from '@/lib/security/rate-limit';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
+import { getDefaultSharedSignature } from '@/lib/email/signatures';
 import { writeAuditLog } from '@/lib/audit';
 import { notifyOrgStaff } from '@/lib/notifications/create';
 
@@ -291,6 +292,7 @@ export async function completeLead(
         program: lead.program,
         target_country: lead.target_country,
       };
+      const signature = await getDefaultSharedSignature(lead.organization_id);
       await sendEmail({
         leadId: lead.id,
         organizationId: lead.organization_id,
@@ -300,6 +302,8 @@ export async function completeLead(
         body: renderTemplate(tpl.body, vars),
         templateKey: 'welcome',
         sentBy: null,
+        signatureId: signature?.id ?? null,
+        signatureHtml: signature?.body_html ?? null,
       });
     }
   } catch (err) {

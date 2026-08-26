@@ -44,6 +44,14 @@ export interface TransactionalEmail {
    * caller has no org context to give one.
    */
   senderName?: string | null;
+  /**
+   * Trusted, already-vetted signature HTML (see lib/email/signatures.ts) —
+   * appended UNESCAPED after the escaped body. Never populate this from raw
+   * client input: `body` is always plain text and safe to escape wholesale,
+   * but signatureHtml is rich markup that would be mangled (`<b>` rendered
+   * as literal text) by the same escaping.
+   */
+  signatureHtml?: string | null;
 }
 
 /**
@@ -81,7 +89,9 @@ export async function sendTransactionalEmail(
         subject: params.subject,
         htmlContent: `<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#0B1F33">${escapeHtml(
           params.body,
-        ).replace(/\n/g, '<br/>')}</div>`,
+        ).replace(/\n/g, '<br/>')}${
+          params.signatureHtml ? `<div style="margin-top:20px">${params.signatureHtml}</div>` : ''
+        }</div>`,
       }),
     });
 
@@ -109,6 +119,9 @@ interface SendParams {
   templateKey?: string | null;
   /** acting staff user id; null = system (auto confirmation) */
   sentBy: string | null;
+  /** The signature row this send used, if any — for the messages audit trail. */
+  signatureId?: string | null;
+  signatureHtml?: string | null;
 }
 
 interface SendResult {
@@ -145,6 +158,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
       body: params.body,
       status: 'queued',
       sent_by: params.sentBy,
+      signature_id: params.signatureId ?? null,
     })
     .select('id')
     .single();
@@ -160,6 +174,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
     subject: params.subject,
     body: params.body,
     senderName,
+    signatureHtml: params.signatureHtml,
   });
 
   if (!res.ok) {

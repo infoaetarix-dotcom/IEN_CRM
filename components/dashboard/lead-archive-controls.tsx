@@ -131,6 +131,7 @@ export function LeadRowActions({
   email,
   phone,
   templates,
+  signatures,
   uploadUrl,
   uploadExpired,
 }: {
@@ -139,6 +140,7 @@ export function LeadRowActions({
   email: string | null;
   phone: string | null;
   templates: { key: string; name: string; subject: string; body: string }[];
+  signatures: { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null }[];
   uploadUrl: string;
   uploadExpired: boolean;
 }) {
@@ -162,6 +164,7 @@ export function LeadRowActions({
         name={fullName}
         email={email}
         templates={templates}
+        signatures={signatures}
         resolveTemplate={(templateKey) => getRenderedLeadTemplate(leadId, templateKey)}
         sendAction={(payload) => sendCustomLeadEmail(leadId, payload)}
       />

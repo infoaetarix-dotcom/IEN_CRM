@@ -4,6 +4,7 @@ import { ArrowLeft, Plus } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { ageFromDob } from '@/lib/utils';
+import { getSignaturesForSender } from '@/lib/email/signatures';
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -84,6 +85,7 @@ export default async function LeadDetailPage({
     universitiesRes,
     documentsRes,
     orgRes,
+    signatures,
   ] = await Promise.all([
     supabase.from('leads').select('*').eq('id', id).single(),
     supabase
@@ -126,6 +128,7 @@ export default async function LeadDetailPage({
       .select('portal_domain')
       .eq('id', profile.organization_id)
       .single(),
+    getSignaturesForSender(profile.organization_id!, profile.id),
   ]);
 
   const lead = leadRes.data;
@@ -478,6 +481,7 @@ export default async function LeadDetailPage({
                 <EmailPanel
                   leadId={lead.id}
                   templates={templatesRes.data ?? []}
+                  signatures={signatures}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">

@@ -29,6 +29,7 @@ export function ApplicationRowActions({
   email,
   phone,
   templates,
+  signatures,
   uploadUrl,
   uploadExpired,
 }: {
@@ -37,6 +38,7 @@ export function ApplicationRowActions({
   email: string | null;
   phone: string | null;
   templates: { key: string; name: string; subject: string; body: string }[];
+  signatures: { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null }[];
   uploadUrl: string;
   uploadExpired: boolean;
 }) {
@@ -62,6 +64,7 @@ export function ApplicationRowActions({
         name={fullName}
         email={email}
         templates={templates}
+        signatures={signatures}
         resolveTemplate={(templateKey) => getRenderedApplicationTemplate(applicationId, templateKey)}
         sendAction={(payload) => sendCustomApplicationEmail(applicationId, payload)}
       />
