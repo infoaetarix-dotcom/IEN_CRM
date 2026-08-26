@@ -342,6 +342,54 @@ export async function setOrgDomains(
   return { ok: true };
 }
 
+const senderEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, 'Email is too long')
+  .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+    message: 'Enter a valid sender email, e.g. info@yourdomain.com',
+  });
+
+/**
+ * Set (or clear) a consultancy's own outbound sender email — the Brevo
+ * "From" address used for every email this org sends (lead mail, staff
+ * notifications, password resets). Super-admin only. The address itself
+ * must ALSO be domain-verified in Brevo (SPF/DKIM) outside this app, or
+ * Brevo will reject sends from it — this action only stores the value.
+ * Pass '' to clear back to the shared platform default
+ * (process.env.BREVO_SENDER_EMAIL).
+ */
+export async function setOrgSenderEmail(
+  orgId: string,
+  senderEmail: string,
+): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+
+  const parsed = senderEmailSchema.safeParse(senderEmail);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+  const sender_email = parsed.data || null;
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from('organizations')
+    .update({ sender_email })
+    .eq('id', orgId);
+  if (error) return { ok: false, error: 'Could not save the sender email.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { sender_email },
+  });
+
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
 /** Enable or disable a module for a consultancy (packaging). */
 export async function toggleModule(
   orgId: string,
@@ -512,11 +560,11 @@ export async function sendPasswordReset(
   const email = userRes.user.email;
   const name = (userRes.user.user_metadata?.full_name as string | undefined) ?? '';
 
-  // The requesting org's own name — this email must never look like it came
-  // from a different (or default) tenant.
+  // The requesting org's own name and sender address — this email must
+  // never look like it came from a different (or default) tenant.
   const { data: orgRow } = await service
     .from('organizations')
-    .select('name, legal_name')
+    .select('name, legal_name, sender_email')
     .eq('id', orgId)
     .single();
   const orgName = orgRow ? brandFromOrg(orgRow).legalName : 'your organization';
@@ -543,6 +591,7 @@ export async function sendPasswordReset(
       toName: name || undefined,
       subject: `Reset your ${orgName} CRM password`,
       senderName: orgRow ? orgName : undefined,
+      senderEmail: orgRow?.sender_email,
       body: `${name ? `Hi ${name.split(' ')[0]},` : 'Hello,'}
 
 An administrator has started a password reset for your ${orgName} CRM account.
