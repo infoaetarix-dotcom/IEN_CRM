@@ -11,6 +11,7 @@ import { AETARIX, initialsFrom } from '@/lib/branding';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { AccountMenu } from '@/components/dashboard/account-menu';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
+import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { FloatingChatButton } from '@/components/dashboard/chatbot/floating-button';
 
 /**
@@ -116,6 +117,7 @@ export default async function AdminLayout({
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <RefreshButton />
           <NotificationsBell profileId={profile.id} initialNotifications={notifications ?? []} />
           <AccountMenu
             fullName={profile.full_name}
