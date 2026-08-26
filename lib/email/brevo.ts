@@ -52,8 +52,6 @@ export interface TransactionalEmail {
    * as literal text) by the same escaping.
    */
   signatureHtml?: string | null;
-  /** The org's own logo (public org-logos bucket URL) — shown above the body. Omitted entirely if the org has none, never a broken image. */
-  logoUrl?: string | null;
 }
 
 /**
@@ -89,11 +87,7 @@ export async function sendTransactionalEmail(
         sender: { email: senderEmail, name: senderName },
         to: [{ email: params.to, name: params.toName ?? undefined }],
         subject: params.subject,
-        htmlContent: `<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#0B1F33">${
-          params.logoUrl
-            ? `<img src="${escapeHtml(params.logoUrl)}" alt="${escapeHtml(senderName)}" style="max-height:48px;margin-bottom:20px;display:block" />`
-            : ''
-        }${escapeHtml(
+        htmlContent: `<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#0B1F33">${escapeHtml(
           params.body,
         ).replace(/\n/g, '<br/>')}${
           params.signatureHtml ? `<div style="margin-top:20px">${params.signatureHtml}</div>` : ''
@@ -144,14 +138,13 @@ interface SendResult {
 export async function sendEmail(params: SendParams): Promise<SendResult> {
   const supabase = createServiceClient();
 
-  // The sending org's own name and logo — never a different (or default) tenant's.
+  // The sending org's own name — never a different (or default) tenant's.
   const { data: org } = await supabase
     .from('organizations')
-    .select('name, legal_name, logo_url')
+    .select('name, legal_name')
     .eq('id', params.organizationId)
     .single();
-  const brand = org ? brandFromOrg(org) : null;
-  const senderName = brand?.legalName;
+  const senderName = org ? brandFromOrg(org).legalName : undefined;
 
   // 1. Log as queued first so nothing is ever sent without a record.
   const { data: msg, error: logErr } = await supabase
@@ -182,7 +175,6 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
     body: params.body,
     senderName,
     signatureHtml: params.signatureHtml,
-    logoUrl: brand?.logoUrl,
   });
 
   if (!res.ok) {
