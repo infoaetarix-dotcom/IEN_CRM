@@ -83,6 +83,7 @@ export const LEAD_SOURCES = [
   'website',
   'personal_reference',
   'old_student_reference',
+  'agent_partner_reference',
   'direct',
   'other',
 ] as const;
@@ -98,17 +99,22 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   website: 'Website',
   personal_reference: 'Personal reference',
   old_student_reference: 'Old student reference',
+  agent_partner_reference: 'Agent/Partner reference',
   direct: 'Direct',
   other: 'Other',
 };
 
 /**
- * The two staff-only sources that ask for who referred the lead — picking
- * either one in the Create query dialog or the lead editor reveals the
+ * The staff-only sources that ask for who referred the lead — picking any
+ * of these in the Create query dialog or the lead editor reveals the
  * persistent Name + Note fields (leads.reference_name/reference_note, see
  * 0032_lead_reference_and_passport.sql).
  */
-export const REFERENCE_SOURCES = ['personal_reference', 'old_student_reference'] as const;
+export const REFERENCE_SOURCES = [
+  'personal_reference',
+  'old_student_reference',
+  'agent_partner_reference',
+] as const;
 
 export function isReferenceSource(v: string): boolean {
   return (REFERENCE_SOURCES as readonly string[]).includes(v);

@@ -131,17 +131,6 @@ export function QuickQueryForm({
             <Label htmlFor="passport_number">Passport number</Label>
             <Input id="passport_number" name="passport_number" placeholder="Optional" defaultValue={initial?.passport_number} />
           </div>
-          <div>
-            <Label htmlFor="document">Document</Label>
-            <input
-              type="file"
-              id="document"
-              accept="application/pdf,image/png,image/jpeg"
-              className="block w-full text-sm text-tenant-ink file:mr-3 file:rounded-md file:border-0 file:bg-tenant-gray file:px-3 file:py-1.5 file:text-sm"
-              onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">PDF, PNG, or JPG — up to 10MB. Optional.</p>
-          </div>
         </div>
 
         {isReferenceSource(source) && (
@@ -299,6 +288,23 @@ export function QuickQueryForm({
             <Textarea id="prior_rejection_detail" name="prior_rejection_detail" rows={3} placeholder="Country, year, and reason if known." defaultValue={initial?.prior_rejection_detail} />
           </div>
         )}
+      </section>
+
+      <section className="space-y-4 rounded-xl border border-tenant-ink/10 bg-white p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
+          Document
+        </p>
+        <div>
+          <Label htmlFor="document">Document</Label>
+          <input
+            type="file"
+            id="document"
+            accept="application/pdf,image/png,image/jpeg"
+            className="block w-full text-sm text-tenant-ink file:mr-3 file:rounded-md file:border-0 file:bg-tenant-gray file:px-3 file:py-1.5 file:text-sm"
+            onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">PDF, PNG, or JPG — up to 10MB. Optional.</p>
+        </div>
       </section>
 
       <div className="flex gap-3">
