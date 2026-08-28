@@ -181,6 +181,47 @@ export function LeadForm({
   const [englishTest, setEnglishTest] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
 
+  // Every plain text/select/textarea field below is deliberately controlled
+  // (rather than left to the browser's native uncontrolled defaultValue).
+  // React's form Actions reset uncontrolled fields once a step's action
+  // settles — including on a validation error — which otherwise silently
+  // blanks whatever the applicant typed the moment the server rejects just
+  // one field. Controlled state survives that reset.
+  const [fullName, setFullName] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [v2, setV2] = useState({
+    city: '',
+    district: '',
+    last_qualification: '',
+    prior_institution: '',
+    passing_year: '',
+    grading_system: '',
+    grade_value: '',
+    work_experience_years: '',
+    work_experience_detail: '',
+  });
+  const [v3, setV3] = useState({
+    institution: '',
+    funding_source: '',
+    intake_season: '',
+    intake_year: '',
+    english_score: '',
+    prior_rejection_detail: '',
+  });
+  function bind<T extends Record<string, string>>(
+    values: T,
+    setValues: React.Dispatch<React.SetStateAction<T>>,
+  ) {
+    return (key: keyof T & string) => ({
+      value: values[key],
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+      ) => setValues((v) => ({ ...v, [key]: e.target.value })),
+    });
+  }
+  const bind2 = bind(v2, setV2);
+  const bind3 = bind(v3, setV3);
+
   const [s1, action1, p1] = useActionState(actions.step1, init);
   const [s2, action2, p2] = useActionState(actions.step2, init);
   const [s3, action3, p3] = useActionState(actions.step3, init);
@@ -267,6 +308,8 @@ export function LeadForm({
                 placeholder="e.g. Ayesha Khan"
                 autoComplete="name"
                 className="mt-1.5"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
               />
               <FieldError message={err1.full_name} />
             </div>
@@ -300,7 +343,12 @@ export function LeadForm({
               </div>
             </div>
             <label className="flex items-start gap-3 text-sm">
-              <Checkbox name="consent_given" className="mt-0.5 text-tenant-accent accent-tenant-accent" />
+              <Checkbox
+                name="consent_given"
+                checked={consentGiven}
+                onChange={(e) => setConsentGiven(e.target.checked)}
+                className="mt-0.5 text-tenant-accent accent-tenant-accent"
+              />
               <span>
                 I consent to {consentName} storing and processing these details
                 to contact me about my application.
@@ -354,7 +402,7 @@ export function LeadForm({
                   City
                   <Required />
                 </Label>
-                <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" className="mt-1.5" />
+                <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" className="mt-1.5" {...bind2('city')} />
                 <FieldError message={err2.city} />
               </div>
               <div>
@@ -362,7 +410,7 @@ export function LeadForm({
                   District
                   <Optional />
                 </Label>
-                <Input id="district" name="district" placeholder="e.g. Model Town" className="mt-1.5" />
+                <Input id="district" name="district" placeholder="e.g. Model Town" className="mt-1.5" {...bind2('district')} />
                 <FieldError message={err2.district} />
               </div>
             </div>
@@ -386,6 +434,7 @@ export function LeadForm({
                   name="last_qualification"
                   placeholder="e.g. BSc Computer Science"
                   className="mt-1.5"
+                  {...bind2('last_qualification')}
                 />
                 <FieldError message={err2.last_qualification} />
               </div>
@@ -401,6 +450,7 @@ export function LeadForm({
                   name="prior_institution"
                   placeholder="e.g. Punjab University"
                   className="mt-1.5"
+                  {...bind2('prior_institution')}
                 />
                 <FieldError message={err2.prior_institution} />
               </div>
@@ -410,7 +460,7 @@ export function LeadForm({
                   <Required />
                 </Label>
                 <div className="mt-1.5">
-                  <Select id="passing_year" name="passing_year" defaultValue="">
+                  <Select id="passing_year" name="passing_year" {...bind2('passing_year')}>
                     <option value="">Select year</option>
                     {PASSING_YEARS.map((y) => (
                       <option key={y} value={y}>{y}</option>
@@ -427,7 +477,7 @@ export function LeadForm({
                   <Required />
                 </Label>
                 <div className="mt-1.5">
-                  <Select id="grading_system" name="grading_system" defaultValue="">
+                  <Select id="grading_system" name="grading_system" {...bind2('grading_system')}>
                     <option value="">Select grading system</option>
                     {GRADING_SYSTEMS.map((x) => (
                       <option key={x.value} value={x.value}>{x.label}</option>
@@ -450,6 +500,7 @@ export function LeadForm({
                   inputMode="decimal"
                   placeholder="e.g. 3.5 or 85"
                   className="mt-1.5"
+                  {...bind2('grade_value')}
                 />
                 <FieldError message={err2.grade_value} />
               </div>
@@ -469,6 +520,7 @@ export function LeadForm({
                   inputMode="numeric"
                   placeholder="0 if none"
                   className="mt-1.5"
+                  {...bind2('work_experience_years')}
                 />
                 <FieldError message={err2.work_experience_years} />
               </div>
@@ -482,6 +534,7 @@ export function LeadForm({
                   name="work_experience_detail"
                   placeholder="e.g. Software Engineer"
                   className="mt-1.5"
+                  {...bind2('work_experience_detail')}
                 />
               </div>
             </div>
@@ -532,6 +585,7 @@ export function LeadForm({
                   name="institution"
                   placeholder="e.g. University of Toronto"
                   className="mt-1.5"
+                  {...bind3('institution')}
                 />
               </div>
               <div>
@@ -540,7 +594,7 @@ export function LeadForm({
                   <Optional />
                 </Label>
                 <div className="mt-1.5">
-                  <Select id="funding_source" name="funding_source" defaultValue="">
+                  <Select id="funding_source" name="funding_source" {...bind3('funding_source')}>
                     <option value="">Select funding source</option>
                     {FUNDING_SOURCES.map((f) => (
                       <option key={f.value} value={f.value}>{f.label}</option>
@@ -565,13 +619,13 @@ export function LeadForm({
                   <Optional />
                 </Label>
                 <div className="mt-1.5 grid grid-cols-2 gap-2">
-                  <Select id="intake_season" name="intake_season" defaultValue="">
+                  <Select id="intake_season" name="intake_season" {...bind3('intake_season')}>
                     <option value="">Season</option>
                     {INTAKE_SEASONS.map((x) => (
                       <option key={x.value} value={x.value}>{x.label}</option>
                     ))}
                   </Select>
-                  <Select name="intake_year" defaultValue="" aria-label="Intake year">
+                  <Select name="intake_year" aria-label="Intake year" {...bind3('intake_year')}>
                     <option value="">Year</option>
                     {INTAKE_YEARS.map((y) => (
                       <option key={y} value={y}>{y}</option>
@@ -609,6 +663,7 @@ export function LeadForm({
                   inputMode="decimal"
                   placeholder="e.g. 6.5 (IELTS), 90 (TOEFL)"
                   className="mt-1.5"
+                  {...bind3('english_score')}
                 />
                 <FieldError message={err3.english_score} />
               </div>
@@ -629,6 +684,7 @@ export function LeadForm({
                   rows={3}
                   placeholder="e.g. UK student visa, 2023 — refused for insufficient funds evidence"
                   className="mt-1.5"
+                  {...bind3('prior_rejection_detail')}
                 />
                 <FieldError message={err3.prior_rejection_detail} />
               </div>
