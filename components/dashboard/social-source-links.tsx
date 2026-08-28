@@ -10,6 +10,7 @@ const PLATFORMS = [
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'twitter', label: 'Twitter / X' },
   { key: 'youtube', label: 'YouTube' },
+  { key: 'google_profile', label: 'Google Profile' },
 ] as const;
 
 function CopyRow({ label, url }: { label: string; url: string }) {
@@ -17,7 +18,7 @@ function CopyRow({ label, url }: { label: string; url: string }) {
 
   return (
     <div className="flex items-center justify-between gap-3 border-b border-tenant-ink/10 py-2.5 last:border-b-0">
-      <span className="w-20 flex-none text-sm font-medium text-tenant-ink">{label}</span>
+      <span className="w-28 flex-none text-sm font-medium text-tenant-ink">{label}</span>
       <code className="min-w-0 flex-1 truncate text-xs text-tenant-ink/60">{url}</code>
       <button
         type="button"
