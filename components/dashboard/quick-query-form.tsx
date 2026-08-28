@@ -58,6 +58,52 @@ export function QuickQueryForm({
   const [uploading, setUploading] = useState(false);
   const [state, action, pending] = useActionState(createQuery, init);
   const err = state.fieldErrors ?? {};
+
+  // Controlled, not defaultValue-seeded uncontrolled inputs: React resets
+  // uncontrolled form fields once this form's action settles — including on
+  // a validation error — which would otherwise silently blank whatever was
+  // typed the moment the server rejects just one field. Controlled state
+  // survives that reset.
+  const [fullName, setFullName] = useState(initial?.full_name ?? '');
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [passportNumber, setPassportNumber] = useState(initial?.passport_number ?? '');
+  const [referenceName, setReferenceName] = useState(initial?.reference_name ?? '');
+  const [referenceNote, setReferenceNote] = useState(initial?.reference_note ?? '');
+  const [v2, setV2] = useState({
+    city: initial?.city ?? '',
+    district: initial?.district ?? '',
+    last_qualification: initial?.last_qualification ?? '',
+    prior_institution: initial?.prior_institution ?? '',
+    passing_year: initial?.passing_year ? String(initial.passing_year) : '',
+    grading_system: initial?.grading_system ?? '',
+    grade_value: initial?.grade_value != null ? String(initial.grade_value) : '',
+    work_experience_years:
+      initial?.work_experience_years != null ? String(initial.work_experience_years) : '',
+    work_experience_detail: initial?.work_experience_detail ?? '',
+  });
+  const [v3, setV3] = useState({
+    institution: initial?.institution ?? '',
+    funding_source: initial?.funding_source ?? '',
+    intake_season: initial?.intake_season ?? '',
+    intake_year: initial?.intake_year ? String(initial.intake_year) : '',
+    english_score: initial?.english_score != null ? String(initial.english_score) : '',
+  });
+  const [priorRejectionDetail, setPriorRejectionDetail] = useState(
+    initial?.prior_rejection_detail ?? '',
+  );
+  function bind<T extends Record<string, string>>(
+    values: T,
+    setValues: React.Dispatch<React.SetStateAction<T>>,
+  ) {
+    return (key: keyof T & string) => ({
+      value: values[key],
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+      ) => setValues((v) => ({ ...v, [key]: e.target.value })),
+    });
+  }
+  const bind2 = bind(v2, setV2);
+  const bind3 = bind(v3, setV3);
   // Strict Mode invokes effects twice in dev — guard against uploading the
   // same picked file twice for the same freshly created lead.
   const uploadedForLeadId = useRef<string | null>(null);
@@ -98,7 +144,7 @@ export function QuickQueryForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
           <Label htmlFor="full_name">Full name</Label>
-          <Input id="full_name" name="full_name" autoComplete="name" defaultValue={initial?.full_name} />
+          <Input id="full_name" name="full_name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
           <FieldError message={err.full_name} />
         </div>
           <div>
@@ -129,7 +175,7 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="passport_number">Passport number</Label>
-            <Input id="passport_number" name="passport_number" placeholder="Optional" defaultValue={initial?.passport_number} />
+            <Input id="passport_number" name="passport_number" placeholder="Optional" value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
           </div>
         </div>
 
@@ -137,17 +183,17 @@ export function QuickQueryForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="reference_name">Name</Label>
-              <Input id="reference_name" name="reference_name" placeholder="Who referred them" defaultValue={initial?.reference_name} />
+              <Input id="reference_name" name="reference_name" placeholder="Who referred them" value={referenceName} onChange={(e) => setReferenceName(e.target.value)} />
             </div>
             <div>
               <Label htmlFor="reference_note">Note</Label>
-              <Input id="reference_note" name="reference_note" placeholder="Optional detail" defaultValue={initial?.reference_note} />
+              <Input id="reference_note" name="reference_note" placeholder="Optional detail" value={referenceNote} onChange={(e) => setReferenceNote(e.target.value)} />
             </div>
           </div>
         )}
 
         <label className="flex items-start gap-3 text-sm">
-          <Checkbox name="consent_given" className="mt-0.5" />
+          <Checkbox name="consent_given" checked={consentGiven} onChange={(e) => setConsentGiven(e.target.checked)} className="mt-0.5" />
           <span>
             {consentName} has consent to store and process these details to
             contact this person about their application.
@@ -166,12 +212,12 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="city">City</Label>
-            <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" defaultValue={initial?.city} />
+            <Input id="city" name="city" placeholder="e.g. Lahore" autoComplete="address-level2" {...bind2('city')} />
             <FieldError message={err.city} />
           </div>
           <div>
             <Label htmlFor="district">District</Label>
-            <Input id="district" name="district" placeholder="e.g. Lahore" defaultValue={initial?.district} />
+            <Input id="district" name="district" placeholder="e.g. Lahore" {...bind2('district')} />
           </div>
             <div>
             <Label htmlFor="highest_education">Highest education level</Label>
@@ -179,15 +225,15 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="last_qualification">Last qualification / field</Label>
-            <Input id="last_qualification" name="last_qualification" placeholder="e.g. BSc Computer Science" defaultValue={initial?.last_qualification} />
+            <Input id="last_qualification" name="last_qualification" placeholder="e.g. BSc Computer Science" {...bind2('last_qualification')} />
           </div>
           <div>
             <Label htmlFor="prior_institution">Institution / board attended</Label>
-            <Input id="prior_institution" name="prior_institution" placeholder="Where they last studied" defaultValue={initial?.prior_institution} />
+            <Input id="prior_institution" name="prior_institution" placeholder="Where they last studied" {...bind2('prior_institution')} />
           </div>
           <div>
             <Label htmlFor="passing_year">Passing year</Label>
-            <Select id="passing_year" name="passing_year" defaultValue={initial?.passing_year ? String(initial.passing_year) : ''}>
+            <Select id="passing_year" name="passing_year" {...bind2('passing_year')}>
               <option value="">Select year</option>
               {PASSING_YEARS.map((y) => (
                 <option key={y} value={y}>{y}</option>
@@ -196,7 +242,7 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="grading_system">Grading system</Label>
-            <Select id="grading_system" name="grading_system" defaultValue={initial?.grading_system ?? ''}>
+            <Select id="grading_system" name="grading_system" {...bind2('grading_system')}>
               <option value="">Select grading system</option>
               {GRADING_SYSTEMS.map((x) => (
                 <option key={x.value} value={x.value}>{x.label}</option>
@@ -205,16 +251,16 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="grade_value">Result (CGPA / %)</Label>
-            <Input id="grade_value" name="grade_value" type="number" step="0.01" min="0" inputMode="decimal" placeholder="e.g. 3.5 or 85" defaultValue={initial?.grade_value != null ? String(initial.grade_value) : undefined} />
+            <Input id="grade_value" name="grade_value" type="number" step="0.01" min="0" inputMode="decimal" placeholder="e.g. 3.5 or 85" {...bind2('grade_value')} />
             <FieldError message={err.grade_value} />
           </div>
            <div>
             <Label htmlFor="work_experience_years">Work experience (years)</Label>
-            <Input id="work_experience_years" name="work_experience_years" type="number" min="0" max="60" inputMode="numeric" defaultValue={initial?.work_experience_years != null ? String(initial.work_experience_years) : undefined} />
+            <Input id="work_experience_years" name="work_experience_years" type="number" min="0" max="60" inputMode="numeric" {...bind2('work_experience_years')} />
           </div>
           <div>
             <Label htmlFor="work_experience_detail">Current / recent role</Label>
-            <Input id="work_experience_detail" name="work_experience_detail" placeholder="Optional" defaultValue={initial?.work_experience_detail} />
+            <Input id="work_experience_detail" name="work_experience_detail" placeholder="Optional" {...bind2('work_experience_detail')} />
           </div>
         </div>
 
@@ -228,11 +274,11 @@ export function QuickQueryForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="institution">Preferred institution (abroad)</Label>
-            <Input id="institution" name="institution" placeholder="University or college" defaultValue={initial?.institution} />
+            <Input id="institution" name="institution" placeholder="University or college" {...bind3('institution')} />
           </div>
           <div>
             <Label htmlFor="funding_source">How will they fund their studies?</Label>
-            <Select id="funding_source" name="funding_source" defaultValue={initial?.funding_source ?? ''}>
+            <Select id="funding_source" name="funding_source" {...bind3('funding_source')}>
               <option value="">Select funding source</option>
               {FUNDING_SOURCES.map((f) => (
                 <option key={f.value} value={f.value}>{f.label}</option>
@@ -248,13 +294,13 @@ export function QuickQueryForm({
           <div>
             <Label htmlFor="intake_season">Intended intake</Label>
             <div className="grid grid-cols-2 gap-2">
-              <Select id="intake_season" name="intake_season" defaultValue={initial?.intake_season ?? ''}>
+              <Select id="intake_season" name="intake_season" {...bind3('intake_season')}>
                 <option value="">Season</option>
                 {INTAKE_SEASONS.map((x) => (
                   <option key={x.value} value={x.value}>{x.label}</option>
                 ))}
               </Select>
-              <Select name="intake_year" defaultValue={initial?.intake_year ? String(initial.intake_year) : ''} aria-label="Intake year">
+              <Select name="intake_year" aria-label="Intake year" {...bind3('intake_year')}>
                 <option value="">Year</option>
                 {INTAKE_YEARS.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -275,7 +321,7 @@ export function QuickQueryForm({
         {SCORED_TESTS.includes(englishTest) && (
           <div className="sm:max-w-[50%]">
             <Label htmlFor="english_score">Overall score</Label>
-            <Input id="english_score" name="english_score" type="number" step="0.5" min="0" inputMode="decimal" placeholder="e.g. IELTS 6.5, TOEFL 90" defaultValue={initial?.english_score != null ? String(initial.english_score) : undefined} />
+            <Input id="english_score" name="english_score" type="number" step="0.5" min="0" inputMode="decimal" placeholder="e.g. IELTS 6.5, TOEFL 90" {...bind3('english_score')} />
           </div>
         )}
         <label className="flex items-center gap-3 text-sm">
@@ -285,7 +331,7 @@ export function QuickQueryForm({
         {priorRejection && (
           <div>
             <Label htmlFor="prior_rejection_detail">Briefly, what happened?</Label>
-            <Textarea id="prior_rejection_detail" name="prior_rejection_detail" rows={3} placeholder="Country, year, and reason if known." defaultValue={initial?.prior_rejection_detail} />
+            <Textarea id="prior_rejection_detail" name="prior_rejection_detail" rows={3} placeholder="Country, year, and reason if known." value={priorRejectionDetail} onChange={(e) => setPriorRejectionDetail(e.target.value)} />
           </div>
         )}
       </section>

@@ -63,7 +63,7 @@ export async function startLead(
       ip === 'unknown' ? undefined : ip,
     );
     if (!ok) {
-      return { ok: false, error: 'Bot verification failed. Please refresh and try again.' };
+      return { ok: false, error: "We couldn't confirm you're not a bot — please try again." };
     }
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Cloudflare Turnstile widget. Renders the challenge and writes the token into
@@ -30,6 +30,10 @@ declare global {
 
 const SCRIPT_SRC =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit';
+// How long to wait for the Cloudflare script/widget before offering a manual
+// retry — a stuck spinner with no way out is what actually frustrates
+// applicants, not a slow network on its own.
+const STALL_TIMEOUT_MS = 8000;
 
 export function Turnstile({
   onVerify,
@@ -39,38 +43,74 @@ export function Turnstile({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const [stalled, setStalled] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     if (!siteKey) return;
+    let cancelled = false;
+    setStalled(false);
+
+    const stallTimer = setTimeout(() => {
+      if (!cancelled) setStalled(true);
+    }, STALL_TIMEOUT_MS);
 
     const render = () => {
-      if (!containerRef.current || !window.turnstile) return;
-      if (widgetIdRef.current) return; // render once
+      if (cancelled || !containerRef.current || !window.turnstile) return;
+      clearTimeout(stallTimer);
+      if (widgetIdRef.current) {
+        // Already rendered once — a manual retry re-runs the challenge in
+        // place instead of forcing a full page reload.
+        window.turnstile.reset(widgetIdRef.current);
+        setStalled(false);
+        return;
+      }
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         theme: 'light',
-        callback: (token) => onVerify?.(token),
-        'expired-callback': () => onVerify?.(''),
-        'error-callback': () => onVerify?.(''),
+        callback: (token) => {
+          setStalled(false);
+          onVerify?.(token);
+        },
+        'expired-callback': () => {
+          onVerify?.('');
+          // Silently re-challenge — an expired token shouldn't force the
+          // applicant to notice or act.
+          if (window.turnstile && widgetIdRef.current) {
+            window.turnstile.reset(widgetIdRef.current);
+          }
+        },
+        'error-callback': () => {
+          onVerify?.('');
+          setStalled(true);
+        },
       });
     };
 
-    // If the script is already present/loaded, render immediately.
     if (window.turnstile) {
       render();
-      return;
-    }
-
-    window.onTurnstileLoad = render;
-
-    if (!document.querySelector(`script[src="${SCRIPT_SRC}"]`)) {
+    } else {
+      window.onTurnstileLoad = render;
+      // A manual retry removes any previous (possibly failed) script tag
+      // first, so it's a genuine fresh network attempt rather than a no-op
+      // against a tag that already failed to load.
+      document.querySelector('script[data-turnstile-loader]')?.remove();
       const script = document.createElement('script');
       script.src = SCRIPT_SRC;
       script.async = true;
       script.defer = true;
+      script.dataset.turnstileLoader = 'true';
+      script.onerror = () => {
+        if (!cancelled) setStalled(true);
+      };
       document.head.appendChild(script);
     }
-  }, [siteKey, onVerify]);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(stallTimer);
+    };
+  }, [siteKey, onVerify, retryTick]);
 
   if (!siteKey) {
     return (
@@ -80,5 +120,27 @@ export function Turnstile({
     );
   }
 
-  return <div ref={containerRef} className="min-h-[65px]" />;
+  return (
+    <div>
+      <div ref={containerRef} className="min-h-[65px]" />
+      {stalled && (
+        <button
+          type="button"
+          onClick={() => {
+            setStalled(false);
+            if (window.turnstile && widgetIdRef.current) {
+              window.turnstile.reset(widgetIdRef.current);
+            } else {
+              // The script itself never loaded — re-run the effect to try
+              // loading it again, still without a full page reload.
+              setRetryTick((n) => n + 1);
+            }
+          }}
+          className="mt-1.5 text-xs font-medium text-tenant-accent underline underline-offset-2"
+        >
+          Verification is taking longer than expected — tap to retry
+        </button>
+      )}
+    </div>
+  );
 }
