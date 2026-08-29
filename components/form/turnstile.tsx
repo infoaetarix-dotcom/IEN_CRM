@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 /**
  * Cloudflare Turnstile widget. Renders the challenge and writes the token into
@@ -8,6 +8,18 @@ import { useEffect, useRef, useState } from 'react';
  * and verifies. If no site key is configured, renders nothing (dev fallback —
  * the server verifier allows missing tokens only in development).
  */
+
+export interface TurnstileHandle {
+  /**
+   * Request a fresh token. Turnstile tokens are single-use — Cloudflare
+   * rejects a token on its second verify attempt, success or not. The
+   * server checks Turnstile before anything else, so even a submission that
+   * failed for an unrelated reason (a missing field) already consumed the
+   * token. Call this after any failed submission so a retry isn't silently
+   * doomed to fail the bot check on a token that's already spent.
+   */
+  reset: () => void;
+}
 
 declare global {
   interface Window {
@@ -35,16 +47,21 @@ const SCRIPT_SRC =
 // applicants, not a slow network on its own.
 const STALL_TIMEOUT_MS = 8000;
 
-export function Turnstile({
-  onVerify,
-}: {
-  onVerify?: (token: string) => void;
-}) {
+export const Turnstile = forwardRef<TurnstileHandle, { onVerify?: (token: string) => void }>(
+  function Turnstile({ onVerify }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [stalled, setStalled] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (window.turnstile && widgetIdRef.current) {
+        window.turnstile.reset(widgetIdRef.current);
+      }
+    },
+  }), []);
 
   useEffect(() => {
     if (!siteKey) return;
@@ -143,4 +160,5 @@ export function Turnstile({
       )}
     </div>
   );
-}
+  },
+);

@@ -7,7 +7,6 @@ import {
   step3Schema,
   normalizeSource,
 } from '@/lib/validation/lead';
-import { verifyTurnstile } from '@/lib/security/turnstile';
 import { rateLimit, clientIp } from '@/lib/security/rate-limit';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendEmail, renderTemplate } from '@/lib/email/brevo';
@@ -39,7 +38,10 @@ function fieldErrorsFrom(
 /**
  * STEP 1 — the hook. Creates (or, on back-navigation, updates) a PARTIAL lead
  * so the contact is captured even if the visitor abandons later steps.
- * Hardened like any public write: rate limit + Turnstile + honeypot + Zod.
+ * Hardened like any public write: rate limit + honeypot + Zod. Turnstile was
+ * dropped from this form — it was blocking real applicants (Cloudflare's own
+ * widget intermittently failing verification, on both local and the live
+ * site) more than it was stopping bots; the remaining layers cover it.
  */
 export async function startLead(
   _prev: StepState,
@@ -56,14 +58,6 @@ export async function startLead(
     const limited = await rateLimit(`lead:${ip}`, 5, 10 * 60 * 1000);
     if (!limited.success) {
       return { ok: false, error: 'Too many submissions. Please try again shortly.' };
-    }
-    const token = formData.get('cf-turnstile-response');
-    const ok = await verifyTurnstile(
-      typeof token === 'string' ? token : null,
-      ip === 'unknown' ? undefined : ip,
-    );
-    if (!ok) {
-      return { ok: false, error: "We couldn't confirm you're not a bot — please try again." };
     }
   }
 

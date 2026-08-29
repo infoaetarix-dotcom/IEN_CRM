@@ -16,7 +16,6 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Turnstile } from '@/components/form/turnstile';
 import { EmailField } from '@/components/form/email-field';
 import { PhoneField } from '@/components/form/phone-field';
 import { CountryField } from '@/components/form/country-field';
@@ -158,14 +157,11 @@ export function LeadForm({
    *  redirecting (it's rendered inside the CRM, not a standalone page), and
    *  uses this to navigate to the new lead once it's done. */
   onComplete,
-  /** Staff are already authenticated — skip the bot-verification widget. */
-  showTurnstile = true,
 }: {
   consentName?: string;
   orgSlug?: string;
   actions?: { step1: StepAction; step2: StepAction; step3: StepAction };
   onComplete?: (leadId: string) => void;
-  showTurnstile?: boolean;
 }) {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
@@ -179,7 +175,6 @@ export function LeadForm({
   const [lead, setLead] = useState({ id: '', token: '' });
   const [priorRejection, setPriorRejection] = useState(false);
   const [englishTest, setEnglishTest] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
 
   // Every plain text/select/textarea field below is deliberately controlled
   // (rather than left to the browser's native uncontrolled defaultValue).
@@ -275,7 +270,6 @@ export function LeadForm({
         <input type="hidden" name="utm_source" value={utm.source} />
         <input type="hidden" name="utm_medium" value={utm.medium} />
         <input type="hidden" name="utm_campaign" value={utm.campaign} />
-        <input type="hidden" name="cf-turnstile-response" value={turnstileToken} />
         <div aria-hidden className="absolute left-[-9999px] top-[-9999px]">
           <label>
             Company
@@ -356,7 +350,6 @@ export function LeadForm({
               </span>
             </label>
             <FieldError message={err1.consent_given} />
-            {showTurnstile && <Turnstile onVerify={setTurnstileToken} />}
           </section>
 
           <Button
