@@ -6,6 +6,7 @@ import {
   INTAKE_SEASON_VALUES,
   FUNDING_VALUES,
 } from '@/lib/form-options';
+import { LEAD_SOURCES } from '@/lib/leads/display';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -42,18 +43,6 @@ const optCode = (values: readonly string[]) =>
  * Single source of truth for lead validation — shared by the client form (UX)
  * and the server action (the real security boundary; the server re-validates).
  */
-
-export const LEAD_SOURCES = [
-  'instagram',
-  'facebook',
-  'linkedin',
-  'youtube',
-  'whatsapp',
-  'twitter',
-  'website',
-  'direct',
-  'other',
-] as const;
 
 export const EDUCATION_LEVELS = [
   'high_school',
