@@ -14,7 +14,10 @@ function redirectFor(request: NextRequest, decision: Extract<RouteDecision, { ac
   }
   const url = request.nextUrl.clone();
   url.pathname = decision.to;
-  url.search = '';
+  // Keep the original query string (utm_source and friends) — a form_domain
+  // visit to "/" redirects to "/{slug}/apply" and must carry the tracked
+  // link's UTM params through, or every custom-domain source link silently
+  // becomes "direct".
   return NextResponse.redirect(url);
 }
 
