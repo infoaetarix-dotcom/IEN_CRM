@@ -4,7 +4,14 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
-import { Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon } from 'lucide-react';
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const COLORS = ['#0B1F33', '#2563EB', '#DC2626', '#16A34A', '#7C3AED'];
@@ -39,12 +46,12 @@ function ToolbarButton({
 }
 
 /**
- * Minimal rich text editor for signature bodies: bold/italic/underline/
- * color/links only — the toolbar's scope IS the schema's scope. StarterKit
- * is configured down to just paragraph/bold/italic/underline/link, so the
- * editor cannot emit headings, lists, blockquotes, code blocks, or anything
- * else outside that set — this is what actually keeps the generated HTML
- * safe to mail out raw, not just the toolbar UI.
+ * Minimal rich text editor for signatures and the custom email compose box:
+ * bold/italic/underline/color/links/bullet+numbered lists only — the
+ * toolbar's scope IS the schema's scope. StarterKit is configured down to
+ * just that set, so the editor cannot emit headings, blockquotes, code
+ * blocks, or anything else outside it — this is what actually keeps the
+ * generated HTML safe to mail out raw, not just the toolbar UI.
  */
 export function RichTextEditor({
   value,
@@ -61,14 +68,10 @@ export function RichTextEditor({
     extensions: [
       StarterKit.configure({
         blockquote: false,
-        bulletList: false,
         code: false,
         codeBlock: false,
         heading: false,
         horizontalRule: false,
-        listItem: false,
-        listKeymap: false,
-        orderedList: false,
         strike: false,
         link: {
           openOnClick: false,
@@ -130,6 +133,23 @@ export function RichTextEditor({
         </ToolbarButton>
         <ToolbarButton active={editor.isActive('link')} disabled={disabled} onClick={setLink} title="Link">
           <LinkIcon className="h-3.5 w-3.5" />
+        </ToolbarButton>
+        <span className="mx-1 h-4 w-px bg-tenant-ink/10" />
+        <ToolbarButton
+          active={editor.isActive('bulletList')}
+          disabled={disabled}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          title="Bullet list"
+        >
+          <List className="h-3.5 w-3.5" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={editor.isActive('orderedList')}
+          disabled={disabled}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          title="Numbered list"
+        >
+          <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
         <span className="mx-1 h-4 w-px bg-tenant-ink/10" />
         {COLORS.map((c) => (

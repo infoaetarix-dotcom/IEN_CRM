@@ -38,6 +38,13 @@ export interface TransactionalEmail {
   /** Plain text; newlines become <br/> and the content is HTML-escaped. */
   body: string;
   /**
+   * Set when `body` is already HTML (the rich text compose box) rather than
+   * plain text — skips escaping so the markup renders instead of showing as
+   * literal tags. Never set this for text sourced from a saved template or
+   * any other unescaped input; only the compose box's own controlled output.
+   */
+  bodyIsHtml?: boolean;
+  /**
    * Display name recipients see as the sender — should be the consultancy's
    * own name for anything tied to a tenant, never a fixed platform default.
    * Falls back to BREVO_SENDER_NAME (then a hardcoded default) only when the
@@ -98,9 +105,9 @@ export async function sendTransactionalEmail(
         sender: { email: senderEmail, name: senderName },
         to: [{ email: params.to, name: params.toName ?? undefined }],
         subject: params.subject,
-        htmlContent: `<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#0B1F33">${escapeHtml(
-          params.body,
-        ).replace(/\n/g, '<br/>')}${
+        htmlContent: `<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#0B1F33">${
+          params.bodyIsHtml ? params.body : escapeHtml(params.body).replace(/\n/g, '<br/>')
+        }${
           params.signatureHtml ? `<div style="margin-top:20px">${params.signatureHtml}</div>` : ''
         }</div>`,
       }),
@@ -127,6 +134,8 @@ interface SendParams {
   toName?: string | null;
   subject: string;
   body: string;
+  /** See TransactionalEmail.bodyIsHtml — threaded through and also recorded on the messages row. */
+  bodyIsHtml?: boolean;
   templateKey?: string | null;
   /** acting staff user id; null = system (auto confirmation) */
   sentBy: string | null;
@@ -167,6 +176,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
       template_key: params.templateKey ?? null,
       subject: params.subject,
       body: params.body,
+      body_is_html: params.bodyIsHtml ?? false,
       status: 'queued',
       sent_by: params.sentBy,
       signature_id: params.signatureId ?? null,
@@ -184,6 +194,7 @@ export async function sendEmail(params: SendParams): Promise<SendResult> {
     toName: params.toName,
     subject: params.subject,
     body: params.body,
+    bodyIsHtml: params.bodyIsHtml,
     senderName,
     senderEmail: org?.sender_email,
     signatureHtml: params.signatureHtml,

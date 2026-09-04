@@ -16,6 +16,8 @@ export interface HistoryMessage {
   id: string;
   subject: string | null;
   body: string | null;
+  /** True for the rich text compose box's output; false/legacy is plain text. */
+  body_is_html: boolean | null;
   status: string;
   template_key: string | null;
   sent_by: string | null;
@@ -98,10 +100,21 @@ export function MessageHistoryDialog({
                   Emailed by {senderName}
                   {senderEmail ? ` (${senderEmail})` : ''} · {fmtDateTime(m.created_at)}
                 </p>
-                {m.body && (
-                  <p className="mt-2 whitespace-pre-wrap rounded-md bg-tenant-gray p-2.5 text-sm text-tenant-ink">
-                    {m.body}
-                  </p>
+                {m.body && m.body_is_html ? (
+                  <div
+                    className="mt-2 rounded-md bg-tenant-gray p-2.5 text-sm text-tenant-ink [&_a]:text-tenant-accent [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5"
+                    // Rich text compose output, not raw client input — the
+                    // editor's own schema restricts it to a small safe tag
+                    // set (bold/italic/underline/color/links/lists), the
+                    // same trust boundary already used for signature HTML.
+                    dangerouslySetInnerHTML={{ __html: m.body }}
+                  />
+                ) : (
+                  m.body && (
+                    <p className="mt-2 whitespace-pre-wrap rounded-md bg-tenant-gray p-2.5 text-sm text-tenant-ink">
+                      {m.body}
+                    </p>
+                  )
                 )}
                 {m.error_detail && (
                   <p className="mt-2 text-xs text-destructive">{m.error_detail}</p>

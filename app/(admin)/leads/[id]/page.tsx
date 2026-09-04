@@ -102,7 +102,7 @@ export default async function LeadDetailPage({
       .order('changed_at', { ascending: false }),
     supabase
       .from('messages')
-      .select('id, subject, body, status, template_key, sent_by, created_at, error_detail')
+      .select('id, subject, body, body_is_html, status, template_key, sent_by, created_at, error_detail')
       .eq('lead_id', id)
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name, email, is_active'),

@@ -13,8 +13,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { RichTextEditor } from '@/components/dashboard/rich-text-editor';
+import { isBlankHtml } from '@/lib/utils';
 
 type Template = { key: string; name: string; subject: string; body: string };
 type Signature = { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null };
@@ -29,6 +30,21 @@ function defaultSignatureId(signatures: Signature[]): string {
   if (personal) return personal.id;
   const shared = signatures.find((s) => s.profile_id === null && s.is_default);
   return shared?.id ?? '';
+}
+
+/** Give a plain-text template body a reasonable starting shape in the rich text box. */
+function plainTextToHtml(text: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map((para) => `<p>${escapeHtml(para).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
@@ -97,7 +113,9 @@ export function SendEmailDialog({
         return;
       }
       setSubject(res.subject);
-      setBody(res.body);
+      // The template's body is plain text; the compose box is rich text —
+      // give it an HTML starting point instead of one unformatted line.
+      setBody(plainTextToHtml(res.body));
     });
   }
 
@@ -107,7 +125,7 @@ export function SendEmailDialog({
       const res = await sendAction({
         to: to.trim(),
         subject: subject.trim(),
-        body: body.trim(),
+        body,
         templateKey: templateKey || null,
         signatureId: signatureId || null,
       });
@@ -189,14 +207,9 @@ export function SendEmailDialog({
 
           <div>
             <Label htmlFor="send-email-body">Message</Label>
-            <Textarea
-              id="send-email-body"
-              rows={8}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              disabled={busy}
-              className="mt-1.5"
-            />
+            <div className="mt-1.5">
+              <RichTextEditor value={body} onChange={setBody} disabled={busy} />
+            </div>
           </div>
 
           {signatures.length > 0 && (
@@ -235,7 +248,7 @@ export function SendEmailDialog({
             <Button
               type="button"
               className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-              disabled={busy || !to.trim() || !subject.trim() || !body.trim()}
+              disabled={busy || !to.trim() || !subject.trim() || isBlankHtml(body)}
               onClick={handleSend}
             >
               {sending ? 'Sending…' : 'Send email'}

@@ -13,6 +13,7 @@ import { getDefaultSharedSignature, getSignatureForSend } from '@/lib/email/sign
 import { notifyOrgStaff } from '@/lib/notifications/create';
 import { DOCUMENT_MAX_BYTES, DOCUMENT_TYPES } from '@/lib/validation/application';
 import { UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
+import { isBlankHtml } from '@/lib/utils';
 
 export interface ActionResult {
   ok: boolean;
@@ -393,7 +394,7 @@ export async function sendCustomLeadEmail(
   const to = payload.to.trim();
   if (!to) return { ok: false, error: 'Recipient email is required.' };
   if (!payload.subject.trim()) return { ok: false, error: 'Subject is required.' };
-  if (!payload.body.trim()) return { ok: false, error: 'Message is required.' };
+  if (isBlankHtml(payload.body)) return { ok: false, error: 'Message is required.' };
 
   const supabase = await createClient();
   const { data: lead } = await supabase
@@ -416,6 +417,7 @@ export async function sendCustomLeadEmail(
     toName: lead.full_name,
     subject: payload.subject,
     body: payload.body,
+    bodyIsHtml: true,
     templateKey: payload.templateKey,
     sentBy: user.id,
     signatureId: signature?.id ?? null,
