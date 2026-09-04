@@ -17,6 +17,7 @@ import { sendEmail, renderTemplate } from '@/lib/email/brevo';
 import { getSignatureForSend } from '@/lib/email/signatures';
 import { leadToApplicationDefaults, UPLOAD_LINK_TTL_DAYS } from '@/lib/applications/types';
 import { notifyOrgStaff } from '@/lib/notifications/create';
+import { isBlankHtml } from '@/lib/utils';
 
 export interface ActionState {
   ok: boolean;
@@ -365,7 +366,7 @@ export async function sendCustomApplicationEmail(
   const to = payload.to.trim();
   if (!to) return { ok: false, error: 'Recipient email is required.' };
   if (!payload.subject.trim()) return { ok: false, error: 'Subject is required.' };
-  if (!payload.body.trim()) return { ok: false, error: 'Message is required.' };
+  if (isBlankHtml(payload.body)) return { ok: false, error: 'Message is required.' };
 
   const supabase = await createClient();
   const { data: app } = await supabase
@@ -388,6 +389,7 @@ export async function sendCustomApplicationEmail(
     toName: app.full_name,
     subject: payload.subject,
     body: payload.body,
+    bodyIsHtml: true,
     templateKey: payload.templateKey,
     sentBy: user.id,
     signatureId: signature?.id ?? null,
