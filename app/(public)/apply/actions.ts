@@ -179,6 +179,7 @@ export async function saveStep2(
     passing_year: g(formData, 'passing_year'),
     grading_system: g(formData, 'grading_system'),
     grade_value: g(formData, 'grade_value'),
+    grade_letter: g(formData, 'grade_letter'),
     work_experience_years: g(formData, 'work_experience_years'),
     work_experience_detail: g(formData, 'work_experience_detail'),
   });
@@ -191,6 +192,10 @@ export async function saveStep2(
   }
 
   const d = parsed.data;
+  // Whichever result field doesn't match the chosen grading system is
+  // explicitly nulled, not left as-is — otherwise a Back-navigate + switch
+  // grading system + resubmit could leave a stale value in the other one.
+  const isGradeLetter = d.grading_system === 'grade';
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('leads')
@@ -203,7 +208,8 @@ export async function saveStep2(
       prior_institution: d.prior_institution,
       passing_year: d.passing_year,
       grading_system: d.grading_system,
-      grade_value: d.grade_value,
+      grade_value: isGradeLetter ? null : (d.grade_value ?? null),
+      grade_letter: isGradeLetter ? (d.grade_letter || null) : null,
       work_experience_years: d.work_experience_years ?? null,
       work_experience_detail: d.work_experience_detail || null,
     })

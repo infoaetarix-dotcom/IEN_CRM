@@ -23,6 +23,7 @@ import {
   FUNDING_SOURCES,
   PASSING_YEARS,
   INTAKE_YEARS,
+  gradeResultConfig,
 } from '@/lib/form-options';
 import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
@@ -77,6 +78,7 @@ export function QuickQueryForm({
     passing_year: initial?.passing_year ? String(initial.passing_year) : '',
     grading_system: initial?.grading_system ?? '',
     grade_value: initial?.grade_value != null ? String(initial.grade_value) : '',
+    grade_letter: initial?.grade_letter ?? '',
     work_experience_years:
       initial?.work_experience_years != null ? String(initial.work_experience_years) : '',
     work_experience_detail: initial?.work_experience_detail ?? '',
@@ -242,18 +244,44 @@ export function QuickQueryForm({
           </div>
           <div>
             <Label htmlFor="grading_system">Grading system</Label>
-            <Select id="grading_system" name="grading_system" {...bind2('grading_system')}>
+            <Select
+              id="grading_system"
+              name="grading_system"
+              value={v2.grading_system}
+              onChange={(e) => {
+                const next = e.target.value;
+                // Clear whichever result field no longer applies, so
+                // switching systems can't leave both a numeric result and a
+                // letter grade set on the same new lead.
+                setV2((v) => ({
+                  ...v,
+                  grading_system: next,
+                  grade_value: next === 'grade' ? '' : v.grade_value,
+                  grade_letter: next === 'grade' ? v.grade_letter : '',
+                }));
+              }}
+            >
               <option value="">Select grading system</option>
               {GRADING_SYSTEMS.map((x) => (
                 <option key={x.value} value={x.value}>{x.label}</option>
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="grade_value">Result (CGPA / %)</Label>
-            <Input id="grade_value" name="grade_value" type="number" step="0.01" min="0" inputMode="decimal" placeholder="e.g. 3.5 or 85" {...bind2('grade_value')} />
-            <FieldError message={err.grade_value} />
-          </div>
+          {(() => {
+            const cfg = gradeResultConfig(v2.grading_system);
+            if (!cfg) return null;
+            return (
+              <div>
+                <Label htmlFor={cfg.name}>{cfg.label}</Label>
+                {cfg.kind === 'number' ? (
+                  <Input id="grade_value" name="grade_value" type="number" step={cfg.step} min={cfg.min} max={cfg.max} inputMode="decimal" placeholder={cfg.placeholder} {...bind2('grade_value')} />
+                ) : (
+                  <Input id="grade_letter" name="grade_letter" placeholder={cfg.placeholder} {...bind2('grade_letter')} />
+                )}
+                <FieldError message={cfg.kind === 'number' ? err.grade_value : err.grade_letter} />
+              </div>
+            );
+          })()}
            <div>
             <Label htmlFor="work_experience_years">Work experience (years)</Label>
             <Input id="work_experience_years" name="work_experience_years" type="number" min="0" max="60" inputMode="numeric" {...bind2('work_experience_years')} />

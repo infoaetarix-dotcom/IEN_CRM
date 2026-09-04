@@ -179,6 +179,7 @@ export default async function LeadDetailPage({
     passing_year: s(lead.passing_year),
     grading_system: s(lead.grading_system),
     grade_value: s(lead.grade_value),
+    grade_letter: s(lead.grade_letter),
     work_experience_years: s(lead.work_experience_years),
     work_experience_detail: s(lead.work_experience_detail),
     english_test: s(lead.english_test),
@@ -284,11 +285,13 @@ export default async function LeadDetailPage({
               <Field label="Institution / board attended" value={lead.prior_institution} />
               <Field label="Passing year" value={lead.passing_year} />
               <Field
-                label="Result (CGPA / %)"
+                label="Result"
                 value={
-                  lead.grade_value != null
-                    ? `${lead.grade_value}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
-                    : null
+                  lead.grading_system === 'grade' && lead.grade_letter
+                    ? `${lead.grade_letter} — Grade`
+                    : lead.grade_value != null
+                      ? `${lead.grade_value}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
+                      : null
                 }
               />
               <Field

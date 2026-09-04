@@ -25,6 +25,8 @@ import {
   FUNDING_SOURCES,
   PASSING_YEARS,
   INTAKE_YEARS,
+  CODE_LABELS,
+  gradeResultConfig,
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
 import { ProgramField, splitProgram } from '@/components/form/program-field';
@@ -53,6 +55,7 @@ export interface LeadEditState {
   passing_year: string;
   grading_system: string;
   grade_value: string;
+  grade_letter: string;
   work_experience_years: string;
   work_experience_detail: string;
   english_test: string;
@@ -268,15 +271,38 @@ export function LeadDetailsEditor({
             <Select
               value={form.grading_system}
               disabled={pending}
-              onChange={(e) => set('grading_system', e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                // Clear whichever result field no longer applies — otherwise
+                // switching from, say, CGPA to Grade could leave the old
+                // numeric result saved alongside the new letter grade.
+                const merged = {
+                  ...formRef.current,
+                  grading_system: next,
+                  grade_value: next === 'grade' ? '' : formRef.current.grade_value,
+                  grade_letter: next === 'grade' ? formRef.current.grade_letter : '',
+                };
+                formRef.current = merged;
+                setForm(merged);
+              }}
             >
               <option value="">Select…</option>
-              {GRADING_SYSTEMS.map((g) => (
-                <option key={g.value} value={g.value}>{g.label}</option>
+              {withCurrent(GRADING_SYSTEMS.map((g) => g.value), form.grading_system).map((v) => (
+                <option key={v} value={v}>{CODE_LABELS[v] ?? v}</option>
               ))}
             </Select>
           </LField>
-          <LField label="Result (CGPA / %)">{text('grade_value', 'number')}</LField>
+          {(() => {
+            const cfg = gradeResultConfig(form.grading_system);
+            if (!cfg) return null;
+            return (
+              <LField label={cfg.label}>
+                {cfg.kind === 'number'
+                  ? text('grade_value', 'number')
+                  : text('grade_letter')}
+              </LField>
+            );
+          })()}
           <LField label="Work experience (years)">
             {text('work_experience_years', 'number')}
           </LField>
