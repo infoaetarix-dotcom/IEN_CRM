@@ -15,7 +15,6 @@ import {
 import {
   StatusChanger,
   NoteComposer,
-  EmailPanel,
   LeadCustomEmailButton,
 } from '@/components/dashboard/lead-controls';
 import {
@@ -494,19 +493,6 @@ export default async function LeadDetailPage({
                 signatures={signatures}
               />
             </CardHeader>
-            <CardContent>
-              {(templatesRes.data ?? []).length > 0 ? (
-                <EmailPanel
-                  leadId={lead.id}
-                  templates={templatesRes.data ?? []}
-                  signatures={signatures}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No templates available.
-                </p>
-              )}
-            </CardContent>
           </Card>
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
