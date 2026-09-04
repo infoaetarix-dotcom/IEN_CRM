@@ -110,6 +110,15 @@ describe('step2Schema — dynamic grade result', () => {
     const outOfRange = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_5', grade_value: '5.5' });
     expect(outOfRange.success).toBe(false);
   });
+
+  it('requires grade_letter (not grade_value) for the other system too', () => {
+    const withLetter = step2Schema.safeParse({ ...step2Base, grading_system: 'other', grade_letter: 'Pass' });
+    expect(withLetter.success).toBe(true);
+
+    const missing = step2Schema.safeParse({ ...step2Base, grading_system: 'other' });
+    expect(missing.success).toBe(false);
+    if (!missing.success) expect(missing.error.issues[0]!.path).toContain('grade_letter');
+  });
 });
 
 describe('normalizeSource', () => {

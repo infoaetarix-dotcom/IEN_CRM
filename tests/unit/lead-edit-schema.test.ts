@@ -40,8 +40,10 @@ describe('leadEditSchema', () => {
     expect(leadEditSchema.safeParse({ ...valid, email: 'not-an-email' }).success).toBe(false);
   });
 
-  it('rejects an empty name', () => {
-    expect(leadEditSchema.safeParse({ ...valid, full_name: '' }).success).toBe(false);
+  it('allows clearing the name (nothing is required in Edit Lead)', () => {
+    const r = leadEditSchema.safeParse({ ...valid, full_name: '' });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.full_name).toBeUndefined();
   });
 
   it('rejects a passing year before 1950', () => {
@@ -85,11 +87,11 @@ describe('leadEditSchema', () => {
     if (r.success) expect(r.data.utm_source).toBe('personal_reference');
   });
 
-  it('accepts blanking every field except full name, email, and phone', () => {
+  it('accepts blanking every field, including full name, email, and phone', () => {
     const r = leadEditSchema.safeParse({
-      full_name: 'Asha Khan',
-      email: 'asha@example.com',
-      phone: '+923001234567',
+      full_name: '',
+      email: '',
+      phone: '',
       date_of_birth: '',
       city: '',
       district: '',
@@ -113,14 +115,16 @@ describe('leadEditSchema', () => {
       prior_rejection_detail: '',
     });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.city).toBeUndefined();
+    if (r.success) {
+      expect(r.data.full_name).toBeUndefined();
+      expect(r.data.email).toBeUndefined();
+      expect(r.data.phone).toBeUndefined();
+      expect(r.data.city).toBeUndefined();
+    }
   });
 
-  it('still rejects a blank name/email/phone with their normal message, not a generic one', () => {
-    const blankName = leadEditSchema.safeParse({ ...valid, full_name: '' });
-    expect(blankName.success).toBe(false);
-    if (!blankName.success) {
-      expect(blankName.error.issues[0]!.message).toBe('Please enter your full name');
-    }
+  it('still validates a non-blank email/phone for format even though neither is required', () => {
+    expect(leadEditSchema.safeParse({ ...valid, email: 'not-an-email' }).success).toBe(false);
+    expect(leadEditSchema.safeParse({ ...valid, phone: '123' }).success).toBe(false);
   });
 });

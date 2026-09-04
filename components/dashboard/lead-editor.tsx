@@ -27,6 +27,7 @@ import {
   INTAKE_YEARS,
   CODE_LABELS,
   gradeResultConfig,
+  GRADE_LETTER_SYSTEMS,
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
 import { ProgramField, splitProgram } from '@/components/form/program-field';
@@ -276,11 +277,12 @@ export function LeadDetailsEditor({
                 // Clear whichever result field no longer applies — otherwise
                 // switching from, say, CGPA to Grade could leave the old
                 // numeric result saved alongside the new letter grade.
+                const isLetter = (GRADE_LETTER_SYSTEMS as readonly string[]).includes(next);
                 const merged = {
                   ...formRef.current,
                   grading_system: next,
-                  grade_value: next === 'grade' ? '' : formRef.current.grade_value,
-                  grade_letter: next === 'grade' ? formRef.current.grade_letter : '',
+                  grade_value: isLetter ? '' : formRef.current.grade_value,
+                  grade_letter: isLetter ? formRef.current.grade_letter : '',
                 };
                 formRef.current = merged;
                 setForm(merged);

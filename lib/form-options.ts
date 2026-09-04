@@ -44,13 +44,18 @@ const LEGACY_GRADING_SYSTEM = { value: 'cgpa_5', label: 'CGPA (out of 5.0)' } as
 /**
  * Which result field a grading system needs, and how to render it — shared
  * by the public form, Create Query, and the lead editor so the "Result" box
- * swaps to match what was picked (a number for CGPA/Percentage/Other, free
- * text for Grade) instead of one static box for everything. Returns null
+ * swaps to match what was picked (a number for CGPA/Percentage, free text
+ * for Grade/Other) instead of one static box for everything. Returns null
  * when nothing's selected yet, so no result field shows at all.
  */
 export type GradeResultConfig =
   | { kind: 'number'; name: 'grade_value'; label: string; min: number; max?: number; step: string; placeholder: string }
   | { kind: 'text'; name: 'grade_letter'; label: string; placeholder: string };
+
+// Systems whose result is free text, stored in grade_letter rather than the
+// numeric grade_value — shared with the requiredness/clear-on-switch logic
+// that needs the same distinction elsewhere.
+export const GRADE_LETTER_SYSTEMS = ['grade', 'other'] as const;
 
 export function gradeResultConfig(gradingSystem: string | undefined | null): GradeResultConfig | null {
   switch (gradingSystem) {
@@ -63,7 +68,7 @@ export function gradeResultConfig(gradingSystem: string | undefined | null): Gra
     case 'grade':
       return { kind: 'text', name: 'grade_letter', label: 'Grade', placeholder: 'e.g. A, A-, B+, First Division' };
     case 'other':
-      return { kind: 'number', name: 'grade_value', label: 'Result', min: 0, step: '0.01', placeholder: 'e.g. 85' };
+      return { kind: 'text', name: 'grade_letter', label: 'Result', placeholder: 'e.g. Pass, Merit, 3rd year standing' };
     default:
       return null;
   }
