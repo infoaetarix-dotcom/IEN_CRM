@@ -32,10 +32,42 @@ export const DEGREE_OPTIONS = [
 
 export const GRADING_SYSTEMS = [
   { value: 'cgpa_4', label: 'CGPA (out of 4.0)' },
-  { value: 'cgpa_5', label: 'CGPA (out of 5.0)' },
+  { value: 'grade', label: 'Grade' },
   { value: 'percentage', label: 'Percentage (%)' },
   { value: 'other', label: 'Other' },
 ] as const;
+
+// Retired from the dropdown (replaced by 'grade' above) but must stay a
+// recognized, labelable value — existing leads may still have it stored.
+const LEGACY_GRADING_SYSTEM = { value: 'cgpa_5', label: 'CGPA (out of 5.0)' } as const;
+
+/**
+ * Which result field a grading system needs, and how to render it — shared
+ * by the public form, Create Query, and the lead editor so the "Result" box
+ * swaps to match what was picked (a number for CGPA/Percentage/Other, free
+ * text for Grade) instead of one static box for everything. Returns null
+ * when nothing's selected yet, so no result field shows at all.
+ */
+export type GradeResultConfig =
+  | { kind: 'number'; name: 'grade_value'; label: string; min: number; max?: number; step: string; placeholder: string }
+  | { kind: 'text'; name: 'grade_letter'; label: string; placeholder: string };
+
+export function gradeResultConfig(gradingSystem: string | undefined | null): GradeResultConfig | null {
+  switch (gradingSystem) {
+    case 'cgpa_4':
+      return { kind: 'number', name: 'grade_value', label: 'CGPA', min: 0, max: 4, step: '0.01', placeholder: 'e.g. 3.5' };
+    case 'cgpa_5': // legacy — no longer selectable, but an existing lead may still carry it
+      return { kind: 'number', name: 'grade_value', label: 'CGPA (out of 5.0)', min: 0, max: 5, step: '0.01', placeholder: 'e.g. 4.2' };
+    case 'percentage':
+      return { kind: 'number', name: 'grade_value', label: 'Percentage', min: 0, max: 100, step: '0.01', placeholder: 'e.g. 85' };
+    case 'grade':
+      return { kind: 'text', name: 'grade_letter', label: 'Grade', placeholder: 'e.g. A, A-, B+, First Division' };
+    case 'other':
+      return { kind: 'number', name: 'grade_value', label: 'Result', min: 0, step: '0.01', placeholder: 'e.g. 85' };
+    default:
+      return null;
+  }
+}
 
 export const ENGLISH_TESTS = [
   { value: 'ielts', label: 'IELTS' },
@@ -63,7 +95,9 @@ export const FUNDING_SOURCES = [
 ] as const;
 
 // Value lists for validation (must match the DB CHECK constraints).
-export const GRADING_VALUES = GRADING_SYSTEMS.map((g) => g.value);
+// Includes the retired 'cgpa_5' so an existing lead that still has it stays
+// valid to save (just not offered as a new choice via GRADING_SYSTEMS).
+export const GRADING_VALUES = [...GRADING_SYSTEMS.map((g) => g.value), LEGACY_GRADING_SYSTEM.value];
 export const ENGLISH_VALUES = ENGLISH_TESTS.map((t) => t.value);
 export const INTAKE_SEASON_VALUES = INTAKE_SEASONS.map((s) => s.value);
 export const FUNDING_VALUES = FUNDING_SOURCES.map((f) => f.value);
@@ -82,6 +116,7 @@ export const INTAKE_YEARS = Array.from(
 export const CODE_LABELS: Record<string, string> = Object.fromEntries(
   [
     ...GRADING_SYSTEMS,
+    LEGACY_GRADING_SYSTEM,
     ...ENGLISH_TESTS,
     ...INTAKE_SEASONS,
     ...FUNDING_SOURCES,

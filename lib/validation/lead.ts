@@ -145,14 +145,11 @@ const leadFields = {
         .max(CURRENT_YEAR + 1, 'Invalid year'),
     ),
     grading_system: reqCode(GRADING_VALUES, 'Please select a grading system'),
-    grade_value: reqNum(
-      z
-        .number({
-          required_error: 'Please enter your result',
-          invalid_type_error: 'Please enter your result',
-        })
-        .min(0, 'Invalid result'),
-    ),
+    // Numeric result (CGPA/percentage/other) — required only when a system
+    // that uses it is selected; see gradeResultOk below. grade_letter, right
+    // after, is its counterpart for the 'grade' (letter/division) system.
+    grade_value: optNum(z.number().min(0, 'Invalid result')),
+    grade_letter: optText(40),
     // Experience
     work_experience_years: optNum(z.number().int().min(0).max(60)),
     work_experience_detail: optText(300),
@@ -206,6 +203,29 @@ export const GRADE_MSG = {
   path: ['grade_value'] as (string | number)[],
 };
 
+/**
+ * Public-form-only: once a grading system is picked, its matching result
+ * field becomes required — grade_letter for 'grade', grade_value for
+ * everything else. Create Query and the lead editor never apply this (both
+ * stay fully optional), so it's wired into step2Schema alone, not
+ * leadObject/leadSchema.
+ */
+function requireGradeResult(
+  d: { grading_system?: string; grade_value?: number; grade_letter?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (!d.grading_system) return;
+  if (d.grading_system === 'grade') {
+    if (!d.grade_letter || d.grade_letter.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Please enter your grade', path: ['grade_letter'] });
+    }
+    return;
+  }
+  if (d.grade_value == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Please enter your result', path: ['grade_value'] });
+  }
+}
+
 export const leadObject = z.object(leadFields);
 
 export const leadSchema = leadObject
@@ -238,10 +258,12 @@ export const step2Schema = leadObject
     passing_year: true,
     grading_system: true,
     grade_value: true,
+    grade_letter: true,
     work_experience_years: true,
     work_experience_detail: true,
   })
-  .refine(gradeInRange, GRADE_MSG);
+  .refine(gradeInRange, GRADE_MSG)
+  .superRefine(requireGradeResult);
 
 // Step 3: study goals — all optional (never blocks completion).
 export const step3Schema = leadObject
@@ -299,6 +321,7 @@ export const leadEditSchema = z.preprocess((raw) => {
     passing_year: true,
     grading_system: true,
     grade_value: true,
+    grade_letter: true,
     work_experience_years: true,
     work_experience_detail: true,
     english_test: true,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { leadSchema, normalizeSource } from '@/lib/validation/lead';
+import { leadSchema, step2Schema, normalizeSource } from '@/lib/validation/lead';
 import { ageFromDob } from '@/lib/utils';
 
 const base = {
@@ -68,6 +68,47 @@ describe('leadSchema', () => {
   it('blocks a filled honeypot', () => {
     const r = leadSchema.safeParse({ ...base, company: 'spam' });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('step2Schema — dynamic grade result', () => {
+  const step2Base = {
+    date_of_birth: '2000-05-01',
+    city: 'Lahore',
+    highest_education: "Bachelor's degree",
+    last_qualification: 'BSc Computer Science',
+    prior_institution: 'University of the Punjab',
+    passing_year: '2021',
+  };
+
+  it('requires grade_value (not grade_letter) for cgpa_4', () => {
+    const withValue = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_4', grade_value: '3.5' });
+    expect(withValue.success).toBe(true);
+
+    const missing = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_4' });
+    expect(missing.success).toBe(false);
+    if (!missing.success) expect(missing.error.issues[0]!.path).toContain('grade_value');
+  });
+
+  it('requires grade_letter (not grade_value) for the grade system', () => {
+    const withLetter = step2Schema.safeParse({ ...step2Base, grading_system: 'grade', grade_letter: 'A-' });
+    expect(withLetter.success).toBe(true);
+
+    const missing = step2Schema.safeParse({ ...step2Base, grading_system: 'grade' });
+    expect(missing.success).toBe(false);
+    if (!missing.success) expect(missing.error.issues[0]!.path).toContain('grade_letter');
+  });
+
+  it('still enforces the cgpa_4 numeric range on its own field', () => {
+    const r = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_4', grade_value: '4.5' });
+    expect(r.success).toBe(false);
+  });
+
+  it('still validates a legacy cgpa_5 value against its own range (not offered in the dropdown, but existing leads may still carry it)', () => {
+    const inRange = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_5', grade_value: '4.5' });
+    expect(inRange.success).toBe(true);
+    const outOfRange = step2Schema.safeParse({ ...step2Base, grading_system: 'cgpa_5', grade_value: '5.5' });
+    expect(outOfRange.success).toBe(false);
   });
 });
 

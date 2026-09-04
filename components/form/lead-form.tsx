@@ -48,6 +48,7 @@ import {
   FUNDING_SOURCES,
   PASSING_YEARS,
   INTAKE_YEARS,
+  gradeResultConfig,
 } from '@/lib/form-options';
 
 const init: StepState = { ok: false };
@@ -192,6 +193,7 @@ export function LeadForm({
     passing_year: '',
     grading_system: '',
     grade_value: '',
+    grade_letter: '',
     work_experience_years: '',
     work_experience_detail: '',
   });
@@ -470,7 +472,23 @@ export function LeadForm({
                   <Required />
                 </Label>
                 <div className="mt-1.5">
-                  <Select id="grading_system" name="grading_system" {...bind2('grading_system')}>
+                  <Select
+                    id="grading_system"
+                    name="grading_system"
+                    value={v2.grading_system}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      // Clear whichever result field no longer applies —
+                      // switching systems shouldn't leave a stale value
+                      // sitting in the field that's about to disappear.
+                      setV2((v) => ({
+                        ...v,
+                        grading_system: next,
+                        grade_value: next === 'grade' ? '' : v.grade_value,
+                        grade_letter: next === 'grade' ? v.grade_letter : '',
+                      }));
+                    }}
+                  >
                     <option value="">Select grading system</option>
                     {GRADING_SYSTEMS.map((x) => (
                       <option key={x.value} value={x.value}>{x.label}</option>
@@ -479,24 +497,41 @@ export function LeadForm({
                 </div>
                 <FieldError message={err2.grading_system} />
               </div>
-              <div>
-                <Label htmlFor="grade_value">
-                  Your result
-                  <Required />
-                </Label>
-                <Input
-                  id="grade_value"
-                  name="grade_value"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  inputMode="decimal"
-                  placeholder="e.g. 3.5 or 85"
-                  className="mt-1.5"
-                  {...bind2('grade_value')}
-                />
-                <FieldError message={err2.grade_value} />
-              </div>
+              {(() => {
+                const cfg = gradeResultConfig(v2.grading_system);
+                if (!cfg) return null;
+                return (
+                  <div>
+                    <Label htmlFor={cfg.name}>
+                      {cfg.label}
+                      <Required />
+                    </Label>
+                    {cfg.kind === 'number' ? (
+                      <Input
+                        id="grade_value"
+                        name="grade_value"
+                        type="number"
+                        step={cfg.step}
+                        min={cfg.min}
+                        max={cfg.max}
+                        inputMode="decimal"
+                        placeholder={cfg.placeholder}
+                        className="mt-1.5"
+                        {...bind2('grade_value')}
+                      />
+                    ) : (
+                      <Input
+                        id="grade_letter"
+                        name="grade_letter"
+                        placeholder={cfg.placeholder}
+                        className="mt-1.5"
+                        {...bind2('grade_letter')}
+                      />
+                    )}
+                    <FieldError message={cfg.kind === 'number' ? err2.grade_value : err2.grade_letter} />
+                  </div>
+                );
+              })()}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
