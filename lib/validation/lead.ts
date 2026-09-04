@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import {
   GRADING_VALUES,
+  GRADE_LETTER_SYSTEMS,
   ENGLISH_VALUES,
   INTAKE_SEASON_VALUES,
   FUNDING_VALUES,
@@ -215,9 +216,9 @@ function requireGradeResult(
   ctx: z.RefinementCtx,
 ) {
   if (!d.grading_system) return;
-  if (d.grading_system === 'grade') {
+  if ((GRADE_LETTER_SYSTEMS as readonly string[]).includes(d.grading_system)) {
     if (!d.grade_letter || d.grade_letter.trim().length === 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Please enter your grade', path: ['grade_letter'] });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Please enter your result', path: ['grade_letter'] });
     }
     return;
   }
@@ -286,20 +287,17 @@ export const step3Schema = leadObject
 // utm_campaign, and the honeypot (system/audit fields that must never be
 // hand-edited). Reuses the same field rules + cross-field checks.
 //
-// Full name, email, and phone stay required — leads.full_name/email/phone
-// are NOT NULL columns, and a lead with none of them can't be contacted
-// (breaks outbound email, WhatsApp, and the leads list). Every other field
-// is optional/clearable, same "save whatever you have" spirit as
-// quickLeadSchema below. Blank strings are treated as "not provided" for
-// the optional fields only — the required three keep their raw value so a
-// blank one still fails its own validator with its normal message, instead
-// of a generic "Required".
-const REQUIRED_IN_EDIT = new Set(['full_name', 'email', 'phone']);
+// Every field, including full name, email, and phone, is optional/clearable
+// — same "save whatever you have" spirit as quickLeadSchema below. A lead
+// saved with none of the three can't be contacted (breaks outbound email,
+// WhatsApp, and the leads list) until filled back in — an accepted
+// tradeoff, not an oversight; leads.full_name/email/phone were relaxed from
+// NOT NULL in 0042_lead_contact_optional.sql to allow it.
 export const leadEditSchema = z.preprocess((raw) => {
   if (typeof raw !== 'object' || raw === null) return raw;
   const cleaned: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    cleaned[k] = v === '' && !REQUIRED_IN_EDIT.has(k) ? undefined : v;
+    cleaned[k] = v === '' ? undefined : v;
   }
   return cleaned;
 }, leadObject
@@ -335,7 +333,6 @@ export const leadEditSchema = z.preprocess((raw) => {
     passport_number: true,
   })
   .partial()
-  .required({ full_name: true, email: true, phone: true })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
   .refine(gradeInRange, GRADE_MSG));
 

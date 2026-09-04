@@ -49,6 +49,7 @@ import {
   PASSING_YEARS,
   INTAKE_YEARS,
   gradeResultConfig,
+  GRADE_LETTER_SYSTEMS,
 } from '@/lib/form-options';
 
 const init: StepState = { ok: false };
@@ -481,11 +482,12 @@ export function LeadForm({
                       // Clear whichever result field no longer applies —
                       // switching systems shouldn't leave a stale value
                       // sitting in the field that's about to disappear.
+                      const isLetter = (GRADE_LETTER_SYSTEMS as readonly string[]).includes(next);
                       setV2((v) => ({
                         ...v,
                         grading_system: next,
-                        grade_value: next === 'grade' ? '' : v.grade_value,
-                        grade_letter: next === 'grade' ? v.grade_letter : '',
+                        grade_value: isLetter ? '' : v.grade_value,
+                        grade_letter: isLetter ? v.grade_letter : '',
                       }));
                     }}
                   >

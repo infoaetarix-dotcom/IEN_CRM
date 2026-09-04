@@ -24,6 +24,7 @@ import {
   PASSING_YEARS,
   INTAKE_YEARS,
   gradeResultConfig,
+  GRADE_LETTER_SYSTEMS,
 } from '@/lib/form-options';
 import { LEAD_SOURCES, SOURCE_LABELS, isReferenceSource } from '@/lib/leads/display';
 
@@ -253,11 +254,12 @@ export function QuickQueryForm({
                 // Clear whichever result field no longer applies, so
                 // switching systems can't leave both a numeric result and a
                 // letter grade set on the same new lead.
+                const isLetter = (GRADE_LETTER_SYSTEMS as readonly string[]).includes(next);
                 setV2((v) => ({
                   ...v,
                   grading_system: next,
-                  grade_value: next === 'grade' ? '' : v.grade_value,
-                  grade_letter: next === 'grade' ? v.grade_letter : '',
+                  grade_value: isLetter ? '' : v.grade_value,
+                  grade_letter: isLetter ? v.grade_letter : '',
                 }));
               }}
             >

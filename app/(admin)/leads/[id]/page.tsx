@@ -16,12 +16,14 @@ import {
   StatusChanger,
   NoteComposer,
   EmailPanel,
+  LeadCustomEmailButton,
 } from '@/components/dashboard/lead-controls';
 import {
   LeadDetailsEditor,
   type LeadEditState,
 } from '@/components/dashboard/lead-editor';
 import { LeadActions } from '@/components/dashboard/lead-archive-controls';
+import { MessageHistoryDialog } from '@/components/dashboard/message-history-dialog';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import { LeadDocumentsPanel } from '@/components/dashboard/lead-documents-panel';
 import { LeadUploadLinkCard } from '@/components/dashboard/lead-upload-link-card';
@@ -100,7 +102,7 @@ export default async function LeadDetailPage({
       .order('changed_at', { ascending: false }),
     supabase
       .from('messages')
-      .select('id, subject, status, template_key, sent_by, created_at, error_detail')
+      .select('id, subject, body, status, template_key, sent_by, created_at, error_detail')
       .eq('lead_id', id)
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name, email, is_active'),
@@ -179,7 +181,13 @@ export default async function LeadDetailPage({
     passing_year: s(lead.passing_year),
     grading_system: s(lead.grading_system),
     grade_value: s(lead.grade_value),
-    grade_letter: s(lead.grade_letter),
+    // 'other' used to store its result in the numeric grade_value column —
+    // a lead saved before that switched to free text still has its value
+    // there, not in grade_letter. Fall back to it so editing an old "other"
+    // lead shows its existing result instead of an empty box.
+    grade_letter:
+      s(lead.grade_letter) ||
+      (lead.grading_system === 'other' && lead.grade_value != null ? s(lead.grade_value) : ''),
     work_experience_years: s(lead.work_experience_years),
     work_experience_detail: s(lead.work_experience_detail),
     english_test: s(lead.english_test),
@@ -287,8 +295,8 @@ export default async function LeadDetailPage({
               <Field
                 label="Result"
                 value={
-                  lead.grading_system === 'grade' && lead.grade_letter
-                    ? `${lead.grade_letter} — Grade`
+                  lead.grade_letter
+                    ? `${lead.grade_letter}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
                     : lead.grade_value != null
                       ? `${lead.grade_value}${lead.grading_system ? ` — ${CODE_LABELS[lead.grading_system] ?? lead.grading_system}` : ''}`
                       : null
@@ -476,8 +484,15 @@ export default async function LeadDetailPage({
           </Card>
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="font-tenant-display">Send email</CardTitle>
+              <LeadCustomEmailButton
+                leadId={lead.id}
+                name={lead.full_name || lead.email || 'this lead'}
+                email={lead.email}
+                templates={templatesRes.data ?? []}
+                signatures={signatures}
+              />
             </CardHeader>
             <CardContent>
               {(templatesRes.data ?? []).length > 0 ? (
@@ -495,8 +510,13 @@ export default async function LeadDetailPage({
           </Card>
 
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="font-tenant-display">Message history</CardTitle>
+              <MessageHistoryDialog
+                messages={messagesRes.data ?? []}
+                nameById={nameById}
+                emailById={emailById}
+              />
             </CardHeader>
             <CardContent className="space-y-2">
               {(messagesRes.data ?? []).length === 0 && (
@@ -521,7 +541,8 @@ export default async function LeadDetailPage({
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {m.sent_by ? (nameById.get(m.sent_by) ?? 'Staff') : 'System'}{' '}
+                    {m.sent_by ? (nameById.get(m.sent_by) ?? 'Staff') : 'System'}
+                    {m.sent_by && emailById.get(m.sent_by) ? ` (${emailById.get(m.sent_by)})` : ''}{' '}
                     · {fmtDateTime(m.created_at)}
                   </p>
                   {m.error_detail && (

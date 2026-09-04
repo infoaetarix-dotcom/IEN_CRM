@@ -6,11 +6,14 @@ import {
   updateLeadStatus,
   addNote,
   sendLeadEmail,
+  getRenderedLeadTemplate,
+  sendCustomLeadEmail,
 } from '@/app/(admin)/leads/actions';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { LEAD_STATUSES, STATUS_LABELS } from '@/lib/leads/display';
+import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 
 function useAction() {
   const router = useRouter();
@@ -184,5 +187,37 @@ export function EmailPanel({
         {pending ? 'Sending…' : 'Send email'}
       </Button>
     </div>
+  );
+}
+
+/**
+ * Client-side wrapper around SendEmailDialog for the lead detail page.
+ * Server actions must be called from client code, not passed as closures
+ * from a Server Component prop — this component takes plain, serializable
+ * props (leadId etc.) and builds the resolveTemplate/sendAction callbacks
+ * itself, same as LeadRowActions already does for the leads table.
+ */
+export function LeadCustomEmailButton({
+  leadId,
+  name,
+  email,
+  templates,
+  signatures,
+}: {
+  leadId: string;
+  name: string;
+  email: string | null;
+  templates: { key: string; name: string; subject: string; body: string }[];
+  signatures: Signature[];
+}) {
+  return (
+    <SendEmailDialog
+      name={name}
+      email={email}
+      templates={templates}
+      signatures={signatures}
+      resolveTemplate={(templateKey) => getRenderedLeadTemplate(leadId, templateKey)}
+      sendAction={(payload) => sendCustomLeadEmail(leadId, payload)}
+    />
   );
 }
