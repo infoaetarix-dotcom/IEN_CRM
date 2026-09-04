@@ -84,4 +84,43 @@ describe('leadEditSchema', () => {
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.utm_source).toBe('personal_reference');
   });
+
+  it('accepts blanking every field except full name, email, and phone', () => {
+    const r = leadEditSchema.safeParse({
+      full_name: 'Asha Khan',
+      email: 'asha@example.com',
+      phone: '+923001234567',
+      date_of_birth: '',
+      city: '',
+      district: '',
+      target_country: '',
+      institution: '',
+      program: '',
+      intake_season: '',
+      intake_year: '',
+      highest_education: '',
+      last_qualification: '',
+      prior_institution: '',
+      passing_year: '',
+      grading_system: '',
+      grade_value: '',
+      work_experience_years: '',
+      work_experience_detail: '',
+      english_test: '',
+      english_score: '',
+      funding_source: '',
+      prior_rejection: false,
+      prior_rejection_detail: '',
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.city).toBeUndefined();
+  });
+
+  it('still rejects a blank name/email/phone with their normal message, not a generic one', () => {
+    const blankName = leadEditSchema.safeParse({ ...valid, full_name: '' });
+    expect(blankName.success).toBe(false);
+    if (!blankName.success) {
+      expect(blankName.error.issues[0]!.message).toBe('Please enter your full name');
+    }
+  });
 });

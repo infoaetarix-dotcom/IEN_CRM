@@ -263,7 +263,24 @@ export const step3Schema = leadObject
 // 0031_reference_lead_sources.sql). Still excludes consent, utm_medium/
 // utm_campaign, and the honeypot (system/audit fields that must never be
 // hand-edited). Reuses the same field rules + cross-field checks.
-export const leadEditSchema = leadObject
+//
+// Full name, email, and phone stay required — leads.full_name/email/phone
+// are NOT NULL columns, and a lead with none of them can't be contacted
+// (breaks outbound email, WhatsApp, and the leads list). Every other field
+// is optional/clearable, same "save whatever you have" spirit as
+// quickLeadSchema below. Blank strings are treated as "not provided" for
+// the optional fields only — the required three keep their raw value so a
+// blank one still fails its own validator with its normal message, instead
+// of a generic "Required".
+const REQUIRED_IN_EDIT = new Set(['full_name', 'email', 'phone']);
+export const leadEditSchema = z.preprocess((raw) => {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    cleaned[k] = v === '' && !REQUIRED_IN_EDIT.has(k) ? undefined : v;
+  }
+  return cleaned;
+}, leadObject
   .pick({
     full_name: true,
     email: true,
@@ -294,8 +311,10 @@ export const leadEditSchema = leadObject
     reference_note: true,
     passport_number: true,
   })
+  .partial()
+  .required({ full_name: true, email: true, phone: true })
   .refine(priorRejectionOk, PRIOR_REJECTION_MSG)
-  .refine(gradeInRange, GRADE_MSG);
+  .refine(gradeInRange, GRADE_MSG));
 
 export type LeadEditInput = z.infer<typeof leadEditSchema>;
 
