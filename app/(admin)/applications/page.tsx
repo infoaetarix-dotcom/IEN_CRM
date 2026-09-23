@@ -15,16 +15,35 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import { ApplicationRowActions } from '@/components/dashboard/applications/application-controls';
-import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_BADGE, type ApplicationStatus } from '@/lib/leads/display';
+import { ApplicationStageTabs } from '@/components/dashboard/applications/application-stage-tabs';
+import {
+  APPLICATION_STAGES,
+  APPLICATION_STATUS_LABELS,
+  APPLICATION_STATUS_BADGE,
+  APPLICATION_STATUS_STAGE,
+  type ApplicationStage,
+  type ApplicationStatus,
+} from '@/lib/leads/display';
 import { getSignaturesForSender } from '@/lib/email/signatures';
 
 export const metadata = { title: 'Applications' };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
-export default async function ApplicationsPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function ApplicationsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const profile = await requireUser();
   const supabase = await createClient();
+  const sp = await searchParams;
+  const stageParam = (Array.isArray(sp.stage) ? sp.stage[0] : sp.stage) ?? '';
+  const activeStage = (APPLICATION_STAGES as readonly string[]).includes(stageParam)
+    ? (stageParam as ApplicationStage)
+    : null;
 
   // Independent reads — the applications list, the lead picker's and
   // university picker's options, the org's email templates (for the
@@ -62,6 +81,19 @@ export default async function ApplicationsPage() {
   const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
+  // Counts per stage for the tab badges, computed from the same full list —
+  // there's no need for a second query at this scale.
+  const stageCounts = { application: 0, fee_deposit: 0, visa: 0, enrollment: 0 } as Record<
+    ApplicationStage,
+    number
+  >;
+  for (const a of applications ?? []) {
+    stageCounts[APPLICATION_STATUS_STAGE[a.status as ApplicationStatus]]++;
+  }
+  const visibleApplications = activeStage
+    ? (applications ?? []).filter((a) => APPLICATION_STATUS_STAGE[a.status as ApplicationStatus] === activeStage)
+    : (applications ?? []);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -70,6 +102,8 @@ export default async function ApplicationsPage() {
         subtitle="Every application across your leads — each one belongs to exactly one lead."
         action={<CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />}
       />
+
+      <ApplicationStageTabs counts={stageCounts} total={(applications ?? []).length} />
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardContent className="p-0">
@@ -88,7 +122,7 @@ export default async function ApplicationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(applications ?? []).map((a) => {
+              {visibleApplications.map((a) => {
                 const leadRow = Array.isArray(a.leads) ? a.leads[0] : a.leads;
                 const university = Array.isArray(a.universities) ? a.universities[0] : a.universities;
                 return (
@@ -140,10 +174,12 @@ export default async function ApplicationsPage() {
                   </TableRow>
                 );
               })}
-              {(applications ?? []).length === 0 && (
+              {visibleApplications.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    No applications yet — create one from a lead, or the button above.
+                    {activeStage
+                      ? 'No applications at this stage.'
+                      : 'No applications yet — create one from a lead, or the button above.'}
                   </TableCell>
                 </TableRow>
               )}

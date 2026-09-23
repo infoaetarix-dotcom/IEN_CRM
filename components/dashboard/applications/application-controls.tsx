@@ -16,7 +16,12 @@ import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
-import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS } from '@/lib/leads/display';
+import {
+  APPLICATION_STAGES,
+  APPLICATION_STAGE_LABELS,
+  APPLICATION_STATUSES_BY_STAGE,
+  APPLICATION_STATUS_LABELS,
+} from '@/lib/leads/display';
 
 /**
  * Edit / WhatsApp / Email / Copy upload link / Delete for a row in the
@@ -136,10 +141,14 @@ export function ApplicationStatusChanger({
           });
         }}
       >
-        {APPLICATION_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {APPLICATION_STATUS_LABELS[s]}
-          </option>
+        {APPLICATION_STAGES.map((stage) => (
+          <optgroup key={stage} label={APPLICATION_STAGE_LABELS[stage]}>
+            {APPLICATION_STATUSES_BY_STAGE[stage].map((s) => (
+              <option key={s} value={s}>
+                {APPLICATION_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </Select>
       {error && <p className="text-xs text-destructive">{error}</p>}

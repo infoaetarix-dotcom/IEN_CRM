@@ -37,7 +37,7 @@ const applicationFields = leadObject
   .partial()
   .extend({
     passport_number: z.string().trim().max(40).optional(),
-    status: z.enum(APPLICATION_STATUSES).default('new'),
+    status: z.enum(APPLICATION_STATUSES).default('applied_processed'),
     // Unlike everything else here, this is deliberately required — every
     // application must be linked to a university from Settings (see
     // 0027_universities.sql). It's a real application, not lead-stage
