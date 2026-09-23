@@ -1,24 +1,31 @@
 import type { Metadata } from 'next';
-import { Inter, Source_Serif_4, Playfair_Display } from 'next/font/google';
+import localFont from 'next/font/local';
 import { RegisterServiceWorker } from '@/components/pwa/register-sw';
 import './globals.css';
 
-const sans = Inter({
-  subsets: ['latin'],
+// Self-hosted (not next/font/google) so the build never depends on reaching
+// Google's font servers at build time — that's exactly what caused a CI
+// build failure when GitHub's runner couldn't reach fonts.gstatic.com. Same
+// files, pulled once from the same Google Fonts CDN and checked into
+// app/fonts/, so the rendered result is identical.
+const sans = localFont({
+  src: './fonts/Inter-Variable.woff2',
+  weight: '100 900',
   variable: '--font-sans',
   display: 'swap',
 });
 
-const serif = Source_Serif_4({
-  subsets: ['latin'],
+const serif = localFont({
+  src: './fonts/SourceSerif4-Variable.woff2',
+  weight: '200 900',
   variable: '--font-serif',
   display: 'swap',
 });
 
 // Marketing-page display serif (headlines only — see tailwind `font-display`).
-const display = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['600', '700'],
+const display = localFont({
+  src: './fonts/PlayfairDisplay-600-700.woff2',
+  weight: '600 700',
   variable: '--font-display',
   display: 'swap',
 });
