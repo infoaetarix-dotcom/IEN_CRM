@@ -213,7 +213,7 @@ registerTools([
         prior_rejection: defaults.prior_rejection ? 'on' : undefined,
         prior_rejection_detail: defaults.prior_rejection_detail,
         passport_number: defaults.passport_number,
-        status: 'new',
+        status: 'applied_processed',
       });
 
       const outcome = await runGuarded(() =>

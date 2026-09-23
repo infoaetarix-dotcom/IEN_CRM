@@ -119,9 +119,11 @@ export function ApplicationRowActions({
 export function ApplicationStatusChanger({
   applicationId,
   current,
+  className,
 }: {
   applicationId: string;
   current: string;
+  className?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -132,6 +134,7 @@ export function ApplicationStatusChanger({
       <Select
         defaultValue={current}
         disabled={pending}
+        className={className}
         onChange={(e) => {
           setError(null);
           start(async () => {

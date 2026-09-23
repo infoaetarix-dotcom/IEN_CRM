@@ -32,9 +32,11 @@ function useAction() {
 export function StatusChanger({
   leadId,
   current,
+  className,
 }: {
   leadId: string;
   current: string;
+  className?: string;
 }) {
   const { pending, error, run } = useAction();
   return (
@@ -42,6 +44,7 @@ export function StatusChanger({
       <Select
         defaultValue={current}
         disabled={pending}
+        className={className}
         onChange={(e) => run(() => updateLeadStatus(leadId, e.target.value))}
       >
         {LEAD_STATUSES.map((s) => (

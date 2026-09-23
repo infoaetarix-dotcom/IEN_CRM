@@ -12,14 +12,11 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { ApplicationRowActions, ApplicationStatusChanger } from '@/components/dashboard/applications/application-controls';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
-import { ApplicationRowActions } from '@/components/dashboard/applications/application-controls';
 import { ApplicationStageTabs } from '@/components/dashboard/applications/application-stage-tabs';
 import {
   APPLICATION_STAGES,
-  APPLICATION_STATUS_LABELS,
-  APPLICATION_STATUS_BADGE,
   APPLICATION_STATUS_STAGE,
   type ApplicationStage,
   type ApplicationStatus,
@@ -145,9 +142,11 @@ export default async function ApplicationsPage({
                       {[a.target_country, a.program].filter(Boolean).join(' — ') || '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={APPLICATION_STATUS_BADGE[a.status as ApplicationStatus]}>
-                        {APPLICATION_STATUS_LABELS[a.status as ApplicationStatus]}
-                      </Badge>
+                      <ApplicationStatusChanger
+                        applicationId={a.id}
+                        current={a.status}
+                        className="h-8 w-auto min-w-[11rem] py-1 text-xs"
+                      />
                     </TableCell>
                     <TableCell className="text-blue-500 font-semibold">
                       {a.created_by ? (nameById.get(a.created_by) ?? '—') : '—'}
