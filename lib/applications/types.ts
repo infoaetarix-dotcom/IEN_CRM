@@ -73,6 +73,6 @@ export function leadToApplicationDefaults(lead: Record<string, unknown>): Applic
     prior_rejection: lead.prior_rejection === true,
     prior_rejection_detail: str(lead.prior_rejection_detail),
     passport_number: '',
-    status: 'new',
+    status: 'applied_processed',
   };
 }

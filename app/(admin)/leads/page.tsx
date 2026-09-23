@@ -19,11 +19,9 @@ import {
   RestoreLeadButton,
   LeadRowActions,
 } from '@/components/dashboard/lead-archive-controls';
+import { StatusChanger } from '@/components/dashboard/lead-controls';
 import {
-  STATUS_LABELS,
-  STATUS_BADGE,
   SOURCE_LABELS,
-  type LeadStatus,
   type LeadSource,
 } from '@/lib/leads/display';
 import { applyLeadFilters } from '@/lib/leads/filters';
@@ -227,9 +225,15 @@ export default async function LeadsPage({
                   </Badge>
                 </TableCell>
                 <TableCell className="border">
-                  <Badge variant={STATUS_BADGE[l.status as LeadStatus]}>
-                    {STATUS_LABELS[l.status as LeadStatus] ?? l.status}
-                  </Badge>
+                  {showArchived ? (
+                    <Badge variant="neutral">{l.status}</Badge>
+                  ) : (
+                    <StatusChanger
+                      leadId={l.id}
+                      current={l.status}
+                      className="h-8 w-auto min-w-[9rem] py-1 text-xs"
+                    />
+                  )}
                 </TableCell>
                 <TableCell className="hidden text-blue-500 font-semibold lg:table-cell border">
                   {l.created_by ? (nameById.get(l.created_by) ?? '—') : '—'}
