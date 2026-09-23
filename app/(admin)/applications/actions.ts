@@ -65,7 +65,7 @@ function fieldsFrom(formData: FormData) {
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: g(formData, 'prior_rejection_detail'),
     passport_number: g(formData, 'passport_number'),
-    status: g(formData, 'status') || 'new',
+    status: g(formData, 'status') || 'applied_processed',
   };
 }
 

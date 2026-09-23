@@ -32,41 +32,125 @@ export const STATUS_BADGE: Record<
 };
 
 /**
- * An application's own status (applications.status, still the original
- * `lead_status` enum) — a separate, unchanged set. Applications track a
- * specific application's progress, not the lead's journey toward becoming
- * one, so this was deliberately left alone when LEAD_STATUSES collapsed to
- * 4 stages (see 0034_lead_status_v2.sql).
+ * An application's own status (applications.status) — a separate concept
+ * from a lead's journey toward becoming one (LEAD_STATUSES above). This is
+ * the client's real 4-stage admissions pipeline (see
+ * 0044_application_stage_statuses.sql): Application -> Fee Deposit -> Visa
+ * -> Enrollment, each with its own set of specific outcomes. Rejected/
+ * Deferred/Refunded are stage-specific (e.g. app_rejected vs
+ * deposit_rejected) so staff can tell *where* an application fell out,
+ * not just that it did.
  */
+export const APPLICATION_STAGES = ['application', 'fee_deposit', 'visa', 'enrollment'] as const;
+export type ApplicationStage = (typeof APPLICATION_STAGES)[number];
+
+export const APPLICATION_STAGE_LABELS: Record<ApplicationStage, string> = {
+  application: 'Application',
+  fee_deposit: 'Fee Deposit',
+  visa: 'Visa',
+  enrollment: 'Enrolled',
+};
+
 export const APPLICATION_STATUSES = [
-  'new',
-  'contacted',
-  'in_progress',
-  'accepted',
-  'rejected',
-  'follow_up',
+  // Stage 1: Application
+  'applied_processed',
+  'conditional_offer',
+  'unconditional_offer',
+  'interview_assessment',
+  'pci_gte_interview',
+  'app_rejected',
+  'app_deferred',
+  // Stage 2: Fee Deposit
+  'deposit_1_paid',
+  'deposit_2_paid',
+  'cas_coe_i20_received',
+  'deposit_rejected',
+  'deposit_deferred',
+  'deposit_refunded',
+  // Stage 3: Visa
+  'visa_submitted',
+  'visa_accepted',
+  'visa_rejected',
+  'visa_refunded',
+  // Stage 4: Enrollment
+  'enrolled',
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  in_progress: 'In progress',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-  follow_up: 'Follow-up',
+  applied_processed: 'Applied / Processed',
+  conditional_offer: 'Conditional Offer',
+  unconditional_offer: 'Unconditional Offer',
+  interview_assessment: 'Interview / Assessment Required',
+  pci_gte_interview: 'PCI / GTE Interview',
+  app_rejected: 'Rejected — Application',
+  app_deferred: 'Deferred — Application',
+  deposit_1_paid: 'Deposit 1 Paid',
+  deposit_2_paid: 'Deposit 2 Paid',
+  cas_coe_i20_received: 'CAS / COE / I-20 Received',
+  deposit_rejected: 'Rejected — Fee Deposit',
+  deposit_deferred: 'Deferred — Fee Deposit',
+  deposit_refunded: 'Refunded — Fee Deposit',
+  visa_submitted: 'Visa Application Submitted',
+  visa_accepted: 'Visa Accepted',
+  visa_rejected: 'Visa Rejected',
+  visa_refunded: 'Refunded — Visa',
+  enrolled: 'Student Enrolled',
 };
+
+export const APPLICATION_STATUS_STAGE: Record<ApplicationStatus, ApplicationStage> = {
+  applied_processed: 'application',
+  conditional_offer: 'application',
+  unconditional_offer: 'application',
+  interview_assessment: 'application',
+  pci_gte_interview: 'application',
+  app_rejected: 'application',
+  app_deferred: 'application',
+  deposit_1_paid: 'fee_deposit',
+  deposit_2_paid: 'fee_deposit',
+  cas_coe_i20_received: 'fee_deposit',
+  deposit_rejected: 'fee_deposit',
+  deposit_deferred: 'fee_deposit',
+  deposit_refunded: 'fee_deposit',
+  visa_submitted: 'visa',
+  visa_accepted: 'visa',
+  visa_rejected: 'visa',
+  visa_refunded: 'visa',
+  enrolled: 'enrollment',
+};
+
+/** Statuses grouped by stage, in display order — backs the grouped status dropdown. */
+export const APPLICATION_STATUSES_BY_STAGE: Record<ApplicationStage, ApplicationStatus[]> = (() => {
+  const out = { application: [], fee_deposit: [], visa: [], enrollment: [] } as Record<
+    ApplicationStage,
+    ApplicationStatus[]
+  >;
+  for (const s of APPLICATION_STATUSES) out[APPLICATION_STATUS_STAGE[s]].push(s);
+  return out;
+})();
 
 export const APPLICATION_STATUS_BADGE: Record<
   ApplicationStatus,
   'info' | 'accent' | 'warning' | 'success' | 'danger' | 'neutral'
 > = {
-  new: 'info',
-  contacted: 'accent',
-  in_progress: 'warning',
-  accepted: 'success',
-  rejected: 'danger',
-  follow_up: 'neutral',
+  applied_processed: 'info',
+  conditional_offer: 'accent',
+  unconditional_offer: 'accent',
+  interview_assessment: 'warning',
+  pci_gte_interview: 'warning',
+  app_rejected: 'danger',
+  app_deferred: 'neutral',
+  deposit_1_paid: 'info',
+  deposit_2_paid: 'accent',
+  cas_coe_i20_received: 'success',
+  deposit_rejected: 'danger',
+  deposit_deferred: 'neutral',
+  deposit_refunded: 'neutral',
+  visa_submitted: 'info',
+  visa_accepted: 'success',
+  visa_rejected: 'danger',
+  visa_refunded: 'neutral',
+  enrolled: 'success',
 };
 
 export function isApplicationStatus(v: string): v is ApplicationStatus {
