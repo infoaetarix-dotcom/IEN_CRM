@@ -41,6 +41,23 @@ describe('buildVolumeData', () => {
     expect(d[d.length - 1]!.value).toBe(2);
     expect(d[d.length - 2]!.value).toBe(1);
   });
+
+  it('covers a 30-day window across a month boundary', () => {
+    const now = new Date('2026-06-20T12:00:00Z');
+    const rows: LeadRow[] = [
+      ...leads,
+      // 29 days back = first bucket (22 May)
+      { status: 'raw_lead', utm_source: 'website', created_at: '2026-05-22T10:00:00Z' },
+      // 30 days back = just outside the window
+      { status: 'raw_lead', utm_source: 'website', created_at: '2026-05-21T10:00:00Z' },
+    ];
+    const d = buildVolumeData(rows, 30, now);
+    expect(d).toHaveLength(30);
+    expect(d[0]!.label).toBe('22 May');
+    expect(d[0]!.value).toBe(1);
+    expect(d[d.length - 1]!.label).toBe('20 Jun');
+    expect(d.reduce((sum, x) => sum + x.value, 0)).toBe(4);
+  });
 });
 
 describe('computeResponseRate', () => {

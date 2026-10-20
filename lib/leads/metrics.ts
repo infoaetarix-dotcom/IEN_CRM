@@ -63,9 +63,12 @@ export function buildVolumeData(
     if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
   }
   return labels.map((key) => ({
+    // Keys are UTC dates; format in UTC too, or the label shifts a day on
+    // machines behind UTC.
     label: new Date(key).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
+      timeZone: 'UTC',
     }),
     value: buckets.get(key) ?? 0,
   }));

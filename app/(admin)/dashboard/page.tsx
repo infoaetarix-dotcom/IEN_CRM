@@ -24,6 +24,9 @@ import {
 
 export const metadata = { title: 'Dashboard' };
 
+// Window for the lead-volume chart; also drives its title.
+const VOLUME_DAYS = 30;
+
 function MetricCard({
   label,
   value,
@@ -95,7 +98,7 @@ export default async function DashboardPage() {
   ).length;
   const sourceData = buildSourceData(all);
   const pipelineData = buildPipelineData(all);
-  const volumeData = buildVolumeData(all, 14, now);
+  const volumeData = buildVolumeData(all, VOLUME_DAYS, now);
   const recentLeadsIn30 = all.filter((l) => new Date(l.created_at) >= last30);
   const response = computeResponseRate(recentLeadsIn30, firstContact);
   const recent = all.slice(0, 6);
@@ -156,7 +159,7 @@ export default async function DashboardPage() {
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Lead volume (last 14 days)</CardTitle>
+          <CardTitle className="font-tenant-display">Lead volume (last {VOLUME_DAYS} days)</CardTitle>
         </CardHeader>
         <CardContent>
           <VolumeLine data={volumeData} navy={theme.tokens.navy} />
