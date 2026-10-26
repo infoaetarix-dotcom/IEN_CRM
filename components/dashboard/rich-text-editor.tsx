@@ -35,6 +35,9 @@ function ToolbarButton({
       title={title}
       disabled={disabled}
       onClick={onClick}
+      // Keep focus (and the cursor) in the editor: without this, clicking a
+      // toolbar button blurs it, and whatever is typed next can be lost.
+      onMouseDown={(e) => e.preventDefault()}
       className={cn(
         'flex h-7 w-7 items-center justify-center rounded-md transition-colors disabled:opacity-50',
         active ? 'bg-tenant-accent text-white' : 'text-tenant-ink hover:bg-white',
@@ -87,7 +90,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'min-h-[100px] rounded-b-md border border-t-0 border-input bg-white px-3 py-2 text-sm focus:outline-none',
+          'email-content min-h-[100px] rounded-b-md border border-t-0 border-input bg-white px-3 py-2 focus:outline-none',
       },
     },
   });

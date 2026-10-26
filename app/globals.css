@@ -95,3 +95,54 @@
 .ien-phone .PhoneInputCountrySelectArrow {
   opacity: 0.4;
 }
+
+/* Email body as the recipient sees it. Mirrors the htmlContent wrapper in
+   lib/email/brevo.ts plus a mail client's default paragraph/list spacing,
+   so the compose box and email history look like the email that was sent.
+   Tailwind's preflight strips list bullets and paragraph margins, which is
+   why both used to look different from the real email. */
+.email-content {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #0b1f33;
+  overflow-wrap: anywhere;
+}
+.email-content p {
+  margin: 1em 0;
+}
+.email-content ul,
+.email-content ol {
+  margin: 1em 0;
+  padding-left: 40px;
+}
+.email-content ul {
+  list-style-type: disc;
+}
+.email-content ol {
+  list-style-type: decimal;
+}
+.email-content li > ul,
+.email-content li > ol {
+  margin: 0;
+}
+.email-content strong,
+.email-content b {
+  font-weight: 700;
+}
+.email-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.email-content > :first-child {
+  margin-top: 0;
+}
+.email-content > :last-child {
+  margin-bottom: 0;
+}
+.email-content > div > :first-child {
+  margin-top: 0;
+}
+.email-content > div > :last-child {
+  margin-bottom: 0;
+}

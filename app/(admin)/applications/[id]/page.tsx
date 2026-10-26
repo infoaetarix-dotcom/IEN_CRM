@@ -17,6 +17,8 @@ import {
 } from '@/components/dashboard/applications/application-controls';
 import { DocumentsPanel } from '@/components/dashboard/applications/documents-panel';
 import { UploadLinkCard } from '@/components/dashboard/applications/upload-link-card';
+import { MessageHistoryDialog } from '@/components/dashboard/message-history-dialog';
+import { MESSAGE_HISTORY_COLUMNS } from '@/lib/email/history';
 import type { ApplicationDocument } from '@/lib/applications/types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
@@ -60,7 +62,15 @@ export default async function ApplicationDetailPage({
     .single();
   if (!app) notFound();
 
-  const [{ data: lead }, { data: rawDocuments }, { data: notes }, { data: profiles }, { data: universities }, { data: org }] =
+  const [
+    { data: lead },
+    { data: rawDocuments },
+    { data: notes },
+    { data: profiles },
+    { data: universities },
+    { data: org },
+    { data: messages },
+  ] =
     await Promise.all([
       supabase.from('leads').select('id, full_name, lead_number').eq('id', app.lead_id).single(),
       supabase
@@ -84,6 +94,13 @@ export default async function ApplicationDetailPage({
         .select('portal_domain')
         .eq('id', profile.organization_id)
         .single(),
+      // Emails go to the student, so history is the lead's — including any
+      // sent from this application (they're logged against the lead).
+      supabase
+        .from('messages')
+        .select(MESSAGE_HISTORY_COLUMNS)
+        .eq('lead_id', app.lead_id)
+        .order('created_at', { ascending: false }),
     ]);
 
   const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
@@ -329,6 +346,37 @@ export default async function ApplicationDetailPage({
                 url={uploadUrl}
                 expiresAt={app.document_upload_expires_at}
               />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="font-tenant-display">Email history</CardTitle>
+              <MessageHistoryDialog
+                messages={messages ?? []}
+                nameById={nameById}
+                emailById={emailById}
+              />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(messages ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">No emails sent to this student yet.</p>
+              )}
+              {(messages ?? []).slice(0, 5).map((m) => (
+                <div key={m.id} className="text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">{m.subject ?? m.template_key}</span>
+                    <Badge
+                      variant={
+                        m.status === 'sent' ? 'success' : m.status === 'failed' ? 'danger' : 'neutral'
+                      }
+                    >
+                      {m.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{fmtDateTime(m.created_at)}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
