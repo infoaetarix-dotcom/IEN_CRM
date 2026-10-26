@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
@@ -19,17 +19,29 @@ export function UniversityPicker({
   value,
   onChange,
   placeholder = 'Select a university…',
+  onAddNew,
 }: {
   universities: { id: string; name: string; country: string }[];
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
+  /** When given, the list ends with an "Add new university" action that hands
+   *  back whatever was typed in the search box, so the caller can create it
+   *  in place instead of sending the user off to Settings. */
+  onAddNew?: (search: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const selected = universities.find((u) => u.id === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSearch('');
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -49,7 +61,11 @@ export function UniversityPicker({
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Search universities…" />
+          <CommandInput
+            placeholder="Search universities…"
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList id="university-picker-options">
             <CommandEmpty>No university found.</CommandEmpty>
             <CommandGroup>
@@ -70,6 +86,24 @@ export function UniversityPicker({
               ))}
             </CommandGroup>
           </CommandList>
+          {onAddNew && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 border-t px-3 py-2.5 text-left text-sm font-medium text-tenant-accent hover:bg-tenant-accent/5"
+              onClick={() => {
+                onAddNew(search.trim());
+                setOpen(false);
+                setSearch('');
+              }}
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {search.trim()
+                  ? `Add “${search.trim()}” as a new university`
+                  : 'Add new university'}
+              </span>
+            </button>
+          )}
         </Command>
       </PopoverContent>
     </Popover>

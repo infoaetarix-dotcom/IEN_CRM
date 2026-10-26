@@ -12,6 +12,8 @@ export interface SettingsActionState {
   error?: string;
   fieldErrors?: Record<string, string>;
   universityId?: string;
+  /** The saved row, so an inline "add university" can select it without a refetch. */
+  university?: { id: string; name: string; country: string; created_at: string };
 }
 
 export interface SignatureActionState {
@@ -67,6 +69,26 @@ export async function createUniversity(
   }
 
   const supabase = await createClient();
+
+  // Nothing in the schema prevents duplicates, and universities can now be
+  // added mid-flow from the Create application popup, so guard against the
+  // same name + country being added twice (case-insensitive). ilike with the
+  // LIKE wildcards escaped is an exact, case-insensitive match.
+  const { data: existing } = await supabase
+    .from('universities')
+    .select('id')
+    .eq('organization_id', profile.organization_id)
+    .ilike('name', parsed.data.name.replace(/[\\%_]/g, '\\$&'))
+    .ilike('country', parsed.data.country.replace(/[\\%_]/g, '\\$&'))
+    .limit(1);
+  if (existing && existing.length > 0) {
+    return {
+      ok: false,
+      error: 'This university is already in your list.',
+      fieldErrors: { name: 'Already added — pick it from the list instead.' },
+    };
+  }
+
   const { data: uni, error } = await supabase
     .from('universities')
     .insert({
@@ -75,7 +97,7 @@ export async function createUniversity(
       country: parsed.data.country,
       created_by: profile.id,
     })
-    .select('id')
+    .select('id, name, country, created_at')
     .single();
   if (error || !uni) return { ok: false, error: 'Could not save this university.' };
 
@@ -89,7 +111,8 @@ export async function createUniversity(
   });
 
   revalidatePath('/settings');
-  return { ok: true, universityId: uni.id };
+  revalidatePath('/applications');
+  return { ok: true, universityId: uni.id, university: uni };
 }
 
 /**
