@@ -25,6 +25,7 @@ import {
   type LeadSource,
 } from '@/lib/leads/display';
 import { applyLeadFilters } from '@/lib/leads/filters';
+import { getReportingSettings } from '@/lib/reports/settings';
 import { getSignaturesForSender } from '@/lib/email/signatures';
 
 export const metadata = { title: 'Leads' };
@@ -52,6 +53,7 @@ export default async function LeadsPage({
   const completeness = str(sp.completeness); // '', 'complete', 'incomplete'
   const from = str(sp.from);
   const to = str(sp.to);
+  const staff = str(sp.staff);
   const showArchived = str(sp.archived) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
   const sort = str(sp.sort) || 'created_at';
@@ -77,6 +79,7 @@ export default async function LeadsPage({
       { count: 'exact' },
     );
 
+  const { timezone } = await getReportingSettings(profile.organization_id!);
   query = applyLeadFilters(query, {
     q,
     status,
@@ -84,7 +87,9 @@ export default async function LeadsPage({
     completeness,
     from,
     to,
+    staff,
     archived: showArchived,
+    timezone,
   });
 
   const offset = (page - 1) * PAGE_SIZE;
@@ -126,6 +131,7 @@ export default async function LeadsPage({
     if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
+    if (staff) next.set('staff', staff);
     if (sort !== 'created_at') next.set('sort', sort);
     if (dir !== 'desc') next.set('dir', dir);
     if (showArchived) next.set('archived', '1');
@@ -141,6 +147,7 @@ export default async function LeadsPage({
     if (completeness) next.set('completeness', completeness);
     if (from) next.set('from', from);
     if (to) next.set('to', to);
+    if (staff) next.set('staff', staff);
     if (showArchived) next.set('archived', '1');
     return `/api/leads/export?${next.toString()}`;
   })();
@@ -171,7 +178,12 @@ export default async function LeadsPage({
       />
 
       <div className="rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm">
-        <LeadsFilters />
+        <LeadsFilters
+          staff={(profiles ?? [])
+            .filter((p) => p.is_active || p.id === staff)
+            .map((p) => ({ id: p.id, name: p.full_name ?? 'Staff' }))
+            .sort((a, b) => a.name.localeCompare(b.name))}
+        />
       </div>
 
       <div className="rounded-xl border border-tenant-ink/10 bg-white shadow-sm">

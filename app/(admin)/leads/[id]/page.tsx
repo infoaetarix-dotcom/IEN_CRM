@@ -23,6 +23,7 @@ import {
 } from '@/components/dashboard/lead-editor';
 import { LeadActions } from '@/components/dashboard/lead-archive-controls';
 import { MessageHistoryDialog } from '@/components/dashboard/message-history-dialog';
+import { MESSAGE_HISTORY_COLUMNS } from '@/lib/email/history';
 import { CreateApplicationDialog } from '@/components/dashboard/applications/create-application-dialog';
 import { LeadDocumentsPanel } from '@/components/dashboard/lead-documents-panel';
 import { LeadUploadLinkCard } from '@/components/dashboard/lead-upload-link-card';
@@ -101,7 +102,7 @@ export default async function LeadDetailPage({
       .order('changed_at', { ascending: false }),
     supabase
       .from('messages')
-      .select('id, subject, body, body_is_html, status, template_key, sent_by, created_at, error_detail')
+      .select(MESSAGE_HISTORY_COLUMNS)
       .eq('lead_id', id)
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name, email, is_active'),

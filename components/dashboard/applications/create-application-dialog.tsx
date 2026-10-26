@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { LeadPicker } from '@/components/dashboard/lead-picker';
 import { UniversityPicker } from '@/components/dashboard/university-picker';
+import { InlineAddUniversity } from '@/components/dashboard/inline-add-university';
 import { Button } from '@/components/ui/button';
 import { ApplicationForm } from './application-form';
 import type { ApplicationFormValues } from '@/lib/applications/types';
@@ -28,7 +30,8 @@ type Step = 'lead' | 'university' | 'form';
  * Three steps: pick the student (skipped when fixedLead is given) → pick the
  * university this application is for (required — see 0027_universities.sql)
  * → the full form, pre-filled from the lead and with that university
- * already selected but still changeable.
+ * already selected but still changeable. A university that isn't listed yet
+ * can be added right in the university step (InlineAddUniversity).
  */
 export function CreateApplicationDialog({
   leads,
@@ -50,6 +53,19 @@ export function CreateApplicationDialog({
   const [values, setValues] = useState<ApplicationFormValues | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // null = picking from the list; a string = the inline add form is open,
+  // pre-filled with whatever was typed in the picker's search.
+  const [adding, setAdding] = useState<string | null>(null);
+  // Added from this popup — shown immediately, before router.refresh() lands.
+  const [addedUniversities, setAddedUniversities] = useState<University[]>([]);
+  const router = useRouter();
+
+  const allUniversities = useMemo(() => {
+    const known = new Set(universities.map((u) => u.id));
+    return [...universities, ...addedUniversities.filter((u) => !known.has(u.id))].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [universities, addedUniversities]);
 
   function reset() {
     setStep(fixedLead ? 'university' : 'lead');
@@ -57,6 +73,7 @@ export function CreateApplicationDialog({
     setUniversityId('');
     setValues(null);
     setError(null);
+    setAdding(null);
   }
 
   function handleContinueToUniversity() {
@@ -130,33 +147,55 @@ export function CreateApplicationDialog({
 
         {step === 'university' && (
           <div className="space-y-4">
-            <UniversityPicker
-              universities={universities}
-              value={universityId}
-              onChange={setUniversityId}
-            />
-            {universities.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No universities listed yet — add one in Settings first.
-              </p>
+            {adding === null ? (
+              <>
+                <UniversityPicker
+                  universities={allUniversities}
+                  value={universityId}
+                  onChange={setUniversityId}
+                  onAddNew={(search) => setAdding(search)}
+                />
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-tenant-accent hover:underline"
+                  onClick={() => setAdding('')}
+                >
+                  <Plus className="h-3.5 w-3.5" /> University not listed? Add it here
+                </button>
+              </>
+            ) : (
+              <InlineAddUniversity
+                defaultName={adding}
+                onCancel={() => setAdding(null)}
+                onCreated={(u) => {
+                  setAddedUniversities((prev) => [...prev, u]);
+                  setUniversityId(u.id);
+                  setAdding(null);
+                  // Pull the new university into the page's own data too, so
+                  // it's there next time without a manual reload.
+                  router.refresh();
+                }}
+              />
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="flex gap-3">
-              <Button
-                disabled={!universityId || pending}
-                className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
-                onClick={handleContinueToForm}
-              >
-                {pending ? 'Loading…' : 'Continue'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => (fixedLead ? setOpen(false) : setStep('lead'))}
-              >
-                {fixedLead ? 'Cancel' : '← Back'}
-              </Button>
-            </div>
+            {adding === null && (
+              <div className="flex gap-3">
+                <Button
+                  disabled={!universityId || pending}
+                  className="bg-tenant-accent text-white hover:bg-tenant-accent/90"
+                  onClick={handleContinueToForm}
+                >
+                  {pending ? 'Loading…' : 'Continue'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => (fixedLead ? setOpen(false) : setStep('lead'))}
+                >
+                  {fixedLead ? 'Cancel' : '← Back'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -164,7 +203,7 @@ export function CreateApplicationDialog({
           <ApplicationForm
             leadId={leadId}
             initial={values}
-            universities={universities}
+            universities={allUniversities}
             onCancel={() => setOpen(false)}
           />
         )}

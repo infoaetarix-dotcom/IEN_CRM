@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { LayoutDashboard } from 'lucide-react';
+import { ArrowUpRight, LayoutDashboard } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
+import { getReportingSettings } from '@/lib/reports/settings';
+import { zonedYMD, zonedDateKey, ymdKey, startOfDayInZone, monthName } from '@/lib/reports/time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -24,28 +26,41 @@ import {
 
 export const metadata = { title: 'Dashboard' };
 
+// Window for the lead-volume chart; also drives its title.
+const VOLUME_DAYS = 30;
+
+/** Clicking a card opens the leads list filtered to exactly what it counts. */
 function MetricCard({
   label,
   value,
   hint,
+  href,
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  href: string;
 }) {
   return (
-    <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
-      <CardContent className="p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
-          {label}
-        </p>
-        <p className="mt-2 font-tenant-display text-3xl font-semibold text-tenant-ink">
-          {value}
-        </p>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-      </CardContent>
-    </Card>
+    <Link href={href} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tenant-accent">
+      <Card className="h-full rounded-xl border-tenant-ink/10 shadow-sm transition-colors group-hover:border-tenant-accent/40 group-hover:bg-tenant-accent/[0.03]">
+        <CardContent className="p-5">
+          <p className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-tenant-accent">
+            {label}
+            <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+          </p>
+          <p className="mt-2 font-tenant-display text-3xl font-semibold text-tenant-ink">
+            {value}
+          </p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        </CardContent>
+      </Card>
+    </Link>
   );
+}
+
+function leadsHref(params: Record<string, string>) {
+  return `/leads?${new URLSearchParams(params).toString()}`;
 }
 
 export default async function DashboardPage() {
@@ -55,8 +70,9 @@ export default async function DashboardPage() {
   // Independent reads (brand lookup + two org-scoped queries) — fired together
   // instead of one-after-another so the page waits for the slowest of the
   // three round-trips, not their sum.
-  const [brand, { data: leads }, { data: statusHistory }] = await Promise.all([
+  const [brand, { timezone: tz }, { data: leads }, { data: statusHistory }] = await Promise.all([
     getOrgBrand(profile.organization_id),
+    getReportingSettings(profile.organization_id!),
     supabase
       .from('leads')
       .select('id, full_name, status, utm_source, created_at')
@@ -71,10 +87,16 @@ export default async function DashboardPage() {
   ]);
   const theme = resolveTheme(brand.themeKey);
 
+  // "Today" and "this month" follow the consultancy's own clock (Settings →
+  // Reporting), not the server's UTC one.
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const last30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const today = zonedYMD(now, tz);
+  const todayKey = ymdKey(today);
+  const monthStartKey = ymdKey({ ...today, day: 1 });
+  const startOfMonth = startOfDayInZone(tz, today.year, today.month, 1);
+  const startOfToday = startOfDayInZone(tz, today.year, today.month, today.day);
+  const last30 = startOfDayInZone(tz, today.year, today.month, today.day - 29);
+  const last30Key = zonedDateKey(last30, tz);
 
   // RLS scopes these to the caller's organization (shared across admin + agents).
   const all = leads ?? [];
@@ -93,9 +115,12 @@ export default async function DashboardPage() {
   const newToday = all.filter(
     (l) => l.status === 'raw_lead' && new Date(l.created_at) >= startOfToday,
   ).length;
-  const sourceData = buildSourceData(all);
-  const pipelineData = buildPipelineData(all);
-  const volumeData = buildVolumeData(all, 14, now);
+  const sourceData = buildSourceData(all).map((d) => ({ ...d, href: leadsHref({ source: d.key! }) }));
+  const pipelineData = buildPipelineData(all).map((d) => ({ ...d, href: leadsHref({ status: d.key! }) }));
+  const volumeData = buildVolumeData(all, VOLUME_DAYS, now, tz).map((d) => ({
+    ...d,
+    href: leadsHref({ from: d.key!, to: d.key! }),
+  }));
   const recentLeadsIn30 = all.filter((l) => new Date(l.created_at) >= last30);
   const response = computeResponseRate(recentLeadsIn30, firstContact);
   const recent = all.slice(0, 6);
@@ -113,9 +138,14 @@ export default async function DashboardPage() {
         <MetricCard
           label="Leads this month"
           value={totalThisMonth}
-          hint={now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+          hint={monthName(today.month) + ' ' + today.year}
+          href={leadsHref({ from: monthStartKey, to: todayKey })}
         />
-        <MetricCard label="New today (unworked)" value={newToday} />
+        <MetricCard
+          label="New today (unworked)"
+          value={newToday}
+          href={leadsHref({ status: 'raw_lead', from: todayKey, to: todayKey })}
+        />
         <MetricCard
           label="Response rate < 1h"
           value={response.rate == null ? '—' : `${response.rate}%`}
@@ -124,8 +154,14 @@ export default async function DashboardPage() {
               ? 'No leads in last 30 days'
               : `${response.within} of ${response.denom} (last 30 days)`
           }
+          href={leadsHref({ from: last30Key, to: todayKey })}
         />
-        <MetricCard label="Active sources" value={sourceData.length} />
+        <MetricCard
+          label="Active sources"
+          value={sourceData.length}
+          hint="All leads, by source"
+          href="/leads"
+        />
       </div>
 
       {/* Charts */}
@@ -133,6 +169,7 @@ export default async function DashboardPage() {
         <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
           <CardHeader>
             <CardTitle className="font-tenant-display">Leads by source</CardTitle>
+            <p className="text-xs text-muted-foreground">Click a bar to open those leads</p>
           </CardHeader>
           <CardContent>
             {sourceData.length ? (
@@ -147,6 +184,7 @@ export default async function DashboardPage() {
         <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
           <CardHeader>
             <CardTitle className="font-tenant-display">Pipeline status</CardTitle>
+            <p className="text-xs text-muted-foreground">Click a bar to open those leads</p>
           </CardHeader>
           <CardContent>
             <PipelineBar data={pipelineData} accent={theme.tokens.accent} navy={theme.tokens.navy} />
@@ -156,7 +194,8 @@ export default async function DashboardPage() {
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-tenant-display">Lead volume (last 14 days)</CardTitle>
+          <CardTitle className="font-tenant-display">Lead volume (last {VOLUME_DAYS} days)</CardTitle>
+          <p className="text-xs text-muted-foreground">Click a day to open that day’s leads</p>
         </CardHeader>
         <CardContent>
           <VolumeLine data={volumeData} navy={theme.tokens.navy} />

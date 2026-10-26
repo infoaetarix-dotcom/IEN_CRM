@@ -23,6 +23,8 @@ export interface HistoryMessage {
   sent_by: string | null;
   created_at: string;
   error_detail: string | null;
+  /** The signature attached when it was sent (embedded via messages.signature_id). */
+  email_signatures?: { body_html: string } | { body_html: string }[] | null;
 }
 
 function fmtDateTime(s: string) {
@@ -67,7 +69,7 @@ export function MessageHistoryDialog({
             Email history
           </DialogTitle>
           <DialogDescription>
-            Every email sent to this lead, most recent first.
+            Every email sent to this student, most recent first — shown as it was sent.
           </DialogDescription>
         </DialogHeader>
 
@@ -78,6 +80,8 @@ export function MessageHistoryDialog({
           {messages.map((m) => {
             const senderName = m.sent_by ? (nameById.get(m.sent_by) ?? 'Staff') : 'System';
             const senderEmail = m.sent_by ? emailById.get(m.sent_by) : null;
+            const sig = Array.isArray(m.email_signatures) ? m.email_signatures[0] : m.email_signatures;
+            const signature = sig?.body_html || null;
             return (
               <div key={m.id} className="rounded-lg border border-tenant-ink/10 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -100,21 +104,33 @@ export function MessageHistoryDialog({
                   Emailed by {senderName}
                   {senderEmail ? ` (${senderEmail})` : ''} · {fmtDateTime(m.created_at)}
                 </p>
-                {m.body && m.body_is_html ? (
-                  <div
-                    className="mt-2 rounded-md bg-tenant-gray p-2.5 text-sm text-tenant-ink [&_a]:text-tenant-accent [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5"
-                    // Rich text compose output, not raw client input — the
-                    // editor's own schema restricts it to a small safe tag
-                    // set (bold/italic/underline/color/links/lists), the
-                    // same trust boundary already used for signature HTML.
-                    dangerouslySetInnerHTML={{ __html: m.body }}
-                  />
-                ) : (
-                  m.body && (
-                    <p className="mt-2 whitespace-pre-wrap rounded-md bg-tenant-gray p-2.5 text-sm text-tenant-ink">
-                      {m.body}
-                    </p>
-                  )
+                {(m.body || signature) && (
+                  // Rendered like the sent email itself (see .email-content):
+                  // same font, spacing and bullets, signature underneath.
+                  <div className="email-content mt-2 rounded-md border border-tenant-ink/10 bg-white p-4">
+                    {m.body &&
+                      (m.body_is_html ? (
+                        <div
+                          // Rich text compose output, not raw client input —
+                          // the editor's own schema restricts it to a small
+                          // safe tag set (bold/italic/underline/color/links/
+                          // lists), the same trust boundary already used for
+                          // signature HTML.
+                          dangerouslySetInnerHTML={{ __html: m.body }}
+                        />
+                      ) : (
+                        // Plain text was sent HTML-escaped with newlines as
+                        // <br/>; pre-wrap shows it the same way.
+                        <div className="whitespace-pre-wrap">{m.body}</div>
+                      ))}
+                    {signature && (
+                      <div
+                        style={{ marginTop: 20 }}
+                        // Sanitised when saved (lib/email/signatures.ts).
+                        dangerouslySetInnerHTML={{ __html: signature }}
+                      />
+                    )}
+                  </div>
                 )}
                 {m.error_detail && (
                   <p className="mt-2 text-xs text-destructive">{m.error_detail}</p>
