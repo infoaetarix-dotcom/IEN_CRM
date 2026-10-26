@@ -3,9 +3,12 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 /**
  * Keep-warm ping. The free-tier Supabase project pauses after ~7 days idle,
- * which would silently stop the public form from accepting leads. A daily
- * Vercel cron (see vercel.json) calls this; the one cheap read counts as
- * activity and prevents the pause. Public, no secret, returns no data.
+ * which would silently stop the public form from accepting leads. The one
+ * cheap read counts as activity. Public, no secret, returns no data.
+ *
+ * It's no longer scheduled: the follow-up reminder crons
+ * (/api/cron/follow-up-reminders, twice a day in vercel.json) read the
+ * database too and keep it awake. This stays for manual pings.
  */
 export const dynamic = 'force-dynamic';
 

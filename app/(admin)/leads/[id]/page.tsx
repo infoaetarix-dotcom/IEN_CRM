@@ -39,6 +39,9 @@ import {
   type LeadSource,
 } from '@/lib/leads/display';
 import { CODE_LABELS } from '@/lib/form-options';
+import { getReportingSettings } from '@/lib/reports/settings';
+import { zonedDateKey } from '@/lib/reports/time';
+import { FollowUpCard } from '@/components/dashboard/follow-ups/follow-up-card';
 import type { LeadDocument } from '@/lib/leads/types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
@@ -196,6 +199,9 @@ export default async function LeadDetailPage({
     prior_rejection: lead.prior_rejection === true,
     prior_rejection_detail: s(lead.prior_rejection_detail),
   };
+
+  // "Today" for follow-ups, in the org's reporting time zone.
+  const todayKey = zonedDateKey(new Date(), (await getReportingSettings(profile.organization_id!)).timezone);
 
   return (
     <div className="space-y-6">
@@ -452,6 +458,12 @@ export default async function LeadDetailPage({
 
         {/* Right: actions + histories */}
         <div className="space-y-6">
+          <FollowUpCard
+            target={{ kind: 'lead', id: lead.id }}
+            name={lead.full_name || 'this lead'}
+            todayKey={todayKey}
+            nameById={nameById}
+          />
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
               <CardTitle className="font-tenant-display">Manage</CardTitle>

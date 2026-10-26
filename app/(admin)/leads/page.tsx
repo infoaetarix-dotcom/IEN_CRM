@@ -27,6 +27,11 @@ import {
 import { applyLeadFilters } from '@/lib/leads/filters';
 import { getReportingSettings } from '@/lib/reports/settings';
 import { getSignaturesForSender } from '@/lib/email/signatures';
+import { cn } from '@/lib/utils';
+import { zonedDateKey } from '@/lib/reports/time';
+import { isFollowUpFilter } from '@/lib/follow-ups/status';
+import { getOpenFollowUps, followUpRecordIds } from '@/lib/follow-ups/load';
+import { FollowUpTag } from '@/components/dashboard/follow-ups/follow-up-button';
 
 export const metadata = { title: 'Leads' };
 
@@ -54,6 +59,7 @@ export default async function LeadsPage({
   const from = str(sp.from);
   const to = str(sp.to);
   const staff = str(sp.staff);
+  const followup = str(sp.followup);
   const showArchived = str(sp.archived) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
   const sort = str(sp.sort) || 'created_at';
@@ -91,6 +97,12 @@ export default async function LeadsPage({
     archived: showArchived,
     timezone,
   });
+  const todayKey = zonedDateKey(new Date(), timezone);
+  if (isFollowUpFilter(followup)) {
+    const ids = await followUpRecordIds('lead', followup, todayKey);
+    // No matches must mean no rows, not an unfiltered list.
+    query = query.in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+  }
 
   const offset = (page - 1) * PAGE_SIZE;
 
@@ -98,7 +110,7 @@ export default async function LeadsPage({
   // org's email templates (for the row-level Email popup), and the org's
   // portal_domain (for building the document upload link) don't depend on
   // each other, so they're fired together.
-  const [brand, { data: leads, count }, { data: profiles }, { data: templates }, { data: org }, signatures] =
+  const [brand, { data: leads, count }, { data: profiles }, { data: templates }, { data: org }, signatures, followUps] =
     await Promise.all([
       getOrgBrand(profile.organization_id),
       query.order(sortCol, { ascending: dir === 'asc' }).range(offset, offset + PAGE_SIZE - 1),
@@ -114,6 +126,7 @@ export default async function LeadsPage({
         .eq('id', profile.organization_id)
         .single(),
       getSignaturesForSender(profile.organization_id!, profile.id),
+      getOpenFollowUps('lead'),
     ]);
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   // Same "portal domain if configured, else the base app domain" fallback
@@ -132,6 +145,7 @@ export default async function LeadsPage({
     if (from) next.set('from', from);
     if (to) next.set('to', to);
     if (staff) next.set('staff', staff);
+    if (followup) next.set('followup', followup);
     if (sort !== 'created_at') next.set('sort', sort);
     if (dir !== 'desc') next.set('dir', dir);
     if (showArchived) next.set('archived', '1');
@@ -148,6 +162,7 @@ export default async function LeadsPage({
     if (from) next.set('from', from);
     if (to) next.set('to', to);
     if (staff) next.set('staff', staff);
+    if (followup) next.set('followup', followup);
     if (showArchived) next.set('archived', '1');
     return `/api/leads/export?${next.toString()}`;
   })();
@@ -212,8 +227,13 @@ export default async function LeadsPage({
                 </TableCell>
               </TableRow>
             )}
-            {(leads ?? []).map((l) => (
-              <TableRow key={l.id} className="cursor-pointer">
+            {(leads ?? []).map((l) => {
+              const followUp = followUps.get(l.id) ?? null;
+              return (
+              <TableRow
+                key={l.id}
+                className={cn('cursor-pointer', followUp?.due_date === todayKey && 'bg-amber-50/70 hover:bg-amber-50')}
+              >
                 <TableCell className="text-muted-foreground border">
                   <Link href={`/leads/${l.id}`} className="hover:underline">
                     #{l.lead_number}
@@ -226,6 +246,7 @@ export default async function LeadsPage({
                       <Badge variant="warning">Incomplete</Badge>
                     )}
                   </Link>
+                  {!showArchived && <FollowUpTag followUp={followUp} todayKey={todayKey} />}
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell border">
                   <div>{l.email || '—'}</div>
@@ -286,11 +307,14 @@ export default async function LeadsPage({
                       signatures={signatures}
                       uploadUrl={`${uploadBaseUrl}/upload/lead/${l.document_upload_token}`}
                       uploadExpired={new Date(l.document_upload_expires_at) < new Date()}
+                      followUp={followUp}
+                      todayKey={todayKey}
                     />
                   </TableCell>
                 )}
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>

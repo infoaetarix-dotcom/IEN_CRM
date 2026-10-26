@@ -24,7 +24,8 @@ function redirectFor(request: NextRequest, decision: Extract<RouteDecision, { ac
 /**
  * Refreshes the Supabase session on every request and guards the admin area.
  * Unauthenticated traffic to /dashboard, /leads, /agents, /templates, and /api
- * (except /api/health and /api/keep-warm) is redirected to /login.
+ * (except /api/health, /api/keep-warm and the CRON_SECRET-guarded /api/cron/*)
+ * is redirected to /login.
  *
  * Before any of that: if the request's Host header matches a consultancy's
  * configured form_domain or portal_domain (Super Admin → Domains), it's
@@ -118,7 +119,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/super') ||
     (pathname.startsWith('/api') &&
       pathname !== '/api/health' &&
-      pathname !== '/api/keep-warm');
+      pathname !== '/api/keep-warm' &&
+      // Cron routes have no session; each checks CRON_SECRET itself.
+      !pathname.startsWith('/api/cron/'));
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();

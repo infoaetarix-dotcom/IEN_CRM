@@ -27,6 +27,13 @@ import {
   hasApplicationListFilters,
   matchesApplicationListFilters,
 } from '@/lib/applications/list-filters';
+import { cn } from '@/lib/utils';
+import { getReportingSettings } from '@/lib/reports/settings';
+import { zonedDateKey } from '@/lib/reports/time';
+import { isFollowUpFilter, matchesFollowUpFilter } from '@/lib/follow-ups/status';
+import { getOpenFollowUps } from '@/lib/follow-ups/load';
+import { FollowUpTag } from '@/components/dashboard/follow-ups/follow-up-button';
+import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
 
 export const metadata = { title: 'Applications' };
 
@@ -52,8 +59,17 @@ export default async function ApplicationsPage({
   // row-level Email popup), and the org's portal_domain (for building the
   // student upload link) don't depend on each other, so they're fired
   // together.
-  const [{ data: applications }, { data: leads }, { data: templates }, { data: universities }, { data: org }, { data: profiles }, signatures] =
-    await Promise.all([
+  const [
+    { data: applications },
+    { data: leads },
+    { data: templates },
+    { data: universities },
+    { data: org },
+    { data: profiles },
+    signatures,
+    followUps,
+    { timezone },
+  ] = await Promise.all([
       supabase
         .from('applications')
         .select('id, application_number, status, full_name, email, phone, target_country, program, intake_season, intake_year, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
@@ -76,7 +92,11 @@ export default async function ApplicationsPage({
         .single(),
       supabase.from('profiles').select('id, full_name'),
       getSignaturesForSender(profile.organization_id!, profile.id),
+      getOpenFollowUps('application'),
+      getReportingSettings(profile.organization_id!),
     ]);
+  const todayKey = zonedDateKey(new Date(), timezone);
+  const followupParam = (Array.isArray(sp.followup) ? sp.followup[0] : sp.followup) ?? '';
 
   // Same "portal domain if configured, else the base app domain" fallback
   // the /form page already uses for the application-form link.
@@ -86,8 +106,15 @@ export default async function ApplicationsPage({
   // Report click-throughs (Settings → Reports) narrow the list first; the
   // stage tabs then work within that.
   const reportFilters = parseApplicationListFilters(sp);
-  const reportFiltered = hasApplicationListFilters(reportFilters)
+  // The follow-up filter (Today / Overdue / This week) applies first.
+  const withFollowUp = isFollowUpFilter(followupParam)
     ? (applications ?? []).filter((a) => {
+        const f = followUps.get(a.id);
+        return !!f && matchesFollowUpFilter(f.due_date, followupParam, todayKey);
+      })
+    : (applications ?? []);
+  const reportFiltered = hasApplicationListFilters(reportFilters)
+    ? withFollowUp.filter((a) => {
         const uni = Array.isArray(a.universities) ? a.universities[0] : a.universities;
         return matchesApplicationListFilters(
           {
@@ -100,7 +127,7 @@ export default async function ApplicationsPage({
           reportFilters,
         );
       })
-    : (applications ?? []);
+    : withFollowUp;
 
   // Counts per stage for the tab badges, computed from the same list —
   // there's no need for a second query at this scale.
@@ -136,7 +163,12 @@ export default async function ApplicationsPage({
         </div>
       )}
 
-      <ApplicationStageTabs counts={stageCounts} total={reportFiltered.length} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <ApplicationStageTabs counts={stageCounts} total={reportFiltered.length} />
+        </div>
+        <FollowUpFilter className="w-[190px]" />
+      </div>
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardContent className="p-0">
@@ -158,8 +190,12 @@ export default async function ApplicationsPage({
               {visibleApplications.map((a) => {
                 const leadRow = Array.isArray(a.leads) ? a.leads[0] : a.leads;
                 const university = Array.isArray(a.universities) ? a.universities[0] : a.universities;
+                const followUp = followUps.get(a.id) ?? null;
                 return (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    className={cn(followUp?.due_date === todayKey && 'bg-amber-50/70 hover:bg-amber-50')}
+                  >
                     <TableCell className="whitespace-nowrap">
                       <Link href={`/leads/${a.lead_id}`} className="hover:text-tenant-accent hover:underline">
                         #{leadRow?.lead_number ?? '—'}
@@ -170,7 +206,10 @@ export default async function ApplicationsPage({
                         #{a.application_number}
                       </Link>
                     </TableCell>
-                    <TableCell>{a.full_name || leadRow?.full_name || '(no name)'}</TableCell>
+                    <TableCell>
+                      <div>{a.full_name || leadRow?.full_name || '(no name)'}</div>
+                      <FollowUpTag followUp={followUp} todayKey={todayKey} />
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {university ? `${university.name} (${university.country})` : '—'}
                     </TableCell>
@@ -204,6 +243,8 @@ export default async function ApplicationsPage({
                         signatures={signatures}
                         uploadUrl={`${uploadBaseUrl}/upload/${a.document_upload_token}`}
                         uploadExpired={new Date(a.document_upload_expires_at) < new Date()}
+                        followUp={followUp}
+                        todayKey={todayKey}
                       />
                     </TableCell>
                   </TableRow>

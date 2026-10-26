@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
+import { FollowUpButton } from '@/components/dashboard/follow-ups/follow-up-button';
+import type { OpenFollowUp } from '@/lib/follow-ups/load';
 
 function useRun() {
   const router = useRouter();
@@ -134,6 +136,8 @@ export function LeadRowActions({
   signatures,
   uploadUrl,
   uploadExpired,
+  followUp,
+  todayKey,
 }: {
   leadId: string;
   fullName: string;
@@ -143,6 +147,9 @@ export function LeadRowActions({
   signatures: { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null }[];
   uploadUrl: string;
   uploadExpired: boolean;
+  /** Open follow-up (if any) and today in the org's zone, for the calendar button. */
+  followUp: OpenFollowUp | null;
+  todayKey: string;
 }) {
   const { pending, error, run, router } = useRun();
   const [confirming, setConfirming] = useState(false);
@@ -159,6 +166,7 @@ export function LeadRowActions({
       >
         <Pencil className="h-4 w-4" />
       </Button>
+      <FollowUpButton target={{ kind: 'lead', id: leadId }} name={fullName} followUp={followUp} todayKey={todayKey} />
       <SendWhatsAppDialog name={fullName} phone={phone} />
       <SendEmailDialog
         name={fullName}

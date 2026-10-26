@@ -7,6 +7,7 @@ import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LEAD_STATUSES, STATUS_LABELS, LEAD_SOURCES, SOURCE_LABELS } from '@/lib/leads/display';
+import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
 
 /** Staff option for the "created by" filter. */
 export interface StaffOption {
@@ -14,7 +15,7 @@ export interface StaffOption {
   name: string;
 }
 
-const FILTER_KEYS = ['q', 'status', 'source', 'completeness', 'staff', 'from', 'to'];
+const FILTER_KEYS = ['q', 'status', 'source', 'completeness', 'staff', 'followup', 'from', 'to'];
 
 /**
  * Every filter a dashboard or report link can set is visible (and editable)
@@ -112,6 +113,8 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
           ))}
         </Select>
       )}
+
+      <FollowUpFilter className="w-[190px]" />
 
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         Received
