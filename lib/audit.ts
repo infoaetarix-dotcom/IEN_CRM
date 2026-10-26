@@ -48,7 +48,10 @@ export type AuditAction =
   | 'reporting_period_created'
   | 'reporting_period_updated'
   | 'reporting_period_deleted'
-  | 'reporting_settings_updated';
+  | 'reporting_settings_updated'
+  | 'follow_up_set'
+  | 'follow_up_completed'
+  | 'follow_up_removed';
 
 export type AuditEntity =
   | 'lead'
@@ -61,7 +64,8 @@ export type AuditEntity =
   | 'application'
   | 'university'
   | 'email_signature'
-  | 'reporting';
+  | 'reporting'
+  | 'follow_up';
 
 /**
  * Append an audit-log row. Best-effort: auditing must never break the action

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   DayPicker,
+  useDayPicker,
   useNavigation,
   type CaptionProps,
 } from 'react-day-picker';
@@ -17,16 +18,19 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// Defaults when a calendar sets no range — suits date of birth (past years).
 const FROM_YEAR = 1925;
 const TO_YEAR = new Date().getFullYear();
-const YEARS = Array.from(
-  { length: TO_YEAR - FROM_YEAR + 1 },
-  (_, i) => TO_YEAR - i, // newest first — DOB users scroll down a little
-);
 
 /** Custom caption: clean month + year dropdowns with prev/next arrows. */
 function CalendarCaption({ displayMonth }: CaptionProps) {
   const { goToMonth, previousMonth, nextMonth } = useNavigation();
+  // The year list follows the calendar's own range (fromYear/toYear or
+  // fromDate/toDate), so a future-date picker can reach next year too.
+  const { fromYear, toYear, fromDate, toDate } = useDayPicker();
+  const first = fromDate?.getFullYear() ?? fromYear ?? FROM_YEAR;
+  const last = toDate?.getFullYear() ?? toYear ?? TO_YEAR;
+  const years = Array.from({ length: last - first + 1 }, (_, i) => last - i); // newest first
   const month = displayMonth.getMonth();
   const year = displayMonth.getFullYear();
 
@@ -61,7 +65,7 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
         onChange={(e) => goToMonth(new Date(Number(e.target.value), month))}
         className="h-8 w-[88px]"
       >
-        {YEARS.map((y) => (
+        {years.map((y) => (
           <option key={y} value={y}>
             {y}
           </option>

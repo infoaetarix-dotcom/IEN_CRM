@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { SendWhatsAppDialog } from '@/components/dashboard/send-whatsapp-dialog';
 import { SendEmailDialog } from '@/components/dashboard/send-email-dialog';
 import { CopyUploadLinkButton } from '@/components/dashboard/applications/copy-upload-link-button';
+import { FollowUpButton } from '@/components/dashboard/follow-ups/follow-up-button';
+import type { OpenFollowUp } from '@/lib/follow-ups/load';
 import {
   APPLICATION_STAGES,
   APPLICATION_STAGE_LABELS,
@@ -37,6 +39,8 @@ export function ApplicationRowActions({
   signatures,
   uploadUrl,
   uploadExpired,
+  followUp,
+  todayKey,
 }: {
   applicationId: string;
   fullName: string;
@@ -46,6 +50,9 @@ export function ApplicationRowActions({
   signatures: { id: string; title: string; body_html: string; is_default: boolean; profile_id: string | null }[];
   uploadUrl: string;
   uploadExpired: boolean;
+  /** Open follow-up (if any) and today in the org's zone, for the calendar button. */
+  followUp: OpenFollowUp | null;
+  todayKey: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -64,6 +71,12 @@ export function ApplicationRowActions({
       >
         <Pencil className="h-4 w-4" />
       </Button>
+      <FollowUpButton
+        target={{ kind: 'application', id: applicationId }}
+        name={fullName}
+        followUp={followUp}
+        todayKey={todayKey}
+      />
       <SendWhatsAppDialog name={fullName} phone={phone} />
       <SendEmailDialog
         name={fullName}

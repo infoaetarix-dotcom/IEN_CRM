@@ -4,6 +4,9 @@ import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { applyLeadFilters } from '@/lib/leads/filters';
 import { getReportingSettings } from '@/lib/reports/settings';
+import { zonedDateKey } from '@/lib/reports/time';
+import { isFollowUpFilter } from '@/lib/follow-ups/status';
+import { followUpRecordIds } from '@/lib/follow-ups/load';
 import {
   STATUS_LABELS,
   SOURCE_LABELS,
@@ -79,6 +82,11 @@ export async function GET(request: NextRequest) {
     archived: str('archived') === '1',
     timezone,
   });
+  const followup = str('followup');
+  if (isFollowUpFilter(followup)) {
+    const ids = await followUpRecordIds('lead', followup, zonedDateKey(new Date(), timezone));
+    query = query.in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+  }
 
   const { data: leads, error } = await query
     .order('created_at', { ascending: false })

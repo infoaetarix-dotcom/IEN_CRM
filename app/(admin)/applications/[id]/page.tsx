@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_BADGE, type ApplicationStatus } from '@/lib/leads/display';
 import { CODE_LABELS } from '@/lib/form-options';
+import { getReportingSettings } from '@/lib/reports/settings';
+import { zonedDateKey } from '@/lib/reports/time';
+import { FollowUpCard } from '@/components/dashboard/follow-ups/follow-up-card';
 import { ApplicationDetailToggle } from '@/components/dashboard/applications/application-detail-toggle';
 import type { ApplicationFormValues } from '@/components/dashboard/applications/application-form';
 import {
@@ -142,6 +145,9 @@ export default async function ApplicationDetailPage({
     passport_number: s(app.passport_number),
     status: s(app.status),
   };
+
+  // "Today" for follow-ups, in the org's reporting time zone.
+  const todayKey = zonedDateKey(new Date(), (await getReportingSettings(profile.organization_id!)).timezone);
 
   return (
     <div className="space-y-6">
@@ -318,6 +324,12 @@ export default async function ApplicationDetailPage({
         </div>
 
         <div className="space-y-6">
+          <FollowUpCard
+            target={{ kind: 'application', id: app.id }}
+            name={app.full_name || lead?.full_name || 'this application'}
+            todayKey={todayKey}
+            nameById={nameById}
+          />
           <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
             <CardHeader>
               <CardTitle className="font-tenant-display">Manage</CardTitle>

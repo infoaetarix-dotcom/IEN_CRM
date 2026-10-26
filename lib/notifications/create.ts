@@ -21,6 +21,8 @@ export async function notifyOrgStaff(params: {
   link?: string | null;
   emailSubject?: string;
   emailBody?: string;
+  /** Set when emailBody is HTML we built and escaped ourselves (e.g. the follow-up summary). */
+  emailBodyIsHtml?: boolean;
   /** Skip this profile — e.g. don't notify someone about their own note. */
   excludeProfileId?: string;
 }): Promise<void> {
@@ -64,6 +66,7 @@ export async function notifyOrgStaff(params: {
               toName: s.full_name,
               subject: params.emailSubject!,
               body: params.emailBody!,
+              bodyIsHtml: params.emailBodyIsHtml,
               senderName,
               senderEmail,
             }),

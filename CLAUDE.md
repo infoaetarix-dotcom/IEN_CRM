@@ -112,7 +112,14 @@ Never leave `main` broken: the client is using it right now.
   unnoticed for six weeks. Diagnose with `GET https://api.brevo.com/v3/account`
   or by checking `messages.status='failed'`.
 - **Supabase free tier pauses after ~7 days idle**, which would kill the live
-  form. A daily Vercel cron (`/api/keep-warm`, `vercel.json`) prevents it.
+  form. The twice-daily follow-up reminder crons
+  (`/api/cron/follow-up-reminders/{morning,afternoon}`, `vercel.json`) prevent
+  it — their database reads count as activity. They replaced the old
+  `/api/keep-warm` cron (the route still exists for manual pings).
+- **Cron routes need `CRON_SECRET`** set in Vercel. Vercel sends it as a
+  bearer token; without it the reminder routes refuse every call (and so stop
+  keeping Supabase awake). They're exempt from the login redirect in
+  `middleware.ts` because they check the secret themselves.
   There are **no database backups** on this tier.
 - **Kill stray dev servers on port 3000 before e2e** — Playwright's
   `reuseExistingServer` will silently serve a stale build.

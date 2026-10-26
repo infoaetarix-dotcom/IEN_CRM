@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { ArrowUpRight, LayoutDashboard } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, LayoutDashboard } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { getOrgBrand } from '@/lib/branding/org';
 import { resolveTheme } from '@/lib/branding/themes';
 import { getReportingSettings } from '@/lib/reports/settings';
+import { countDueFollowUps } from '@/lib/follow-ups/load';
 import { zonedYMD, zonedDateKey, ymdKey, startOfDayInZone, monthName } from '@/lib/reports/time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +125,9 @@ export default async function DashboardPage() {
   const recentLeadsIn30 = all.filter((l) => new Date(l.created_at) >= last30);
   const response = computeResponseRate(recentLeadsIn30, firstContact);
   const recent = all.slice(0, 6);
+  const followUps = await countDueFollowUps(todayKey);
+  const followUpsDue =
+    followUps.today.leads + followUps.today.applications + followUps.overdue.leads + followUps.overdue.applications;
 
   return (
     <div className="space-y-6">
@@ -163,6 +167,29 @@ export default async function DashboardPage() {
           href="/leads"
         />
       </div>
+
+      {followUpsDue > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+          <span className="inline-flex items-center gap-2 font-medium text-amber-900">
+            <CalendarClock className="h-4 w-4" />
+            {followUps.today.leads + followUps.today.applications} follow-up
+            {followUps.today.leads + followUps.today.applications === 1 ? '' : 's'} due today
+            {followUps.overdue.leads + followUps.overdue.applications > 0 && (
+              <span className="text-red-600">
+                · {followUps.overdue.leads + followUps.overdue.applications} overdue
+              </span>
+            )}
+          </span>
+          <span className="flex flex-wrap gap-3">
+            <Link href="/leads?followup=any" className="text-tenant-accent hover:underline">
+              Leads ({followUps.today.leads + followUps.overdue.leads})
+            </Link>
+            <Link href="/applications?followup=any" className="text-tenant-accent hover:underline">
+              Applications ({followUps.today.applications + followUps.overdue.applications})
+            </Link>
+          </span>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">

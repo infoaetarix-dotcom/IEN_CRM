@@ -83,7 +83,8 @@ merge the code that depends on it. Never edit an applied migration.
 | `/login`, `/update-password`, `/change-password` | auth |
 | `/dashboard`, `/leads`, `/agents`, `/templates` | consultancy staff |
 | `/super`, `/super/orgs/[id]` | Aetarix platform admin |
-| `/api/health`, `/api/keep-warm` | uptime + free-tier keep-warm cron |
+| `/api/health`, `/api/keep-warm` | uptime + manual keep-warm ping |
+| `/api/cron/follow-up-reminders/{morning,afternoon}` | follow-up reminder emails (Vercel cron, needs `CRON_SECRET`); also keeps free-tier Supabase awake |
 
 ## Branching
 
