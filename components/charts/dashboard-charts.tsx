@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -20,12 +21,27 @@ const DEFAULT_NAVY = '#0B1220';
 const GRID = 'rgba(17,24,39,0.08)';
 const TICK = { fontSize: 12, fill: '#6B7A8D' };
 
-interface Datum {
+export interface Datum {
   label: string;
   value: number;
+  /** Where clicking this bar/point goes — a filtered /leads list. */
+  href?: string;
+}
+
+/** Click-through for a chart: navigates to the clicked datum's href, if any. */
+function useChartLink(data: Datum[]) {
+  const router = useRouter();
+  return {
+    clickable: data.some((d) => d.href),
+    go: (index: number | undefined) => {
+      const href = index == null ? undefined : data[index]?.href;
+      if (href) router.push(href);
+    },
+  };
 }
 
 export function SourceBar({ data, accent = DEFAULT_ACCENT }: { data: Datum[]; accent?: string }) {
+  const link = useChartLink(data);
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -36,7 +52,13 @@ export function SourceBar({ data, accent = DEFAULT_ACCENT }: { data: Datum[]; ac
           cursor={{ fill: `${accent}14` }}
           contentStyle={{ fontSize: 12, borderRadius: 8 }}
         />
-        <Bar dataKey="value" radius={[4, 4, 0, 0]} fill={accent} />
+        <Bar
+          dataKey="value"
+          radius={[4, 4, 0, 0]}
+          fill={accent}
+          cursor={link.clickable ? 'pointer' : undefined}
+          onClick={(_, index) => link.go(index)}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -65,6 +87,7 @@ export function PipelineBar({
   navy?: string;
 }) {
   const colors = pipelineColors(accent, navy);
+  const link = useChartLink(data);
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -75,7 +98,12 @@ export function PipelineBar({
           cursor={{ fill: 'rgba(17,24,39,0.05)' }}
           contentStyle={{ fontSize: 12, borderRadius: 8 }}
         />
-        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+        <Bar
+          dataKey="value"
+          radius={[4, 4, 0, 0]}
+          cursor={link.clickable ? 'pointer' : undefined}
+          onClick={(_, index) => link.go(index)}
+        >
           {data.map((d) => (
             <Cell key={d.label} fill={colors[d.label] ?? colors.__default} />
           ))}
@@ -86,9 +114,15 @@ export function PipelineBar({
 }
 
 export function VolumeLine({ data, navy = DEFAULT_NAVY }: { data: Datum[]; navy?: string }) {
+  const link = useChartLink(data);
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+      <LineChart
+        data={data}
+        margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+        style={link.clickable ? { cursor: 'pointer' } : undefined}
+        onClick={(state) => link.go(state?.activeTooltipIndex)}
+      >
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis
           dataKey="label"

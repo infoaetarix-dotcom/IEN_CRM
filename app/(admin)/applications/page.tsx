@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -22,6 +22,11 @@ import {
   type ApplicationStatus,
 } from '@/lib/leads/display';
 import { getSignaturesForSender } from '@/lib/email/signatures';
+import {
+  parseApplicationListFilters,
+  hasApplicationListFilters,
+  matchesApplicationListFilters,
+} from '@/lib/applications/list-filters';
 
 export const metadata = { title: 'Applications' };
 
@@ -51,7 +56,7 @@ export default async function ApplicationsPage({
     await Promise.all([
       supabase
         .from('applications')
-        .select('id, application_number, status, full_name, email, phone, target_country, program, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
+        .select('id, application_number, status, full_name, email, phone, target_country, program, intake_season, intake_year, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
         .order('created_at', { ascending: false }),
       supabase.from('leads').select('id, full_name').order('full_name'),
       supabase
@@ -78,18 +83,37 @@ export default async function ApplicationsPage({
   const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
-  // Counts per stage for the tab badges, computed from the same full list —
+  // Report click-throughs (Settings → Reports) narrow the list first; the
+  // stage tabs then work within that.
+  const reportFilters = parseApplicationListFilters(sp);
+  const reportFiltered = hasApplicationListFilters(reportFilters)
+    ? (applications ?? []).filter((a) => {
+        const uni = Array.isArray(a.universities) ? a.universities[0] : a.universities;
+        return matchesApplicationListFilters(
+          {
+            status: a.status,
+            intake_season: a.intake_season,
+            intake_year: a.intake_year,
+            university_name: uni?.name ?? null,
+            country: uni?.country ?? null,
+          },
+          reportFilters,
+        );
+      })
+    : (applications ?? []);
+
+  // Counts per stage for the tab badges, computed from the same list —
   // there's no need for a second query at this scale.
   const stageCounts = { application: 0, fee_deposit: 0, visa: 0, enrollment: 0 } as Record<
     ApplicationStage,
     number
   >;
-  for (const a of applications ?? []) {
+  for (const a of reportFiltered) {
     stageCounts[APPLICATION_STATUS_STAGE[a.status as ApplicationStatus]]++;
   }
   const visibleApplications = activeStage
-    ? (applications ?? []).filter((a) => APPLICATION_STATUS_STAGE[a.status as ApplicationStatus] === activeStage)
-    : (applications ?? []);
+    ? reportFiltered.filter((a) => APPLICATION_STATUS_STAGE[a.status as ApplicationStatus] === activeStage)
+    : reportFiltered;
 
   return (
     <div className="space-y-6">
@@ -100,7 +124,19 @@ export default async function ApplicationsPage({
         action={<CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />}
       />
 
-      <ApplicationStageTabs counts={stageCounts} total={(applications ?? []).length} />
+      {hasApplicationListFilters(reportFilters) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-tenant-accent/30 bg-tenant-accent/5 px-4 py-2.5 text-sm">
+          <span className="text-tenant-ink">
+            Showing <strong>{reportFiltered.length}</strong> from the report
+            {reportFilters.label ? <>: {reportFilters.label}</> : null}
+          </span>
+          <Link href="/applications" className="inline-flex items-center gap-1 text-tenant-accent hover:underline">
+            <X className="h-3.5 w-3.5" /> Show all applications
+          </Link>
+        </div>
+      )}
+
+      <ApplicationStageTabs counts={stageCounts} total={reportFiltered.length} />
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardContent className="p-0">

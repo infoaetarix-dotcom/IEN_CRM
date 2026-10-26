@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { requireUser } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { applyLeadFilters } from '@/lib/leads/filters';
+import { getReportingSettings } from '@/lib/reports/settings';
 import {
   STATUS_LABELS,
   SOURCE_LABELS,
@@ -53,8 +54,9 @@ const COLUMNS = [
  * nothing here bypasses that.
  */
 export async function GET(request: NextRequest) {
-  await requireUser();
+  const profile = await requireUser();
   const supabase = await createClient();
+  const { timezone } = await getReportingSettings(profile.organization_id!);
   const sp = request.nextUrl.searchParams;
   const str = (k: string) => sp.get(k) ?? '';
 
@@ -73,7 +75,9 @@ export async function GET(request: NextRequest) {
     completeness: str('completeness'),
     from: str('from'),
     to: str('to'),
+    staff: str('staff'),
     archived: str('archived') === '1',
+    timezone,
   });
 
   const { data: leads, error } = await query

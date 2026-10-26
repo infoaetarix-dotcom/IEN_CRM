@@ -260,8 +260,8 @@ export function ApplicationForm({
             <ProgramField defaultDegree={programDegree} defaultField={programField} />
           </div>
           <div>
-            <Label htmlFor="intake_season">Intake season</Label>
-            <Select id="intake_season" name="intake_season" defaultValue={initial.intake_season} disabled={pending}>
+            <Label htmlFor="intake_season">Intake season{!isEdit && ' *'}</Label>
+            <Select id="intake_season" name="intake_season" defaultValue={initial.intake_season} disabled={pending} required={!isEdit}>
               <option value="">Select…</option>
               {INTAKE_SEASONS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -269,8 +269,8 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="intake_year">Intake year</Label>
-            <Select id="intake_year" name="intake_year" defaultValue={initial.intake_year} disabled={pending}>
+            <Label htmlFor="intake_year">Intake year{!isEdit && ' *'}</Label>
+            <Select id="intake_year" name="intake_year" defaultValue={initial.intake_year} disabled={pending} required={!isEdit}>
               <option value="">Select…</option>
               {INTAKE_YEARS.map((y) => (
                 <option key={y} value={y}>{y}</option>

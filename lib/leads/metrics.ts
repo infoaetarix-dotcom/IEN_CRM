@@ -6,6 +6,7 @@ import {
   type LeadStatus,
   type LeadSource,
 } from './display';
+import { zonedYMD, zonedDateKey, startOfDayInZone } from '@/lib/reports/time';
 
 export interface LeadRow {
   status: string;
@@ -14,6 +15,8 @@ export interface LeadRow {
 }
 
 export interface Datum {
+  /** Filter value behind the bar/point (source, status or date), for click-through. */
+  key?: string;
   label: string;
   value: number;
 }
@@ -26,6 +29,7 @@ export function buildSourceData(leads: LeadRow[]): Datum[] {
   }
   return LEAD_SOURCES.filter((s) => counts.get(s))
     .map((s) => ({
+      key: s,
       label: SOURCE_LABELS[s as LeadSource],
       value: counts.get(s) ?? 0,
     }));
@@ -38,34 +42,38 @@ export function buildPipelineData(leads: LeadRow[]): Datum[] {
     counts.set(l.status, (counts.get(l.status) ?? 0) + 1);
   }
   return LEAD_STATUSES.map((s) => ({
+    key: s,
     label: STATUS_LABELS[s as LeadStatus],
     value: counts.get(s) ?? 0,
   }));
 }
 
-/** Daily lead volume for the last `days` days, oldest → newest. */
+/**
+ * Daily lead volume for the last `days` days, oldest → newest, bucketed by
+ * the local date in `tz` (the org's reporting zone). `key` is that date
+ * (YYYY-MM-DD), used for the chart's click-through to /leads.
+ */
 export function buildVolumeData(
   leads: LeadRow[],
   days = 14,
   now: Date = new Date(),
+  tz = 'UTC',
 ): Datum[] {
-  const buckets = new Map<string, number>();
-  const labels: string[] = [];
+  const today = zonedYMD(now, tz);
+  const keys: string[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    buckets.set(key, 0);
-    labels.push(key);
+    keys.push(zonedDateKey(startOfDayInZone(tz, today.year, today.month, today.day - i), tz));
   }
+  const buckets = new Map(keys.map((k) => [k, 0]));
   for (const l of leads) {
-    const key = l.created_at.slice(0, 10);
+    const key = zonedDateKey(new Date(l.created_at), tz);
     if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
   }
-  return labels.map((key) => ({
-    // Keys are UTC dates; format in UTC too, or the label shifts a day on
-    // machines behind UTC.
-    label: new Date(key).toLocaleDateString('en-GB', {
+  return keys.map((key) => ({
+    key,
+    // Keys are plain calendar dates; formatting them in UTC keeps the label
+    // from shifting a day on machines behind UTC.
+    label: new Date(`${key}T00:00:00Z`).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       timeZone: 'UTC',

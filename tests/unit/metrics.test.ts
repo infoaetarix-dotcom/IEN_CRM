@@ -17,8 +17,8 @@ describe('buildSourceData', () => {
   it('counts only sources present', () => {
     const d = buildSourceData(leads);
     expect(d).toEqual([
-      { label: 'Instagram', value: 2 },
-      { label: 'Facebook', value: 1 },
+      { key: 'instagram', label: 'Instagram', value: 2 },
+      { key: 'facebook', label: 'Facebook', value: 1 },
     ]);
   });
 });
@@ -40,6 +40,15 @@ describe('buildVolumeData', () => {
     // 20th has 2 leads, 19th has 1
     expect(d[d.length - 1]!.value).toBe(2);
     expect(d[d.length - 2]!.value).toBe(1);
+  });
+
+  it('buckets by the org time zone, not UTC', () => {
+    // 20 Jun 21:00 UTC is already 21 Jun in Karachi (UTC+5).
+    const rows: LeadRow[] = [{ status: 'raw_lead', utm_source: 'website', created_at: '2026-06-20T21:00:00Z' }];
+    const now = new Date('2026-06-20T22:00:00Z');
+    const d = buildVolumeData(rows, 2, now, 'Asia/Karachi');
+    expect(d.map((x) => x.key)).toEqual(['2026-06-20', '2026-06-21']);
+    expect(d[1]!.value).toBe(1);
   });
 
   it('covers a 30-day window across a month boundary', () => {

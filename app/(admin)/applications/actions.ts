@@ -88,6 +88,12 @@ export async function createApplication(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]!.message };
   }
+  // Required for new applications only: without an intake an application
+  // can't appear in any intake report (Settings → Reports). Editing older
+  // applications that predate this rule stays as it was.
+  if (!parsed.data.intake_season || !parsed.data.intake_year) {
+    return { ok: false, error: 'Choose the intake season and year — every application needs one for intake reports.' };
+  }
 
   const supabase = await createClient();
   const { data: lead } = await supabase
