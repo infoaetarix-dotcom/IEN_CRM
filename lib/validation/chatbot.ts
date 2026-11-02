@@ -44,6 +44,8 @@ export const extractedLeadSchema = z.object({
   english_test: z.string().trim().max(20).optional(),
   english_score: z.coerce.number().optional(),
   funding_source: z.string().trim().max(20).optional(),
+  marital_status: z.string().trim().max(30).optional(),
+  budget_range: z.string().trim().max(20).optional(),
   prior_rejection: z.boolean().optional(),
   prior_rejection_detail: z.string().trim().max(1000).optional(),
   utm_source: z.string().trim().max(30).optional(),

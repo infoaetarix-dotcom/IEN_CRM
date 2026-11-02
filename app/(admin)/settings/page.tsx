@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { UniversitiesDialog } from '@/components/dashboard/settings/universities-dialog';
 import { EmailSignaturesDialog } from '@/components/dashboard/settings/email-signatures-dialog';
-import { ReportingDialog } from '@/components/dashboard/settings/reporting-dialog';
+import { TimezoneDialog } from '@/components/dashboard/settings/timezone-dialog';
 import { getReportingSettings } from '@/lib/reports/settings';
 
 export const metadata = { title: 'Settings' };
@@ -51,12 +51,11 @@ export default async function SettingsPage() {
           <div>
             <p className="font-tenant-display text-base font-semibold text-tenant-ink">Reports</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Monthly and reporting-period lead reports, and application intake reports.
+              Monthly lead reports, and intake reports for leads and applications.
             </p>
           </div>
         </Link>
-        <ReportingDialog
-          periods={reporting.periods}
+        <TimezoneDialog
           timezone={reporting.timezone}
           isAdmin={profile.role === 'admin' || profile.is_super_admin}
         />

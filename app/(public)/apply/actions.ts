@@ -182,6 +182,7 @@ export async function saveStep2(
     grade_letter: g(formData, 'grade_letter'),
     work_experience_years: g(formData, 'work_experience_years'),
     work_experience_detail: g(formData, 'work_experience_detail'),
+    marital_status: g(formData, 'marital_status'),
   });
   if (!parsed.success) {
     return {
@@ -212,6 +213,7 @@ export async function saveStep2(
       grade_letter: isGradeLetter ? (d.grade_letter || null) : null,
       work_experience_years: d.work_experience_years ?? null,
       work_experience_detail: d.work_experience_detail || null,
+      marital_status: d.marital_status,
     })
     .eq('id', leadId)
     .eq('submission_token', token)
@@ -242,6 +244,7 @@ export async function completeLead(
     english_test: g(formData, 'english_test'),
     english_score: g(formData, 'english_score'),
     funding_source: g(formData, 'funding_source'),
+    budget_range: g(formData, 'budget_range'),
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: g(formData, 'prior_rejection_detail'),
   });
@@ -265,6 +268,7 @@ export async function completeLead(
       english_test: d.english_test || null,
       english_score: d.english_score ?? null,
       funding_source: d.funding_source || null,
+      budget_range: d.budget_range || null,
       prior_rejection: d.prior_rejection,
       prior_rejection_detail: d.prior_rejection ? d.prior_rejection_detail || null : null,
       is_complete: true,

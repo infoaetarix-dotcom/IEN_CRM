@@ -78,8 +78,10 @@ test('monthly lead report opens from Settings and links to its leads', async ({ 
   await expect(page.getByText('E2E Lead A')).toBeVisible();
 });
 
-test('application intake report counts the funnel and opens matching applications', async ({ page }) => {
-  test.setTimeout(120000);
+test('intake report: leads aiming for the intake, plus the applications funnel, each opening its list', async ({
+  page,
+}) => {
+  test.setTimeout(150000);
   const svc = serviceClient();
   const { org, leadA } = state() as { org: string; leadA: string };
 
@@ -92,123 +94,84 @@ test('application intake report counts the funnel and opens matching application
   const { data: apps, error } = await svc
     .from('applications')
     .insert([
-      { ...base, status: 'conditional_offer', intake_season: 'fall', intake_year: 2030 },
-      { ...base, status: 'visa_accepted', intake_season: 'fall', intake_year: 2030 },
-      { ...base, status: 'visa_rejected', intake_season: 'fall', intake_year: 2030 },
+      { ...base, status: 'conditional_offer', intake_season: 'sep_oct', intake_year: 2030 },
+      { ...base, status: 'visa_accepted', intake_season: 'sep_oct', intake_year: 2030 },
+      { ...base, status: 'visa_rejected', intake_season: 'sep_oct', intake_year: 2030 },
       { ...base, status: 'applied_processed' }, // no intake
     ])
     .select('id');
   if (error) throw new Error(error.message);
+  // Lead A is aiming for Sep–Oct 2030; Lead B has no intake.
+  await svc.from('leads').update({ intake_season: 'sep_oct', intake_year: 2030 }).eq('id', leadA);
 
   try {
     await login(page);
-    await page.goto('/settings/reports?type=intake&season=fall&year=2030');
-    await expect(page.getByRole('heading', { name: 'Fall 2030 intake' })).toBeVisible();
+    await page.goto('/settings/reports?type=intake&season=sep_oct&year=2030');
+    await expect(page.getByRole('heading', { name: 'Sep – Oct 2030 intake' })).toBeVisible();
+    await expect(page.getByText(/in progress · final from 1 november 2030/i)).toBeVisible();
 
-    // Stat cards come before the per-status rows of the same name.
+    // Leads half.
+    const leadsCard = page.getByRole('link', { name: /leads for this intake/i });
+    await expect(leadsCard.locator('p').nth(1)).toHaveText('1');
+    await expect(page.getByText(/leads? (has|have) no intake set/i)).toBeVisible();
+
+    // Applications half. Stat cards come before per-status rows of the same name.
     const card = (name: RegExp) => page.getByRole('link', { name }).first();
     await expect(card(/applications generated/i)).toContainText('3');
     await expect(card(/visa applied/i)).toContainText('2');
     await expect(card(/^visa accepted/i)).toContainText('1');
     await expect(page.getByText('50%')).toBeVisible(); // 1 accepted of 2 decided
-    await expect(page.getByText(/no intake set/i)).toBeVisible();
+    await expect(page.getByText(/application has no intake set/i)).toBeVisible();
 
+    // A lead number opens the leads list filtered to that intake.
+    await leadsCard.click();
+    await page.waitForURL(/\/leads\?/);
+    await expect(page.getByLabel('Intake', { exact: true })).toHaveValue('sep_oct');
+    await expect(page.getByText('E2E Lead A')).toBeVisible();
+    await expect(page.getByText('E2E Lead B')).toHaveCount(0);
+
+    // An application number opens the applications list with the bar pre-filled.
+    await page.goBack();
     await card(/^visa accepted/i).click();
     await page.waitForURL(/\/applications\?/);
     await expect(page.getByText(/showing\s+1\s+from the report/i)).toBeVisible();
-    await expect(page.getByText('Fall 2030 intake · Visa accepted')).toBeVisible();
+    await expect(page.getByText('Sep – Oct 2030 intake · Visa accepted')).toBeVisible();
+    await expect(page.getByLabel('Intake', { exact: true })).toHaveValue('sep_oct');
+    await expect(page.getByLabel('Intake year')).toHaveValue('2030');
   } finally {
+    await svc.from('leads').update({ intake_season: null, intake_year: null }).eq('id', leadA);
     await svc.from('applications').delete().in('id', (apps ?? []).map((a) => a.id));
     await svc.from('universities').delete().eq('id', uni!.id);
   }
 });
 
-test('admin sets up reporting periods; the period report follows them', async ({ page }) => {
-  test.setTimeout(150000);
-  const svc = serviceClient();
-  const { org } = state() as { org: string };
-
-  try {
-    await login(page);
-    await page.goto('/settings');
-    await page.getByRole('button', { name: /reporting periods/i }).click();
-    const dialog = page.getByRole('dialog');
-
-    await dialog.getByRole('button', { name: /start with common intakes/i }).click();
-    await expect(dialog.getByText('Sep–Oct intake')).toBeVisible({ timeout: 30000 });
-    await expect(dialog.getByText('Jan–Feb intake')).toBeVisible();
-    await expect(dialog.getByText(/leads received september – october · reported in november/i)).toBeVisible();
-
-    // A period overlapping an existing one is refused.
-    await dialog.getByRole('button', { name: /add period/i }).click();
-    await dialog.getByLabel('Name').fill('Overlap test');
-    await dialog.getByLabel('Leads from').selectOption('2');
-    await dialog.getByLabel('Leads to').selectOption('3');
-    await dialog.getByLabel('Report in').selectOption('4');
-    await dialog.getByRole('button', { name: /^add period$/i }).click();
-    await expect(dialog.getByText(/overlap “Jan–Feb intake”/i)).toBeVisible({ timeout: 30000 });
-    await page.keyboard.press('Escape');
-
-    const { data: periods } = await svc.from('reporting_periods').select('id, name').eq('organization_id', org);
-    expect(periods?.map((p) => p.name).sort()).toEqual(['Apr–May intake', 'Jan–Feb intake', 'Sep–Oct intake']);
-    const sepOct = periods!.find((p) => p.name === 'Sep–Oct intake')!;
-
-    // Sep–Oct 2030 hasn't reached its report month: in progress.
-    await page.goto(`/settings/reports?type=period&period=${sepOct.id}&year=2030`);
-    await expect(page.getByRole('heading', { name: 'Sep–Oct intake 2030' })).toBeVisible();
-    await expect(page.getByText(/in progress · final from 1 november 2030/i)).toBeVisible();
-    await expect(page.getByText('Leads per month')).toBeVisible();
-
-    // Sep–Oct 2025 is long past November 2025: final.
-    await page.goto(`/settings/reports?type=period&period=${sepOct.id}&year=2025`);
-    await expect(page.getByText('Final', { exact: true })).toBeVisible();
-  } finally {
-    await svc.from('reporting_periods').delete().eq('organization_id', org);
-  }
-});
-
-test('agents can see reporting periods but not change them', async ({ page }) => {
+test('agents can see the time zone but not change it', async ({ page }) => {
   test.setTimeout(120000);
-  const svc = serviceClient();
   const { org } = state() as { org: string };
-  await svc.from('reporting_periods').insert({
-    organization_id: org,
-    name: 'Agent view period',
-    start_month: 9,
-    end_month: 10,
-    report_month: 11,
+
+  await submitLogin(page, TEST_USERS.agentA.email, TEST_PASSWORD);
+  await page.waitForURL(/\/dashboard/, { timeout: 60000 });
+  await page.goto('/settings');
+  await expect(page.getByRole('button', { name: /reporting periods/i })).toHaveCount(0);
+  await page.getByRole('button', { name: /time zone/i }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText(/only admins can change it/i)).toBeVisible();
+  await expect(dialog.getByLabel('Time zone')).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: /^save$/i })).toHaveCount(0);
+
+  // RLS backs the hidden button up: a direct write as the agent is rejected.
+  const env = loadEnv();
+  const asAgent = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
   });
+  await asAgent.auth.signInWithPassword({ email: TEST_USERS.agentA.email, password: TEST_PASSWORD });
+  const { data: written } = await asAgent
+    .from('reporting_settings')
+    .upsert({ organization_id: org, timezone: 'Europe/London' })
+    .select('timezone');
+  expect(written ?? []).toHaveLength(0);
 
-  try {
-    await submitLogin(page, TEST_USERS.agentA.email, TEST_PASSWORD);
-    await page.waitForURL(/\/dashboard/, { timeout: 60000 });
-    await page.goto('/settings');
-    await page.getByRole('button', { name: /reporting periods/i }).click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText('Agent view period')).toBeVisible();
-    await expect(dialog.getByText(/only admins can change these/i)).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /add period/i })).toHaveCount(0);
-    await expect(dialog.getByTitle('Edit')).toHaveCount(0);
-    await expect(dialog.getByLabel('Time zone')).toBeDisabled();
-
-    // RLS backs the hidden buttons up: a direct write as the agent is rejected.
-    const env = loadEnv();
-    const asAgent = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
-    });
-    await asAgent.auth.signInWithPassword({ email: TEST_USERS.agentA.email, password: TEST_PASSWORD });
-    const { data: inserted } = await asAgent
-      .from('reporting_periods')
-      .insert({ organization_id: org, name: 'Agent write', start_month: 1, end_month: 1, report_month: 2 })
-      .select('id');
-    expect(inserted ?? []).toHaveLength(0);
-    const { data: seen } = await asAgent.from('reporting_periods').select('name');
-    expect(seen?.map((p) => p.name)).toEqual(['Agent view period']);
-
-    // Reports themselves stay visible to agents.
-    await page.goto('/settings/reports?type=monthly');
-    await expect(page.getByRole('link', { name: /leads received/i })).toBeVisible();
-  } finally {
-    await svc.from('reporting_periods').delete().eq('organization_id', org);
-  }
+  // Reports themselves stay visible to agents.
+  await page.goto('/settings/reports?type=monthly');
+  await expect(page.getByRole('link', { name: /leads received/i })).toBeVisible();
 });

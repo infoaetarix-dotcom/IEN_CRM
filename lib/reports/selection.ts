@@ -1,46 +1,32 @@
 import { INTAKE_SEASONS } from '@/lib/form-options';
-import {
-  monthRange,
-  monthName,
-  periodRange,
-  periodReportDate,
-  periodMonthsLabel,
-  zonedYMD,
-  type MonthPeriod,
-  type Range,
-} from './time';
+import { monthRange, monthName, startOfDayInZone, zonedYMD, type Range } from './time';
 
 /**
  * Which report Settings → Reports is showing, read from the URL with
  * sensible defaults. Shared by the page and the Excel export.
  *
- *   ?type=monthly&month=2026-10
- *   ?type=period&period=<id>&year=2026
- *   ?type=intake&season=fall&year=2026
+ *   ?type=monthly&month=2026-10        leads received in a month
+ *   ?type=intake&season=sep_oct&year=2026   leads + applications for an intake
+ *
+ * Intakes come straight from each lead's / application's intake field, so
+ * there is nothing to set up: Jan–Feb is reported (final) in March,
+ * Apr–May in June, Sep–Oct in November (INTAKE_SEASONS.reportMonth).
  */
 
-export type ReportType = 'monthly' | 'period' | 'intake';
-
-export interface PeriodLike extends MonthPeriod {
-  id: string;
-  name: string;
-}
+export type ReportType = 'monthly' | 'intake';
 
 export type ReportSelection =
   | { type: 'monthly'; year: number; month: number; range: Range; previous: Range; title: string; previousLabel: string }
   | {
-      type: 'period';
-      period: PeriodLike;
+      type: 'intake';
+      season: string;
       year: number;
-      range: Range;
-      previous: Range;
       title: string;
       previousLabel: string;
-      final: boolean;
+      /** First day of the intake's report month — the report is final from then. */
       reportDate: Date;
-    }
-  | { type: 'period'; period: null; year: number; title: string }
-  | { type: 'intake'; season: string; year: number; title: string; previousLabel: string };
+      final: boolean;
+    };
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -50,12 +36,18 @@ export function seasonLabel(season: string): string {
   return INTAKE_SEASONS.find((s) => s.value === season)?.label ?? season;
 }
 
+/** When an intake's report becomes final: the 1st of its report month that year. */
+export function intakeReportDate(tz: string, season: string, year: number): Date {
+  const intake = INTAKE_SEASONS.find((s) => s.value === season);
+  return startOfDayInZone(tz, year, intake?.reportMonth ?? 12, 1);
+}
+
 export function resolveReportSelection(
   sp: Params,
   ctx: {
     tz: string;
     now: Date;
-    periods: PeriodLike[];
+    /** Intakes that have data, for the default choice. */
     intakes: { season: string; year: number; count: number }[];
   },
 ): ReportSelection {
@@ -63,54 +55,26 @@ export function resolveReportSelection(
     const v = sp[k];
     return (Array.isArray(v) ? v[0] : v) ?? '';
   };
-  const type: ReportType = (['monthly', 'period', 'intake'] as const).find((t) => t === one('type')) ?? 'monthly';
+  const type: ReportType = one('type') === 'intake' ? 'intake' : 'monthly';
   const today = zonedYMD(ctx.now, ctx.tz);
   const yearParam = Number(one('year'));
   const validYear = Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100 ? yearParam : null;
 
   if (type === 'intake') {
     const seasonParam = one('season');
-    // Default: the intake with the most applications in the latest year that has any.
+    // Default: the intake with the most records in the latest year that has any.
     const fallback = [...ctx.intakes].sort((a, b) => b.year - a.year || b.count - a.count)[0];
-    const season = SEASON_VALUES.includes(seasonParam) ? seasonParam : (fallback?.season ?? 'fall');
+    const season = SEASON_VALUES.includes(seasonParam) ? seasonParam : (fallback?.season ?? 'sep_oct');
     const year = validYear ?? fallback?.year ?? today.year;
+    const reportDate = intakeReportDate(ctx.tz, season, year);
     return {
       type,
       season,
       year,
       title: `${seasonLabel(season)} ${year} intake`,
       previousLabel: `${seasonLabel(season)} ${year - 1}`,
-    };
-  }
-
-  if (type === 'period') {
-    const chosen = ctx.periods.find((p) => p.id === one('period'));
-    // Default: the most recently started period (this year's or last year's).
-    let period = chosen ?? null;
-    let year = validYear;
-    if (!period) {
-      let best: { p: PeriodLike; y: number; start: Date } | null = null;
-      for (const y of [today.year, today.year - 1]) {
-        for (const p of ctx.periods) {
-          const start = periodRange(ctx.tz, p, y).start;
-          if (start <= ctx.now && (!best || start > best.start)) best = { p, y, start };
-        }
-      }
-      period = best?.p ?? ctx.periods[0] ?? null;
-      year = year ?? best?.y ?? today.year;
-    }
-    year = year ?? today.year;
-    if (!period) return { type, period: null, year, title: 'Reporting period' };
-    return {
-      type,
-      period,
-      year,
-      range: periodRange(ctx.tz, period, year),
-      previous: periodRange(ctx.tz, period, year - 1),
-      title: `${period.name} ${year}`,
-      previousLabel: `${periodMonthsLabel(period)} ${year - 1}`,
-      final: ctx.now >= periodReportDate(ctx.tz, period, year),
-      reportDate: periodReportDate(ctx.tz, period, year),
+      reportDate,
+      final: ctx.now >= reportDate,
     };
   }
 
@@ -133,11 +97,4 @@ export function resolveReportSelection(
     title: `${monthName(month)} ${year}`,
     previousLabel: `${monthName(prevMonth)} ${prevYear}`,
   };
-}
-
-/** The URL for a given selection's parameters. */
-export function reportHref(params: Record<string, string | number>): string {
-  const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) q.set(k, String(v));
-  return `/settings/reports?${q.toString()}`;
 }

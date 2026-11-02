@@ -23,6 +23,8 @@ import {
   ENGLISH_TESTS,
   INTAKE_SEASONS,
   FUNDING_SOURCES,
+  MARITAL_STATUSES,
+  BUDGET_RANGES,
   PASSING_YEARS,
   INTAKE_YEARS,
   CODE_LABELS,
@@ -62,6 +64,8 @@ export interface LeadEditState {
   english_test: string;
   english_score: string;
   funding_source: string;
+  marital_status: string;
+  budget_range: string;
   prior_rejection: boolean;
   prior_rejection_detail: string;
 }
@@ -242,6 +246,18 @@ export function LeadDetailsEditor({
           <LField label="Date of birth">{text('date_of_birth', 'date')}</LField>
           <LField label="City">{text('city')}</LField>
           <LField label="District">{text('district')}</LField>
+          <LField label="Marital status">
+            <Select
+              value={form.marital_status}
+              disabled={pending}
+              onChange={(e) => set('marital_status', e.target.value)}
+            >
+              <option value="">Select…</option>
+              {MARITAL_STATUSES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </Select>
+          </LField>
           <LField label="Highest education level">
             <Select
               value={form.highest_education}
@@ -333,6 +349,18 @@ export function LeadDetailsEditor({
               ))}
             </Select>
           </LField>
+          <LField label="Budget (PKR)">
+            <Select
+              value={form.budget_range}
+              disabled={pending}
+              onChange={(e) => set('budget_range', e.target.value)}
+            >
+              <option value="">Select…</option>
+              {BUDGET_RANGES.map((b) => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
+            </Select>
+          </LField>
           <div className="col-span-2 sm:col-span-3">
             <LField label="Program of interest">
               <ProgramField
@@ -342,7 +370,7 @@ export function LeadDetailsEditor({
               />
             </LField>
           </div>
-          <LField label="Intake season">
+          <LField label="Intake">
             <Select
               value={form.intake_season}
               disabled={pending}

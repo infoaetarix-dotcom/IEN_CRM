@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { requireUser } from '@/lib/auth/guards';
 import { writeAuditLog } from '@/lib/audit';
 import { isApplicationStatus } from '@/lib/leads/display';
+import { GRADE_LETTER_SYSTEMS } from '@/lib/form-options';
 import {
   applicationEditSchema,
   DOCUMENT_MAX_BYTES,
@@ -38,6 +39,18 @@ export async function getLeadDefaultsForApplication(
 
 const g = (f: FormData, k: string) => (f.get(k) ?? '') as string;
 
+/**
+ * Only the result field that matches the grading system is kept — a letter
+ * (grade_letter) for letter/"other" systems, a number (grade_value) for
+ * CGPA / percentage — so switching systems can't leave a stale result in
+ * the other column. Same rule as the public form's step 2.
+ */
+function keepMatchingResult(row: Record<string, unknown>) {
+  if (!('grading_system' in row)) return;
+  if ((GRADE_LETTER_SYSTEMS as readonly string[]).includes(String(row.grading_system))) row.grade_value = null;
+  else if (row.grading_system) row.grade_letter = null;
+}
+
 function fieldsFrom(formData: FormData) {
   return {
     full_name: g(formData, 'full_name'),
@@ -57,11 +70,14 @@ function fieldsFrom(formData: FormData) {
     passing_year: g(formData, 'passing_year'),
     grading_system: g(formData, 'grading_system'),
     grade_value: g(formData, 'grade_value'),
+    grade_letter: g(formData, 'grade_letter'),
     work_experience_years: g(formData, 'work_experience_years'),
     work_experience_detail: g(formData, 'work_experience_detail'),
     english_test: g(formData, 'english_test'),
     english_score: g(formData, 'english_score'),
     funding_source: g(formData, 'funding_source'),
+    marital_status: g(formData, 'marital_status'),
+    budget_range: g(formData, 'budget_range'),
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: g(formData, 'prior_rejection_detail'),
     passport_number: g(formData, 'passport_number'),
@@ -107,6 +123,7 @@ export async function createApplication(
   for (const [k, v] of Object.entries(parsed.data)) {
     insert[k] = v === undefined || v === '' ? null : v;
   }
+  keepMatchingResult(insert);
 
   const { data: application, error } = await supabase
     .from('applications')
@@ -215,6 +232,7 @@ export async function updateApplication(
   for (const [k, v] of Object.entries(parsed.data)) {
     update[k] = v === undefined || v === '' ? null : v;
   }
+  keepMatchingResult(update);
 
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -21,6 +21,8 @@ import {
   ENGLISH_TESTS,
   INTAKE_SEASONS,
   FUNDING_SOURCES,
+  MARITAL_STATUSES,
+  BUDGET_RANGES,
   PASSING_YEARS,
   INTAKE_YEARS,
   gradeResultConfig,
@@ -83,10 +85,12 @@ export function QuickQueryForm({
     work_experience_years:
       initial?.work_experience_years != null ? String(initial.work_experience_years) : '',
     work_experience_detail: initial?.work_experience_detail ?? '',
+    marital_status: initial?.marital_status ?? '',
   });
   const [v3, setV3] = useState({
     institution: initial?.institution ?? '',
     funding_source: initial?.funding_source ?? '',
+    budget_range: initial?.budget_range ?? '',
     intake_season: initial?.intake_season ?? '',
     intake_year: initial?.intake_year ? String(initial.intake_year) : '',
     english_score: initial?.english_score != null ? String(initial.english_score) : '',
@@ -222,6 +226,15 @@ export function QuickQueryForm({
             <Label htmlFor="district">District</Label>
             <Input id="district" name="district" placeholder="e.g. Lahore" {...bind2('district')} />
           </div>
+          <div>
+            <Label htmlFor="marital_status">Marital status</Label>
+            <Select id="marital_status" name="marital_status" {...bind2('marital_status')}>
+              <option value="">Select marital status</option>
+              {MARITAL_STATUSES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </Select>
+          </div>
             <div>
             <Label htmlFor="highest_education">Highest education level</Label>
             <EducationField error={err.highest_education} defaultValue={initial?.highest_education} />
@@ -315,6 +328,15 @@ export function QuickQueryForm({
               ))}
             </Select>
           </div>
+          <div>
+            <Label htmlFor="budget_range">Budget for studying abroad</Label>
+            <Select id="budget_range" name="budget_range" {...bind3('budget_range')}>
+              <option value="">Select budget (PKR)</option>
+              {BUDGET_RANGES.map((b) => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
+            </Select>
+          </div>
         </div>
         <div>
           <Label htmlFor="program_degree">Program of interest</Label>
@@ -325,7 +347,7 @@ export function QuickQueryForm({
             <Label htmlFor="intake_season">Intended intake</Label>
             <div className="grid grid-cols-2 gap-2">
               <Select id="intake_season" name="intake_season" {...bind3('intake_season')}>
-                <option value="">Season</option>
+                <option value="">Intake</option>
                 {INTAKE_SEASONS.map((x) => (
                   <option key={x.value} value={x.value}>{x.label}</option>
                 ))}

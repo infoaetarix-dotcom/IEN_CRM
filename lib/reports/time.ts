@@ -116,55 +116,6 @@ export function dateKeysInRange(range: Range, tz: string): string[] {
   return keys;
 }
 
-export interface MonthPeriod {
-  start_month: number;
-  end_month: number;
-  report_month: number;
-}
-
-/** Number of months a period spans, wrapping the year when start > end. */
-export function periodLength(p: Pick<MonthPeriod, 'start_month' | 'end_month'>): number {
-  return ((p.end_month - p.start_month + 12) % 12) + 1;
-}
-
-/**
- * The instant range of a period in a given year. `year` is the year the
- * period starts in, so a Nov–Jan period labelled 2026 runs Nov 2026–Jan 2027.
- */
-export function periodRange(tz: string, p: MonthPeriod, year: number): Range {
-  return {
-    start: startOfDayInZone(tz, year, p.start_month, 1),
-    end: startOfDayInZone(tz, year, p.start_month + periodLength(p), 1),
-  };
-}
-
-/**
- * When the period's report becomes final: the first day of its report
- * month, on or after the period ends (so Sep–Oct reported in November is
- * final from 1 Nov; a report month earlier in the calendar than the end
- * month means the following year).
- */
-export function periodReportDate(tz: string, p: MonthPeriod, year: number): Date {
-  const end = periodRange(tz, p, year).end;
-  const endYmd = zonedYMD(end, tz);
-  const reportYear = p.report_month >= endYmd.month ? endYmd.year : endYmd.year + 1;
-  return startOfDayInZone(tz, reportYear, p.report_month, 1);
-}
-
-/** The months (1–12) a period covers, in order. */
-export function periodMonths(p: Pick<MonthPeriod, 'start_month' | 'end_month'>): number[] {
-  return Array.from({ length: periodLength(p) }, (_, i) => ((p.start_month - 1 + i) % 12) + 1);
-}
-
-/** True when two periods share at least one month. */
-export function periodsOverlap(
-  a: Pick<MonthPeriod, 'start_month' | 'end_month'>,
-  b: Pick<MonthPeriod, 'start_month' | 'end_month'>,
-): boolean {
-  const months = new Set(periodMonths(a));
-  return periodMonths(b).some((m) => months.has(m));
-}
-
 export const MONTH_NAMES = [
   'January',
   'February',
@@ -184,9 +135,3 @@ export function monthName(month: number): string {
   return MONTH_NAMES[(month - 1 + 12) % 12]!;
 }
 
-/** "Jan–Feb" style label from a period's months. */
-export function periodMonthsLabel(p: Pick<MonthPeriod, 'start_month' | 'end_month'>): string {
-  const s = monthName(p.start_month).slice(0, 3);
-  const e = monthName(p.end_month).slice(0, 3);
-  return p.start_month === p.end_month ? s : `${s}–${e}`;
-}

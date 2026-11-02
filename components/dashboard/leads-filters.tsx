@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LEAD_STATUSES, STATUS_LABELS, LEAD_SOURCES, SOURCE_LABELS } from '@/lib/leads/display';
 import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
+import { INTAKE_SEASONS, INTAKE_YEARS } from '@/lib/form-options';
 
 /** Staff option for the "created by" filter. */
 export interface StaffOption {
@@ -15,7 +16,7 @@ export interface StaffOption {
   name: string;
 }
 
-const FILTER_KEYS = ['q', 'status', 'source', 'completeness', 'staff', 'followup', 'from', 'to'];
+const FILTER_KEYS = ['q', 'status', 'source', 'completeness', 'staff', 'followup', 'season', 'year', 'from', 'to'];
 
 /**
  * Every filter a dashboard or report link can set is visible (and editable)
@@ -115,6 +116,38 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
       )}
 
       <FollowUpFilter className="w-[190px]" />
+
+      <div className="flex gap-2">
+        <Select
+          value={params.get('season') ?? ''}
+          aria-label="Intake"
+          className="w-[140px]"
+          onChange={(e) => setParam('season', e.target.value)}
+        >
+          <option value="">Any intake</option>
+          {INTAKE_SEASONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+          <option value="__none">Intake not set</option>
+        </Select>
+        <Select
+          value={params.get('year') ?? ''}
+          aria-label="Intake year"
+          className="w-[110px]"
+          onChange={(e) => setParam('year', e.target.value)}
+        >
+          <option value="">Any year</option>
+          {[...new Set([...INTAKE_YEARS, ...(params.get('year') ? [Number(params.get('year'))] : [])])]
+            .sort((a, b) => a - b)
+            .map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+        </Select>
+      </div>
 
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         Received

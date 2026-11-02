@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Download, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { getOrgBrand } from '@/lib/branding/org';
 import { createClient } from '@/lib/supabase/server';
@@ -15,6 +15,7 @@ import {
 import { PageHeader } from '@/components/dashboard/page-header';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
 import { CreateQueryDialog } from '@/components/dashboard/create-query-dialog';
+import { ExportLeadsDialog } from '@/components/dashboard/export-leads-dialog';
 import {
   RestoreLeadButton,
   LeadRowActions,
@@ -59,6 +60,8 @@ export default async function LeadsPage({
   const from = str(sp.from);
   const to = str(sp.to);
   const staff = str(sp.staff);
+  const season = str(sp.season);
+  const year = str(sp.year);
   const followup = str(sp.followup);
   const showArchived = str(sp.archived) === '1';
   const page = Math.max(1, parseInt(str(sp.page) || '1', 10) || 1);
@@ -94,6 +97,8 @@ export default async function LeadsPage({
     from,
     to,
     staff,
+    season,
+    year,
     archived: showArchived,
     timezone,
   });
@@ -145,6 +150,8 @@ export default async function LeadsPage({
     if (from) next.set('from', from);
     if (to) next.set('to', to);
     if (staff) next.set('staff', staff);
+    if (season) next.set('season', season);
+    if (year) next.set('year', year);
     if (followup) next.set('followup', followup);
     if (sort !== 'created_at') next.set('sort', sort);
     if (dir !== 'desc') next.set('dir', dir);
@@ -152,20 +159,6 @@ export default async function LeadsPage({
     next.set('page', String(p));
     return `/leads?${next.toString()}`;
   };
-
-  const exportHref = (() => {
-    const next = new URLSearchParams();
-    if (q) next.set('q', q);
-    if (status) next.set('status', status);
-    if (source) next.set('source', source);
-    if (completeness) next.set('completeness', completeness);
-    if (from) next.set('from', from);
-    if (to) next.set('to', to);
-    if (staff) next.set('staff', staff);
-    if (followup) next.set('followup', followup);
-    if (showArchived) next.set('archived', '1');
-    return `/api/leads/export?${next.toString()}`;
-  })();
 
   return (
     <div className="space-y-6">
@@ -176,12 +169,7 @@ export default async function LeadsPage({
         action={
           <div className="flex flex-wrap items-center gap-3">
             <CreateQueryDialog consentName={brand.legalName} aiEnabled={aiEnabled} />
-            <a
-              href={exportHref}
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-tenant-accent text-white px-3 text-sm hover:bg-tenant-accent/90"
-            >
-              <Download className="h-4 w-4" /> Export
-            </a>
+            <ExportLeadsDialog todayKey={todayKey} archived={showArchived} />
             <Link
               href={showArchived ? '/leads' : '/leads?archived=1'}
               className="inline-flex items-center gap-2 rounded-md text-sm text-tenant-ink border border-tenant-ink/15 hover:bg-tenant-ink/5 h-9 px-3"

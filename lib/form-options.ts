@@ -83,11 +83,41 @@ export const ENGLISH_TESTS = [
   { value: 'none', label: 'Not taken yet' },
 ] as const;
 
+/**
+ * The consultancy's intakes (stored in leads/applications.intake_season —
+ * the column kept its old name; see 0047). Each intake is a pair of months
+ * and is reported once it has passed: Jan–Feb in March, Apr–May in June,
+ * Sep–Oct in November (lib/reports/selection.ts).
+ */
 export const INTAKE_SEASONS = [
+  { value: 'jan_feb', label: 'Jan – Feb', startMonth: 1, endMonth: 2, reportMonth: 3 },
+  { value: 'apr_may', label: 'Apr – May', startMonth: 4, endMonth: 5, reportMonth: 6 },
+  { value: 'sep_oct', label: 'Sep – Oct', startMonth: 9, endMonth: 10, reportMonth: 11 },
+] as const;
+
+/** The pre-0047 seasons — display labels only, never offered as a choice. */
+const LEGACY_INTAKE_LABELS = [
   { value: 'spring', label: 'Spring' },
   { value: 'summer', label: 'Summer' },
   { value: 'fall', label: 'Fall' },
   { value: 'winter', label: 'Winter' },
+] as const;
+
+export const MARITAL_STATUSES = [
+  { value: 'single', label: 'Single' },
+  { value: 'married', label: 'Married' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+] as const;
+
+/** Study budget in Pakistani rupees (lakh / crore bands). */
+export const BUDGET_RANGES = [
+  { value: 'below_10l', label: 'Below 10 lac' },
+  { value: '10l_20l', label: '10 – 20 lac' },
+  { value: '20l_30l', label: '20 – 30 lac' },
+  { value: '30l_50l', label: '30 – 50 lac' },
+  { value: '50l_1cr', label: '50 lac – 1 crore' },
+  { value: 'above_1cr', label: 'Above 1 crore' },
+  { value: 'not_sure', label: 'Not sure yet' },
 ] as const;
 
 export const FUNDING_SOURCES = [
@@ -106,6 +136,8 @@ export const GRADING_VALUES = [...GRADING_SYSTEMS.map((g) => g.value), LEGACY_GR
 export const ENGLISH_VALUES = ENGLISH_TESTS.map((t) => t.value);
 export const INTAKE_SEASON_VALUES = INTAKE_SEASONS.map((s) => s.value);
 export const FUNDING_VALUES = FUNDING_SOURCES.map((f) => f.value);
+export const MARITAL_VALUES = MARITAL_STATUSES.map((m) => m.value);
+export const BUDGET_VALUES = BUDGET_RANGES.map((b) => b.value);
 
 const CURRENT_YEAR = new Date().getFullYear();
 export const PASSING_YEARS = Array.from(
@@ -124,6 +156,9 @@ export const CODE_LABELS: Record<string, string> = Object.fromEntries(
     LEGACY_GRADING_SYSTEM,
     ...ENGLISH_TESTS,
     ...INTAKE_SEASONS,
+    ...LEGACY_INTAKE_LABELS,
+    ...MARITAL_STATUSES,
+    ...BUDGET_RANGES,
     ...FUNDING_SOURCES,
   ].map((o) => [o.value, o.label]),
 );

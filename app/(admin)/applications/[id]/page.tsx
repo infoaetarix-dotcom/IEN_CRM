@@ -135,11 +135,14 @@ export default async function ApplicationDetailPage({
     passing_year: s(app.passing_year),
     grading_system: s(app.grading_system),
     grade_value: s(app.grade_value),
+    grade_letter: s(app.grade_letter),
     work_experience_years: s(app.work_experience_years),
     work_experience_detail: s(app.work_experience_detail),
     english_test: s(app.english_test),
     english_score: s(app.english_score),
     funding_source: s(app.funding_source),
+    marital_status: s(app.marital_status),
+    budget_range: s(app.budget_range),
     prior_rejection: app.prior_rejection === true,
     prior_rejection_detail: s(app.prior_rejection_detail),
     passport_number: s(app.passport_number),
@@ -213,6 +216,10 @@ export default async function ApplicationDetailPage({
                 />
                 <Field label="City" value={app.city} />
                 <Field label="District" value={app.district} />
+                <Field
+                  label="Marital status"
+                  value={app.marital_status ? (CODE_LABELS[app.marital_status] ?? app.marital_status) : null}
+                />
                 <Field label="Passport number" value={app.passport_number} />
               </CardContent>
             </Card>
@@ -229,8 +236,8 @@ export default async function ApplicationDetailPage({
                 <Field
                   label="Result"
                   value={
-                    app.grade_value != null
-                      ? `${app.grade_value}${app.grading_system ? ` — ${CODE_LABELS[app.grading_system] ?? app.grading_system}` : ''}`
+                    app.grade_letter || app.grade_value != null
+                      ? `${app.grade_letter || app.grade_value}${app.grading_system ? ` — ${CODE_LABELS[app.grading_system] ?? app.grading_system}` : ''}`
                       : null
                   }
                 />
@@ -275,6 +282,10 @@ export default async function ApplicationDetailPage({
                 <Field
                   label="Funding"
                   value={app.funding_source ? (CODE_LABELS[app.funding_source] ?? app.funding_source) : null}
+                />
+                <Field
+                  label="Budget (PKR)"
+                  value={app.budget_range ? (CODE_LABELS[app.budget_range] ?? app.budget_range) : null}
                 />
                 <Field label="Prior visa rejection" value={app.prior_rejection ? 'Yes' : 'No'} />
                 {app.prior_rejection && (

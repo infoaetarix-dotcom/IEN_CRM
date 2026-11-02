@@ -6,6 +6,8 @@ import {
   ENGLISH_VALUES,
   INTAKE_SEASON_VALUES,
   FUNDING_VALUES,
+  MARITAL_VALUES,
+  BUDGET_VALUES,
 } from '@/lib/form-options';
 import { LEAD_SOURCES } from '@/lib/leads/display';
 
@@ -30,7 +32,7 @@ const reqNum = (schema: z.ZodNumber) => z.preprocess(numPre, schema);
 
 /** Required standardized code — must be one of `values`. */
 const reqCode = (values: readonly string[], msg: string) =>
-  z.string().min(1, msg).refine((v) => values.includes(v), 'Invalid selection');
+  z.string({ required_error: msg }).min(1, msg).refine((v) => values.includes(v), 'Invalid selection');
 
 /** Optional standardized code — must be blank or one of `values`. */
 const optCode = (values: readonly string[]) =>
@@ -97,8 +99,13 @@ const leadFields = {
         'Enter a valid phone number for the selected country',
       ),
     // Date of birth (YYYY-MM-DD). Age is derived and range-checked below.
+    // The picker posts nothing until a date is chosen (null, not '') — give
+    // that the same plain message instead of Zod's "Expected string".
     date_of_birth: z
-      .string()
+      .string({
+        required_error: 'Please select your date of birth',
+        invalid_type_error: 'Please select your date of birth',
+      })
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date of birth')
       .refine((s) => !Number.isNaN(new Date(s).getTime()), 'Invalid date')
       .refine((s) => new Date(s) <= new Date(), 'Date cannot be in the future')
@@ -157,8 +164,12 @@ const leadFields = {
     // English proficiency
     english_test: optCode(ENGLISH_VALUES),
     english_score: optNum(z.number().min(0).max(120)),
+    // Required on the public form (step 2); optional in Create query and the
+    // editors, which take .partial() copies of these fields.
+    marital_status: reqCode(MARITAL_VALUES, 'Please select your marital status'),
     // Funding
     funding_source: optCode(FUNDING_VALUES),
+    budget_range: optCode(BUDGET_VALUES),
     prior_rejection: z.boolean().default(false),
     prior_rejection_detail: z.string().trim().max(1000).optional().or(z.literal('')),
     consent_given: z.literal(true, {
@@ -262,6 +273,7 @@ export const step2Schema = leadObject
     grade_letter: true,
     work_experience_years: true,
     work_experience_detail: true,
+    marital_status: true,
   })
   .refine(gradeInRange, GRADE_MSG)
   .superRefine(requireGradeResult);
@@ -276,6 +288,7 @@ export const step3Schema = leadObject
     english_test: true,
     english_score: true,
     funding_source: true,
+    budget_range: true,
     prior_rejection: true,
     prior_rejection_detail: true,
   })
@@ -325,6 +338,8 @@ export const leadEditSchema = z.preprocess((raw) => {
     english_test: true,
     english_score: true,
     funding_source: true,
+    marital_status: true,
+    budget_range: true,
     prior_rejection: true,
     prior_rejection_detail: true,
     utm_source: true,

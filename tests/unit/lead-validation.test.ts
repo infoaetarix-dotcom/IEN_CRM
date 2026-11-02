@@ -15,6 +15,7 @@ const base = {
   passing_year: '2021', // required (form sends string)
   grading_system: 'cgpa_4', // required
   grade_value: '3.5', // required
+  marital_status: 'single', // required (public form)
   prior_rejection: false,
   consent_given: true as const,
 };
@@ -79,6 +80,7 @@ describe('step2Schema — dynamic grade result', () => {
     last_qualification: 'BSc Computer Science',
     prior_institution: 'University of the Punjab',
     passing_year: '2021',
+    marital_status: 'single',
   };
 
   it('requires grade_value (not grade_letter) for cgpa_4', () => {

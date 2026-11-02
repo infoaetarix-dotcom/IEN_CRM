@@ -23,8 +23,11 @@ import {
   ENGLISH_TESTS,
   INTAKE_SEASONS,
   FUNDING_SOURCES,
+  MARITAL_STATUSES,
+  BUDGET_RANGES,
   PASSING_YEARS,
   INTAKE_YEARS,
+  gradeResultConfig,
 } from '@/lib/form-options';
 import { TARGET_COUNTRIES } from '@/lib/validation/lead';
 
@@ -77,6 +80,8 @@ export function ApplicationForm({
   const [state, formAction, pending] = useActionState(action, init);
   const [priorRejection, setPriorRejection] = useState(initial.prior_rejection);
   const [universityId, setUniversityId] = useState(initial.university_id);
+  const [gradingSystem, setGradingSystem] = useState(initial.grading_system);
+  const gradeCfg = gradeResultConfig(gradingSystem);
 
   useEffect(() => {
     if (state.ok) {
@@ -177,6 +182,15 @@ export function ApplicationForm({
             <Input id="district" name="district" defaultValue={initial.district} disabled={pending} />
           </div>
           <div>
+            <Label htmlFor="marital_status">Marital status</Label>
+            <Select id="marital_status" name="marital_status" defaultValue={initial.marital_status} disabled={pending}>
+              <option value="">Select…</option>
+              {MARITAL_STATUSES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="highest_education">Highest education level</Label>
             <Select id="highest_education" name="highest_education" defaultValue={initial.highest_education} disabled={pending}>
               <option value="">Select…</option>
@@ -210,7 +224,13 @@ export function ApplicationForm({
           </div>
           <div>
             <Label htmlFor="grading_system">Grading system</Label>
-            <Select id="grading_system" name="grading_system" defaultValue={initial.grading_system} disabled={pending}>
+            <Select
+              id="grading_system"
+              name="grading_system"
+              value={gradingSystem}
+              onChange={(e) => setGradingSystem(e.target.value)}
+              disabled={pending}
+            >
               <option value="">Select…</option>
               {GRADING_SYSTEMS.map((g) => (
                 <option key={g.value} value={g.value}>{g.label}</option>
@@ -218,8 +238,36 @@ export function ApplicationForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="grade_value">Result (CGPA / %)</Label>
-            <Input id="grade_value" name="grade_value" type="number" step="0.01" defaultValue={initial.grade_value} disabled={pending} />
+            {/* Same switch as the lead form: a number for CGPA / %, text for
+                letter grades or "other" (e.g. "A-", "Pass"), so a letter
+                result copied from the lead isn't dropped. */}
+            {gradeCfg?.kind === 'text' ? (
+              <>
+                <Label htmlFor="grade_letter">{gradeCfg.label}</Label>
+                <Input
+                  id="grade_letter"
+                  name="grade_letter"
+                  defaultValue={initial.grade_letter}
+                  placeholder={gradeCfg.placeholder}
+                  disabled={pending}
+                />
+              </>
+            ) : (
+              <>
+                <Label htmlFor="grade_value">{gradeCfg?.label ?? 'Result (CGPA / %)'}</Label>
+                <Input
+                  id="grade_value"
+                  name="grade_value"
+                  type="number"
+                  step="0.01"
+                  min={gradeCfg?.kind === 'number' ? gradeCfg.min : undefined}
+                  max={gradeCfg?.kind === 'number' ? gradeCfg.max : undefined}
+                  defaultValue={initial.grade_value}
+                  placeholder={gradeCfg?.placeholder}
+                  disabled={pending}
+                />
+              </>
+            )}
           </div>
           <div>
             <Label htmlFor="work_experience_years">Work experience (years)</Label>
@@ -255,12 +303,21 @@ export function ApplicationForm({
               ))}
             </Select>
           </div>
+          <div>
+            <Label htmlFor="budget_range">Budget (PKR)</Label>
+            <Select id="budget_range" name="budget_range" defaultValue={initial.budget_range} disabled={pending}>
+              <option value="">Select…</option>
+              {BUDGET_RANGES.map((b) => (
+                <option key={b.value} value={b.value}>{b.label}</option>
+              ))}
+            </Select>
+          </div>
           <div className="sm:col-span-3">
             <Label htmlFor="program_degree">Program of interest</Label>
             <ProgramField defaultDegree={programDegree} defaultField={programField} />
           </div>
           <div>
-            <Label htmlFor="intake_season">Intake season{!isEdit && ' *'}</Label>
+            <Label htmlFor="intake_season">Intake{!isEdit && ' *'}</Label>
             <Select id="intake_season" name="intake_season" defaultValue={initial.intake_season} disabled={pending} required={!isEdit}>
               <option value="">Select…</option>
               {INTAKE_SEASONS.map((s) => (
