@@ -4,7 +4,14 @@ import type { NextRequest } from 'next/server';
 import { requireChatbotAccess } from '@/lib/chatbot/guard';
 import { callLLM } from '@/lib/chatbot/provider';
 import { extractLeadSchema, type ExtractedLead } from '@/lib/validation/chatbot';
-import { GRADING_VALUES, ENGLISH_VALUES, INTAKE_SEASON_VALUES, FUNDING_VALUES } from '@/lib/form-options';
+import {
+  GRADING_VALUES,
+  ENGLISH_VALUES,
+  INTAKE_SEASON_VALUES,
+  FUNDING_VALUES,
+  MARITAL_VALUES,
+  BUDGET_VALUES,
+} from '@/lib/form-options';
 import { LEAD_SOURCES } from '@/lib/leads/display';
 
 export const runtime = 'nodejs';
@@ -20,11 +27,12 @@ fill in from the text — omit keys you cannot determine, never guess or
 invent a value that isn't actually implied by the text:
 
 full_name, email, phone, date_of_birth (YYYY-MM-DD), city, district,
-target_country, institution, program, intake_season (spring/summer/fall/winter),
+target_country, institution, program, intake_season (jan_feb/apr_may/sep_oct — the intake months; e.g. "September intake" → sep_oct),
 intake_year (number), highest_education, last_qualification, prior_institution,
 passing_year (number), grading_system (percentage/cgpa_4/cgpa_5), grade_value (number),
 work_experience_years (number), work_experience_detail, english_test (ielts/toefl/pte/duolingo/none),
 english_score (number), funding_source (self/family/loan/scholarship/sponsor),
+marital_status (single/married/prefer_not_to_say), budget_range (below_10l/10l_20l/20l_30l/30l_50l/50l_1cr/above_1cr/not_sure — PKR study budget),
 prior_rejection (boolean), prior_rejection_detail, utm_source (one of: ${LEAD_SOURCES.join(', ')}),
 reference_name, reference_note, passport_number.
 
@@ -86,6 +94,8 @@ function sanitize(raw: unknown): ExtractedLead {
     english_test: pickCode(r.english_test, ENGLISH_VALUES),
     english_score: pickNumber(r.english_score),
     funding_source: pickCode(r.funding_source, FUNDING_VALUES),
+    marital_status: pickCode(r.marital_status, MARITAL_VALUES),
+    budget_range: pickCode(r.budget_range, BUDGET_VALUES),
     prior_rejection: pickBool(r.prior_rejection),
     prior_rejection_detail: pickString(r.prior_rejection_detail, 1000),
     utm_source: pickCode(r.utm_source, LEAD_SOURCES),

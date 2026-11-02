@@ -3,6 +3,7 @@
 
 import { isLeadStatus } from '@/lib/leads/display';
 import { dayRange, parseYmdKey, DEFAULT_TIMEZONE } from '@/lib/reports/time';
+import { INTAKE_SEASON_VALUES } from '@/lib/form-options';
 
 export interface LeadFilterParams {
   q: string;
@@ -15,6 +16,10 @@ export interface LeadFilterParams {
   to: string;
   /** A staff profile id (who created the lead), or 'none' for public-form leads. */
   staff?: string;
+  /** Intended intake (jan_feb / apr_may / sep_oct), or '__none' for no intake. */
+  season?: string;
+  /** Intended intake year. */
+  year?: string;
   archived: boolean;
   /** Zone the from/to dates are local to — the org's reporting time zone. */
   timezone?: string;
@@ -53,6 +58,11 @@ export function applyLeadFilters<Q extends { [k: string]: any }>(
   if (to) query = query.lt('created_at', dayRange(tz, to).end.toISOString());
   if (params.staff === 'none') query = query.is('created_by', null);
   else if (params.staff && UUID.test(params.staff)) query = query.eq('created_by', params.staff);
+  if (params.season === '__none') query = query.is('intake_season', null);
+  else if (params.season && (INTAKE_SEASON_VALUES as readonly string[]).includes(params.season)) {
+    query = query.eq('intake_season', params.season);
+  }
+  if (params.year && /^\d{4}$/.test(params.year)) query = query.eq('intake_year', Number(params.year));
   if (params.archived) query = query.not('archived_at', 'is', null);
   else query = query.is('archived_at', null);
   return query;

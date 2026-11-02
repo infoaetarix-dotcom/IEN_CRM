@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildIntakeReport } from '@/lib/reports/applications';
 import { buildLeadReport, percentChange, rangeDateBounds } from '@/lib/reports/leads';
-import { monthRange, dateKeysInRange } from '@/lib/reports/time';
+import { monthRange, dateKeysInRange, zonedDateKey } from '@/lib/reports/time';
 import { resolveReportSelection } from '@/lib/reports/selection';
 
 describe('buildIntakeReport', () => {
@@ -108,19 +108,18 @@ describe('buildLeadReport', () => {
 describe('resolveReportSelection', () => {
   const tz = 'Asia/Karachi';
   const now = new Date('2026-11-10T08:00:00Z');
-  const periods = [
-    { id: 'p1', name: 'Jan–Feb intake', start_month: 1, end_month: 2, report_month: 3 },
-    { id: 'p3', name: 'Sep–Oct intake', start_month: 9, end_month: 10, report_month: 11 },
-  ];
-  const ctx = { tz, now, periods, intakes: [
-    { season: 'spring', year: 2027, count: 15 },
-    { season: 'fall', year: 2026, count: 1 },
-  ] };
+  const ctx = {
+    tz,
+    now,
+    intakes: [
+      { season: 'apr_may', year: 2027, count: 15 },
+      { season: 'sep_oct', year: 2026, count: 1 },
+    ],
+  };
 
   it('defaults the monthly report to last month', () => {
     const s = resolveReportSelection({}, ctx);
-    expect(s.type).toBe('monthly');
-    if (s.type !== 'monthly') return;
+    if (s.type !== 'monthly') throw new Error();
     expect(s.title).toBe('October 2026');
     expect(s.previousLabel).toBe('September 2026');
   });
@@ -132,35 +131,32 @@ describe('resolveReportSelection', () => {
     expect(s.previousLabel).toBe('December 2025');
   });
 
-  it('defaults to the most recently started period, final once its report month arrives', () => {
-    const s = resolveReportSelection({ type: 'period' }, ctx);
-    if (s.type !== 'period' || !s.period) throw new Error();
-    expect(s.period.id).toBe('p3');
-    expect(s.year).toBe(2026);
-    expect(s.final).toBe(true); // 10 Nov is past 1 Nov
-    expect(s.previousLabel).toBe('Sep–Oct 2025');
-  });
-
-  it('marks a period in progress before its report month', () => {
-    const s = resolveReportSelection({ type: 'period', period: 'p3', year: '2026' }, {
-      ...ctx,
-      now: new Date('2026-10-15T08:00:00Z'),
-    });
-    if (s.type !== 'period' || !s.period) throw new Error();
-    expect(s.final).toBe(false);
-  });
-
-  it('handles no periods configured', () => {
-    const s = resolveReportSelection({ type: 'period' }, { ...ctx, periods: [] });
-    expect(s.type === 'period' && s.period === null).toBe(true);
-  });
-
-  it('defaults the intake report to the latest intake with applications', () => {
+  it('defaults the intake report to the latest intake with data', () => {
     const s = resolveReportSelection({ type: 'intake' }, ctx);
     if (s.type !== 'intake') throw new Error();
-    expect(s.title).toBe('Spring 2027 intake');
-    expect(resolveReportSelection({ type: 'intake', season: 'fall', year: '2026' }, ctx).title).toBe(
-      'Fall 2026 intake',
-    );
+    expect(s.title).toBe('Apr – May 2027 intake');
+    expect(s.previousLabel).toBe('Apr – May 2026');
+  });
+
+  it('an intake is final from the 1st of its report month (Mar / Jun / Nov)', () => {
+    const sepOct = resolveReportSelection({ type: 'intake', season: 'sep_oct', year: '2026' }, ctx);
+    if (sepOct.type !== 'intake') throw new Error();
+    expect(zonedDateKey(sepOct.reportDate, tz)).toBe('2026-11-01');
+    expect(sepOct.final).toBe(true); // 10 Nov is past 1 Nov
+
+    const janFeb = resolveReportSelection({ type: 'intake', season: 'jan_feb', year: '2027' }, ctx);
+    if (janFeb.type !== 'intake') throw new Error();
+    expect(zonedDateKey(janFeb.reportDate, tz)).toBe('2027-03-01');
+    expect(janFeb.final).toBe(false);
+
+    const aprMay = resolveReportSelection({ type: 'intake', season: 'apr_may', year: '2026' }, ctx);
+    if (aprMay.type !== 'intake') throw new Error();
+    expect(zonedDateKey(aprMay.reportDate, tz)).toBe('2026-06-01');
+  });
+
+  it('ignores an unknown intake value', () => {
+    const s = resolveReportSelection({ type: 'intake', season: 'fall', year: '2026' }, ctx);
+    if (s.type !== 'intake') throw new Error();
+    expect(s.season).toBe('apr_may'); // falls back to the default intake
   });
 });

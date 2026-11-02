@@ -29,11 +29,14 @@ export interface ApplicationFormValues {
   passing_year: string;
   grading_system: string;
   grade_value: string;
+  grade_letter: string;
   work_experience_years: string;
   work_experience_detail: string;
   english_test: string;
   english_score: string;
   funding_source: string;
+  marital_status: string;
+  budget_range: string;
   prior_rejection: boolean;
   prior_rejection_detail: string;
   passport_number: string;
@@ -65,11 +68,14 @@ export function leadToApplicationDefaults(lead: Record<string, unknown>): Applic
     passing_year: str(lead.passing_year),
     grading_system: str(lead.grading_system),
     grade_value: str(lead.grade_value),
+    grade_letter: str(lead.grade_letter),
     work_experience_years: str(lead.work_experience_years),
     work_experience_detail: str(lead.work_experience_detail),
     english_test: str(lead.english_test),
     english_score: str(lead.english_score),
     funding_source: str(lead.funding_source),
+    marital_status: str(lead.marital_status),
+    budget_range: str(lead.budget_range),
     prior_rejection: lead.prior_rejection === true,
     prior_rejection_detail: str(lead.prior_rejection_detail),
     passport_number: '',

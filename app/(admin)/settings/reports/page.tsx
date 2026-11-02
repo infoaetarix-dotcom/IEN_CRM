@@ -9,9 +9,17 @@ import { ReportPicker } from '@/components/dashboard/reports/report-picker';
 import { LeadReportView } from '@/components/dashboard/reports/lead-report-view';
 import { IntakeReportView } from '@/components/dashboard/reports/intake-report-view';
 import { getReportingSettings } from '@/lib/reports/settings';
-import { loadLeadReport, countLeads, loadIntakeReport, loadIntakeOptions } from '@/lib/reports/load';
+import {
+  loadLeadReport,
+  countLeads,
+  loadIntakeReport,
+  loadIntakeLeadReport,
+  countIntakeLeads,
+  loadIntakeOptions,
+} from '@/lib/reports/load';
+import { rangeDateBounds } from '@/lib/reports/leads';
 import { resolveReportSelection } from '@/lib/reports/selection';
-import { periodMonthsLabel, zonedYMD } from '@/lib/reports/time';
+import { zonedYMD } from '@/lib/reports/time';
 
 export const metadata = { title: 'Reports' };
 
@@ -19,9 +27,10 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /**
  * Settings → Reports. One report at a time, chosen from a single row of
- * controls (no tabs): monthly leads, a reporting period's leads (periods
- * set in Settings → Reporting periods), or an application intake. Visible
- * to everyone in the consultancy.
+ * controls (no tabs): leads received in a month, or an intake (Jan–Feb /
+ * Apr–May / Sep–Oct) — the leads aiming for it plus its applications'
+ * admissions funnel. Intakes come straight from each record's intake
+ * field; there's nothing to set up. Visible to everyone in the consultancy.
  */
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const profile = await requireUser();
@@ -37,47 +46,37 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const now = new Date();
   const thisYear = zonedYMD(now, tz).year;
 
-  const selection = resolveReportSelection(sp, {
-    tz,
-    now,
-    periods: settings.periods,
-    intakes: intakeInfo.options,
-  });
+  const selection = resolveReportSelection(sp, { tz, now, intakes: intakeInfo.options });
 
   // Years offered in the picker: a few either side of now, plus any year
   // that has intake data.
   const years = [
     ...new Set([
-      ...Array.from({ length: 6 }, (_, i) => thisYear - 3 + i),
+      ...Array.from({ length: 7 }, (_, i) => thisYear - 3 + i),
       ...intakeInfo.options.map((o) => o.year),
       selection.year,
     ]),
   ].sort((a, b) => b - a);
 
-  const exportQuery = new URLSearchParams();
-  exportQuery.set('type', selection.type);
-  if (selection.type === 'monthly') exportQuery.set('month', `${selection.year}-${String(selection.month).padStart(2, '0')}`);
-  if (selection.type === 'period' && selection.period) {
-    exportQuery.set('period', selection.period.id);
-    exportQuery.set('year', String(selection.year));
-  }
-  if (selection.type === 'intake') {
+  const exportQuery = new URLSearchParams({ type: selection.type });
+  if (selection.type === 'monthly') {
+    exportQuery.set('month', `${selection.year}-${String(selection.month).padStart(2, '0')}`);
+  } else {
     exportQuery.set('season', selection.season);
     exportQuery.set('year', String(selection.year));
   }
-  const canExport = selection.type !== 'period' || !!selection.period;
 
-  // Fetch the chosen report (and its comparison) in parallel.
-  const leadRange =
-    selection.type === 'monthly' || (selection.type === 'period' && selection.period)
-      ? { range: selection.range, previous: selection.previous }
-      : null;
-  const [leadReport, previousCount, intakeReport, previousIntake] = await Promise.all([
-    leadRange ? loadLeadReport(leadRange.range, tz) : null,
-    leadRange ? countLeads(leadRange.previous) : 0,
-    selection.type === 'intake' ? loadIntakeReport(selection.season, selection.year) : null,
-    selection.type === 'intake' ? loadIntakeReport(selection.season, selection.year - 1) : null,
-  ]);
+  // Fetch the chosen report and its comparison in parallel.
+  const isIntake = selection.type === 'intake';
+  const [monthly, monthlyPrevious, intakeLeads, intakeLeadsPrevious, intakeApps, intakeAppsPrevious] =
+    await Promise.all([
+      !isIntake ? loadLeadReport(selection.range, tz) : null,
+      !isIntake ? countLeads(selection.previous) : 0,
+      isIntake ? loadIntakeLeadReport(selection.season, selection.year, tz) : null,
+      isIntake ? countIntakeLeads(selection.season, selection.year - 1) : 0,
+      isIntake ? loadIntakeReport(selection.season, selection.year) : null,
+      isIntake ? loadIntakeReport(selection.season, selection.year - 1) : null,
+    ]);
 
   return (
     <div className="space-y-6">
@@ -87,23 +86,21 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
       <PageHeader
         icon={BarChart3}
         title="Reports"
-        subtitle="Leads by month or reporting period, and applications by intake."
+        subtitle="Leads by month, and leads and applications by intake."
       />
 
       <ReportPicker
         type={selection.type}
         month={selection.type === 'monthly' ? `${selection.year}-${String(selection.month).padStart(2, '0')}` : ''}
-        periods={settings.periods.map((p) => ({ id: p.id, label: `${p.name} (${periodMonthsLabel(p)})` }))}
-        periodId={selection.type === 'period' && selection.period ? selection.period.id : ''}
         year={selection.year}
-        season={selection.type === 'intake' ? selection.season : ''}
+        season={isIntake ? selection.season : ''}
         years={years}
-        exportHref={canExport ? `/api/reports/export?${exportQuery.toString()}` : null}
+        exportHref={`/api/reports/export?${exportQuery.toString()}`}
       />
 
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="font-tenant-display text-xl font-semibold text-tenant-ink">{selection.title}</h2>
-        {selection.type === 'period' && selection.period && (
+        {selection.type === 'intake' && (
           <Badge variant={selection.final ? 'success' : 'neutral'}>
             {selection.final
               ? 'Final'
@@ -112,49 +109,56 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         )}
       </div>
 
-      {selection.type === 'monthly' && (
+      {selection.type === 'monthly' && monthly && (
         <LeadReportView
-          report={leadReport!}
-          range={selection.range}
-          tz={tz}
-          previousCount={previousCount}
+          report={monthly}
+          scope={rangeDateBounds(selection.range, tz)}
+          totalLabel="Leads received"
+          previousCount={monthlyPrevious}
           previousLabel={selection.previousLabel}
-          accent={theme.tokens.accent}
+          showDaily
           navy={theme.tokens.navy}
         />
       )}
 
-      {selection.type === 'period' &&
-        (selection.period ? (
-          <LeadReportView
-            report={leadReport!}
-            range={selection.range}
-            tz={tz}
-            previousCount={previousCount}
-            previousLabel={selection.previousLabel}
-            accent={theme.tokens.accent}
-            navy={theme.tokens.navy}
-          />
-        ) : (
-          <p className="rounded-xl border border-dashed border-tenant-ink/20 bg-white p-8 text-center text-sm text-muted-foreground">
-            No reporting periods yet. Set them up in{' '}
-            <Link href="/settings" className="text-tenant-accent underline">
-              Settings → Reporting periods
-            </Link>
-            .
-          </p>
-        ))}
+      {selection.type === 'intake' && intakeLeads && intakeApps && intakeAppsPrevious && (
+        <>
+          <section className="space-y-3">
+            <h3 className="font-tenant-display text-lg font-semibold text-tenant-ink">Leads for this intake</h3>
+            {intakeInfo.withoutIntake.leads > 0 && (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+                {intakeInfo.withoutIntake.leads} lead{intakeInfo.withoutIntake.leads === 1 ? ' has' : 's have'} no
+                intake set, so {intakeInfo.withoutIntake.leads === 1 ? 'it isn’t' : 'they aren’t'} in any intake
+                report.{' '}
+                <Link href="/leads?season=__none" className="font-medium underline">
+                  Review them
+                </Link>
+              </p>
+            )}
+            <LeadReportView
+              report={intakeLeads}
+              scope={{ season: selection.season, year: String(selection.year) }}
+              totalLabel="Leads for this intake"
+              previousCount={intakeLeadsPrevious}
+              previousLabel={selection.previousLabel}
+              showDaily={false}
+              navy={theme.tokens.navy}
+            />
+          </section>
 
-      {selection.type === 'intake' && (
-        <IntakeReportView
-          report={intakeReport!}
-          previous={previousIntake!}
-          season={selection.season}
-          year={selection.year}
-          title={selection.title}
-          previousLabel={selection.previousLabel}
-          withoutIntake={intakeInfo.withoutIntake}
-        />
+          <section className="space-y-3">
+            <h3 className="font-tenant-display text-lg font-semibold text-tenant-ink">Applications for this intake</h3>
+            <IntakeReportView
+              report={intakeApps}
+              previous={intakeAppsPrevious}
+              season={selection.season}
+              year={selection.year}
+              title={selection.title}
+              previousLabel={selection.previousLabel}
+              withoutIntake={intakeInfo.withoutIntake.applications}
+            />
+          </section>
+        </>
       )}
     </div>
   );

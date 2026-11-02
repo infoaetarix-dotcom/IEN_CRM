@@ -26,6 +26,7 @@ import {
   parseApplicationListFilters,
   hasApplicationListFilters,
   matchesApplicationListFilters,
+  applicationSearchText,
 } from '@/lib/applications/list-filters';
 import { cn } from '@/lib/utils';
 import { getReportingSettings } from '@/lib/reports/settings';
@@ -33,7 +34,7 @@ import { zonedDateKey } from '@/lib/reports/time';
 import { isFollowUpFilter, matchesFollowUpFilter } from '@/lib/follow-ups/status';
 import { getOpenFollowUps } from '@/lib/follow-ups/load';
 import { FollowUpTag } from '@/components/dashboard/follow-ups/follow-up-button';
-import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
+import { ApplicationsFilters } from '@/components/dashboard/applications/applications-filters';
 
 export const metadata = { title: 'Applications' };
 
@@ -72,7 +73,7 @@ export default async function ApplicationsPage({
   ] = await Promise.all([
       supabase
         .from('applications')
-        .select('id, application_number, status, full_name, email, phone, target_country, program, intake_season, intake_year, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
+        .select('id, application_number, status, full_name, email, phone, passport_number, target_country, program, intake_season, intake_year, created_at, created_by, lead_id, document_upload_token, document_upload_expires_at, leads(lead_number, full_name), universities(name, country)')
         .order('created_at', { ascending: false }),
       supabase.from('leads').select('id, full_name').order('full_name'),
       supabase
@@ -103,19 +104,19 @@ export default async function ApplicationsPage({
   const uploadBaseUrl = org?.portal_domain ? `https://${org.portal_domain}` : APP_URL;
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
-  // Report click-throughs (Settings → Reports) narrow the list first; the
-  // stage tabs then work within that.
-  const reportFilters = parseApplicationListFilters(sp);
-  // The follow-up filter (Today / Overdue / This week) applies first.
+  // The filter bar (and report click-throughs, which use the same keys)
+  // narrow the list first; the stage tabs then work within that.
+  const filters = parseApplicationListFilters(sp);
   const withFollowUp = isFollowUpFilter(followupParam)
     ? (applications ?? []).filter((a) => {
         const f = followUps.get(a.id);
         return !!f && matchesFollowUpFilter(f.due_date, followupParam, todayKey);
       })
     : (applications ?? []);
-  const reportFiltered = hasApplicationListFilters(reportFilters)
+  const reportFiltered = hasApplicationListFilters(filters)
     ? withFollowUp.filter((a) => {
         const uni = Array.isArray(a.universities) ? a.universities[0] : a.universities;
+        const leadRow = Array.isArray(a.leads) ? a.leads[0] : a.leads;
         return matchesApplicationListFilters(
           {
             status: a.status,
@@ -123,11 +124,27 @@ export default async function ApplicationsPage({
             intake_year: a.intake_year,
             university_name: uni?.name ?? null,
             country: uni?.country ?? null,
+            created_by: a.created_by,
+            created_date: zonedDateKey(new Date(a.created_at), timezone),
+            search_text: applicationSearchText([
+              a.full_name,
+              leadRow?.full_name,
+              a.email,
+              a.phone,
+              a.passport_number,
+              a.application_number,
+              leadRow?.lead_number,
+            ]),
           },
-          reportFilters,
+          filters,
         );
       })
     : withFollowUp;
+
+  // Filter-bar options: the org's universities and their countries.
+  const universityNames = [...new Set((universities ?? []).map((u) => u.name))];
+  const countryNames = [...new Set((universities ?? []).map((u) => u.country))].sort();
+  const intakeYearsUsed = (applications ?? []).map((a) => a.intake_year).filter((y): y is number => !!y);
 
   // Counts per stage for the tab badges, computed from the same list —
   // there's no need for a second query at this scale.
@@ -151,11 +168,21 @@ export default async function ApplicationsPage({
         action={<CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />}
       />
 
-      {hasApplicationListFilters(reportFilters) && (
+      <div className="rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm">
+        <ApplicationsFilters
+          universities={universityNames}
+          countries={countryNames}
+          staff={(profiles ?? [])
+            .map((p) => ({ id: p.id, name: p.full_name ?? 'Staff' }))
+            .sort((a, b) => a.name.localeCompare(b.name))}
+          years={intakeYearsUsed}
+        />
+      </div>
+
+      {filters.label && hasApplicationListFilters(filters) && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-tenant-accent/30 bg-tenant-accent/5 px-4 py-2.5 text-sm">
           <span className="text-tenant-ink">
-            Showing <strong>{reportFiltered.length}</strong> from the report
-            {reportFilters.label ? <>: {reportFilters.label}</> : null}
+            Showing <strong>{reportFiltered.length}</strong> from the report: {filters.label}
           </span>
           <Link href="/applications" className="inline-flex items-center gap-1 text-tenant-accent hover:underline">
             <X className="h-3.5 w-3.5" /> Show all applications
@@ -163,12 +190,7 @@ export default async function ApplicationsPage({
         </div>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <ApplicationStageTabs counts={stageCounts} total={reportFiltered.length} />
-        </div>
-        <FollowUpFilter className="w-[190px]" />
-      </div>
+      <ApplicationStageTabs counts={stageCounts} total={reportFiltered.length} />
 
       <Card className="rounded-xl border-tenant-ink/10 shadow-sm">
         <CardContent className="p-0">
@@ -253,9 +275,11 @@ export default async function ApplicationsPage({
               {visibleApplications.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    {activeStage
-                      ? 'No applications at this stage.'
-                      : 'No applications yet — create one from a lead, or the button above.'}
+                    {hasApplicationListFilters(filters) || isFollowUpFilter(followupParam)
+                      ? 'No applications match your filters.'
+                      : activeStage
+                        ? 'No applications at this stage.'
+                        : 'No applications yet — create one from a lead, or the button above.'}
                   </TableCell>
                 </TableRow>
               )}

@@ -196,6 +196,8 @@ export default async function LeadDetailPage({
     english_test: s(lead.english_test),
     english_score: s(lead.english_score),
     funding_source: s(lead.funding_source),
+    marital_status: s(lead.marital_status),
+    budget_range: s(lead.budget_range),
     prior_rejection: lead.prior_rejection === true,
     prior_rejection_detail: s(lead.prior_rejection_detail),
   };
@@ -294,6 +296,10 @@ export default async function LeadDetailPage({
               />
               <Field label="City" value={lead.city} />
               <Field label="District" value={lead.district} />
+              <Field
+                label="Marital status"
+                value={lead.marital_status ? (CODE_LABELS[lead.marital_status] ?? lead.marital_status) : null}
+              />
               <Field label="Highest education level" value={lead.highest_education} />
               <Field label="Last qualification / field" value={lead.last_qualification} />
               <Field label="Institution / board attended" value={lead.prior_institution} />
@@ -332,6 +338,10 @@ export default async function LeadDetailPage({
                     ? (CODE_LABELS[lead.funding_source] ?? lead.funding_source)
                     : null
                 }
+              />
+              <Field
+                label="Budget (PKR)"
+                value={lead.budget_range ? (CODE_LABELS[lead.budget_range] ?? lead.budget_range) : null}
               />
               <Field label="Program of interest" value={lead.program} />
               <Field

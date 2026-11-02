@@ -46,6 +46,8 @@ import {
   ENGLISH_TESTS,
   INTAKE_SEASONS,
   FUNDING_SOURCES,
+  MARITAL_STATUSES,
+  BUDGET_RANGES,
   PASSING_YEARS,
   INTAKE_YEARS,
   gradeResultConfig,
@@ -197,10 +199,12 @@ export function LeadForm({
     grade_letter: '',
     work_experience_years: '',
     work_experience_detail: '',
+    marital_status: '',
   });
   const [v3, setV3] = useState({
     institution: '',
     funding_source: '',
+    budget_range: '',
     intake_season: '',
     intake_year: '',
     english_score: '',
@@ -408,6 +412,23 @@ export function LeadForm({
                 </Label>
                 <Input id="district" name="district" placeholder="e.g. Model Town" className="mt-1.5" {...bind2('district')} />
                 <FieldError message={err2.district} />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              <div>
+                <Label htmlFor="marital_status">
+                  Marital status
+                  <Required />
+                </Label>
+                <div className="mt-1.5">
+                  <Select id="marital_status" name="marital_status" {...bind2('marital_status')}>
+                    <option value="">Select…</option>
+                    {MARITAL_STATUSES.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </Select>
+                </div>
+                <FieldError message={err2.marital_status} />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -632,6 +653,20 @@ export function LeadForm({
                   </Select>
                 </div>
               </div>
+              <div>
+                <Label htmlFor="budget_range">
+                  Your budget for studying abroad
+                  <Optional />
+                </Label>
+                <div className="mt-1.5">
+                  <Select id="budget_range" name="budget_range" {...bind3('budget_range')}>
+                    <option value="">Select budget (PKR)</option>
+                    {BUDGET_RANGES.map((b) => (
+                      <option key={b.value} value={b.value}>{b.label}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
             </div>
             <div>
               <Label htmlFor="program_degree">
@@ -650,7 +685,7 @@ export function LeadForm({
                 </Label>
                 <div className="mt-1.5 grid grid-cols-2 gap-2">
                   <Select id="intake_season" name="intake_season" {...bind3('intake_season')}>
-                    <option value="">Season</option>
+                    <option value="">Intake</option>
                     {INTAKE_SEASONS.map((x) => (
                       <option key={x.value} value={x.value}>{x.label}</option>
                     ))}

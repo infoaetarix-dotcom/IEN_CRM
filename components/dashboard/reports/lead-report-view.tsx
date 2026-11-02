@@ -1,6 +1,5 @@
-import { SourceBar, VolumeLine } from '@/components/charts/dashboard-charts-lazy';
-import { percentChange, rangeDateBounds, type LeadReport } from '@/lib/reports/leads';
-import type { Range } from '@/lib/reports/time';
+import { VolumeLine } from '@/components/charts/dashboard-charts-lazy';
+import { percentChange, type LeadReport } from '@/lib/reports/leads';
 import { StatCard, Section, CountList, ReportTable } from './report-blocks';
 
 function leadsHref(params: Record<string, string>) {
@@ -8,40 +7,40 @@ function leadsHref(params: Record<string, string>) {
 }
 
 /**
- * Lead report body — the monthly report and the reporting-period report
- * show the same numbers over different ranges. A period spanning several
- * months adds a per-month chart; a single month shows each day.
+ * Lead report body, shared by the monthly report (leads received in a
+ * month — with a per-day chart) and the intake report (leads whose intended
+ * intake is e.g. Sep–Oct 2027 — no chart, they arrived over many months).
+ * `scope` is the /leads filter every number's link carries, so each one
+ * opens exactly the leads it counted.
  */
 export function LeadReportView({
   report,
-  range,
-  tz,
+  scope,
+  totalLabel,
   previousCount,
   previousLabel,
-  accent,
+  showDaily,
   navy,
 }: {
   report: LeadReport;
-  range: Range;
-  tz: string;
+  scope: Record<string, string>;
+  totalLabel: string;
   previousCount: number;
   previousLabel: string;
-  accent: string;
+  showDaily: boolean;
   navy: string;
 }) {
-  const { from, to } = rangeDateBounds(range, tz);
-  const inRange = (extra: Record<string, string> = {}) => leadsHref({ from, to, ...extra });
+  const link = (extra: Record<string, string> = {}) => leadsHref({ ...scope, ...extra });
   const change = percentChange(report.total, previousCount);
   const rejected = report.byStatus.find((s) => s.key === 'rejected')?.count ?? 0;
-  const multiMonth = report.monthly.length > 1;
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Leads received"
+          label={totalLabel}
           value={report.total}
-          href={inRange()}
+          href={link()}
           hint={
             <>
               {previousCount} in {previousLabel}
@@ -63,32 +62,17 @@ export function LeadReportView({
           label="Contacted within 1h"
           value={`${report.responseRate}%`}
           hint="First status change within an hour"
-          href={inRange()}
+          href={link()}
         />
         <StatCard
           label="Rejected"
           value={rejected}
           tone={rejected ? 'bad' : undefined}
-          href={inRange({ status: 'rejected' })}
+          href={link({ status: 'rejected' })}
         />
       </div>
 
-      {multiMonth ? (
-        <Section title="Leads per month" hint="Click a month to open its leads">
-          <SourceBar
-            accent={accent}
-            data={report.monthly.map((m) => {
-              const [y, mo] = m.key.split('-');
-              const lastDay = new Date(Date.UTC(Number(y), Number(mo), 0)).getUTCDate();
-              return {
-                label: m.label,
-                value: m.count,
-                href: leadsHref({ from: `${m.key}-01`, to: `${m.key}-${String(lastDay).padStart(2, '0')}` }),
-              };
-            })}
-          />
-        </Section>
-      ) : (
+      {showDaily && (
         <Section title="Leads per day" hint="Click a day to open its leads">
           <VolumeLine
             navy={navy}
@@ -100,8 +84,8 @@ export function LeadReportView({
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="By source">
           <CountList
-            empty="No leads in this period."
-            rows={report.bySource.map((s) => ({ label: s.label, count: s.count, href: inRange({ source: s.key }) }))}
+            empty="No leads."
+            rows={report.bySource.map((s) => ({ label: s.label, count: s.count, href: link({ source: s.key }) }))}
           />
         </Section>
         <Section title="By current status">
@@ -110,7 +94,7 @@ export function LeadReportView({
               label: s.label,
               count: s.count,
               muted: s.count === 0,
-              href: inRange({ status: s.key }),
+              href: link({ status: s.key }),
             }))}
           />
         </Section>
@@ -119,10 +103,10 @@ export function LeadReportView({
       <Section title="By staff member" hint="Who added each lead — public-form leads are grouped separately">
         <ReportTable
           columns={['Staff', 'Leads', 'Contacted < 1h', 'Became applications']}
-          empty="No leads in this period."
+          empty="No leads."
           rows={report.byStaff.map((s) => ({
             key: s.key,
-            href: inRange({ staff: s.key }),
+            href: link({ staff: s.key }),
             cells: [s.label, s.count, s.fastResponses, s.converted],
           }))}
         />

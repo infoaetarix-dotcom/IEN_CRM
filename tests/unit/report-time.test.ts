@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  zonedDateKey,
-  startOfDayInZone,
-  monthRange,
-  dateKeysInRange,
-  periodRange,
-  periodReportDate,
-  periodLength,
-  periodsOverlap,
-  periodMonthsLabel,
-} from '@/lib/reports/time';
+import { zonedDateKey, startOfDayInZone, monthRange, dateKeysInRange } from '@/lib/reports/time';
 
 const KHI = 'Asia/Karachi'; // UTC+5, no DST
 const LON = 'Europe/London'; // has DST
@@ -48,39 +38,3 @@ describe('zoned dates', () => {
   });
 });
 
-describe('reporting periods', () => {
-  const sepOct = { start_month: 9, end_month: 10, report_month: 11 };
-  const janFeb = { start_month: 1, end_month: 2, report_month: 3 };
-  const novJan = { start_month: 11, end_month: 1, report_month: 2 };
-
-  it('covers the right months', () => {
-    const r = periodRange(KHI, sepOct, 2026);
-    expect(zonedDateKey(r.start, KHI)).toBe('2026-09-01');
-    expect(zonedDateKey(new Date(r.end.getTime() - 1), KHI)).toBe('2026-10-31');
-  });
-
-  it('wraps a period across the new year', () => {
-    expect(periodLength(novJan)).toBe(3);
-    const r = periodRange(KHI, novJan, 2026);
-    expect(zonedDateKey(r.start, KHI)).toBe('2026-11-01');
-    expect(zonedDateKey(new Date(r.end.getTime() - 1), KHI)).toBe('2027-01-31');
-  });
-
-  it('is final from the first day of its report month', () => {
-    expect(zonedDateKey(periodReportDate(KHI, sepOct, 2026), KHI)).toBe('2026-11-01');
-    expect(zonedDateKey(periodReportDate(KHI, janFeb, 2026), KHI)).toBe('2026-03-01');
-    expect(zonedDateKey(periodReportDate(KHI, novJan, 2026), KHI)).toBe('2027-02-01');
-  });
-
-  it('detects overlap, including across the year end', () => {
-    expect(periodsOverlap(janFeb, sepOct)).toBe(false);
-    expect(periodsOverlap(janFeb, { start_month: 2, end_month: 3 })).toBe(true);
-    expect(periodsOverlap(novJan, janFeb)).toBe(true);
-    expect(periodsOverlap(novJan, sepOct)).toBe(false);
-  });
-
-  it('labels the months', () => {
-    expect(periodMonthsLabel(janFeb)).toBe('Jan–Feb');
-    expect(periodMonthsLabel({ start_month: 6, end_month: 6 })).toBe('Jun');
-  });
-});

@@ -41,9 +41,11 @@ const COLUMNS = [
   { header: 'Work Experience (yrs)', key: 'work_experience_years', width: 20 },
   { header: 'English Test', key: 'english_test', width: 14 },
   { header: 'English Score', key: 'english_score', width: 14 },
-  { header: 'Intake Season', key: 'intake_season', width: 14 },
+  { header: 'Intake', key: 'intake_season', width: 12 },
   { header: 'Intake Year', key: 'intake_year', width: 12 },
   { header: 'Funding Source', key: 'funding_source', width: 16 },
+  { header: 'Budget (PKR)', key: 'budget_range', width: 16 },
+  { header: 'Marital Status', key: 'marital_status', width: 16 },
   { header: 'Created By', key: 'created_by', width: 20 },
   { header: 'Consent Given', key: 'consent_given', width: 14 },
   { header: 'Created At', key: 'created_at', width: 20 },
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
      target_country, institution, program, highest_education, last_qualification,
      prior_institution, passing_year, grading_system, grade_value,
      work_experience_years, english_test, english_score, intake_season, intake_year,
-     funding_source, created_by, consent_given, created_at, archived_at`,
+     funding_source, budget_range, marital_status, created_by, consent_given, created_at, archived_at`,
   );
 
   query = applyLeadFilters(query, {
@@ -79,6 +81,8 @@ export async function GET(request: NextRequest) {
     from: str('from'),
     to: str('to'),
     staff: str('staff'),
+    season: str('season'),
+    year: str('year'),
     archived: str('archived') === '1',
     timezone,
   });
@@ -118,6 +122,8 @@ export async function GET(request: NextRequest) {
       funding_source: l.funding_source
         ? (CODE_LABELS[l.funding_source] ?? l.funding_source)
         : '',
+      budget_range: l.budget_range ? (CODE_LABELS[l.budget_range] ?? l.budget_range) : '',
+      marital_status: l.marital_status ? (CODE_LABELS[l.marital_status] ?? l.marital_status) : '',
       created_by: l.created_by ? (nameById.get(l.created_by) ?? '') : '',
       consent_given: l.consent_given ? 'Yes' : 'No',
       created_at: new Date(l.created_at).toLocaleString('en-GB'),
@@ -125,14 +131,32 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const filename = `leads-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  // Name the file after the date range when there is one (the Export
+  // dialog's From / To), otherwise today's date.
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(str('from')) ? str('from') : '';
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(str('to')) ? str('to') : '';
+  const stem =
+    from || to
+      ? `leads-${from || 'start'}-to-${to || zonedDateKey(new Date(), timezone)}`
+      : `leads-export-${zonedDateKey(new Date(), timezone)}`;
 
+  if (str('format') === 'csv') {
+    // BOM so Excel opens UTF-8 names (e.g. Urdu) correctly.
+    const csv = await workbook.csv.writeBuffer();
+    return new Response(new Blob(['﻿', csv]), {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${stem}.csv"`,
+      },
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
   return new Response(buffer, {
     headers: {
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${stem}.xlsx"`,
     },
   });
 }

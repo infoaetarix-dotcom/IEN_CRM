@@ -78,6 +78,8 @@ export async function createQuery(
     english_test: formStr(formData, 'english_test'),
     english_score: formStr(formData, 'english_score'),
     funding_source: formStr(formData, 'funding_source'),
+    marital_status: formStr(formData, 'marital_status'),
+    budget_range: formStr(formData, 'budget_range'),
     prior_rejection: formData.get('prior_rejection') === 'on',
     prior_rejection_detail: formStr(formData, 'prior_rejection_detail'),
     consent_given: formData.get('consent_given') === 'on',
