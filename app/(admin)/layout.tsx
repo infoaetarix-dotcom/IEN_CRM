@@ -13,6 +13,7 @@ import { AccountMenu } from '@/components/dashboard/account-menu';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
 import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { FloatingChatButton } from '@/components/dashboard/chatbot/floating-button';
+import { ChatProvider } from '@/components/dashboard/chat/chat-provider';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -80,7 +81,15 @@ export default async function AdminLayout({
     .order('created_at', { ascending: false })
     .limit(20);
 
-  return (
+  // Team chat (opt-in module): starting unread counts for the sidebar
+  // badge; ChatProvider keeps them live from here.
+  const chatOn = enabledModules.includes('team_chat');
+  const { data: inbox } = chatOn ? await supabase.rpc('chat_inbox') : { data: null };
+  const initialUnread = Object.fromEntries(
+    ((inbox ?? []) as { conversation_id: string; unread_count: number }[]).map((c) => [c.conversation_id, c.unread_count]),
+  );
+
+  const page = (
     <div
       id="tenant-theme-root"
       style={themeStyleVars(theme.tokens)}
@@ -144,5 +153,13 @@ export default async function AdminLayout({
 
       {enabledModules.includes('chatbot') && <FloatingChatButton />}
     </div>
+  );
+
+  return chatOn ? (
+    <ChatProvider profileId={profile.id} initialUnread={initialUnread}>
+      {page}
+    </ChatProvider>
+  ) : (
+    page
   );
 }

@@ -3,7 +3,8 @@ export type NotificationType =
   | 'document_uploaded'
   | 'lead_document_uploaded'
   | 'note_added'
-  | 'follow_up_due';
+  | 'follow_up_due'
+  | 'chat_message';
 
 export interface Notification {
   id: string;

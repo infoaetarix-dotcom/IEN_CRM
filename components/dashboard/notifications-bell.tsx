@@ -68,6 +68,26 @@ export function NotificationsBell({
             setNotifications((prev) => [payload.new as Notification, ...prev].slice(0, 20));
           },
         )
+        // Team chat refreshes one notification per conversation instead of
+        // adding another (it moves back to the top), and opening the chat
+        // marks it read — both arrive as updates.
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `profile_id=eq.${profileId}`,
+          },
+          (payload) => {
+            const n = payload.new as Notification;
+            setNotifications((prev) =>
+              [n, ...prev.filter((x) => x.id !== n.id)]
+                .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+                .slice(0, 20),
+            );
+          },
+        )
         .subscribe();
     });
 
