@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { ChatPanel } from '@/components/dashboard/chatbot/chat-panel';
+import { cn } from '@/lib/utils';
 
 /**
  * Mounted in app/(admin)/layout.tsx, gated on enabledModules.includes('chatbot')
@@ -12,9 +14,12 @@ import { ChatPanel } from '@/components/dashboard/chatbot/chat-panel';
  */
 export function FloatingChatButton() {
   const [open, setOpen] = useState(false);
+  // On Messages the bottom-right corner is the team chat's Send button —
+  // sit above it instead of covering it.
+  const onMessages = usePathname().startsWith('/messages');
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <div className={cn('fixed right-5 z-50 flex flex-col items-end gap-3', onMessages ? 'bottom-24' : 'bottom-5')}>
       {open && <ChatPanel onClose={() => setOpen(false)} />}
       <button
         type="button"

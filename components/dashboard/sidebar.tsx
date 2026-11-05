@@ -13,9 +13,11 @@ import {
   Activity,
   FileText,
   Settings,
+  MessageSquare,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useChat } from '@/components/dashboard/chat/chat-provider';
 
 interface NavItem {
   href: string;
@@ -47,6 +49,7 @@ const NAV: NavItem[] = [
     adminOnly: true,
     moduleKey: 'activity_tracker',
   },
+  { href: '/messages', label: 'Messages', icon: MessageSquare, moduleKey: 'team_chat' },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -61,6 +64,7 @@ export function Sidebar({
   orientation?: 'vertical' | 'horizontal';
 }) {
   const pathname = usePathname();
+  const chat = useChat();
   const items = NAV.filter((i) => {
     if (i.adminOnly && role !== 'admin') return false;
     if (i.moduleKey && !enabledModules.includes(i.moduleKey)) return false;
@@ -85,6 +89,7 @@ export function Sidebar({
         const active =
           pathname === item.href || pathname.startsWith(item.href + '/');
         const Icon = item.icon;
+        const badge = item.href === '/messages' ? (chat?.unreadTotal ?? 0) : 0;
         return (
           <Link
             key={item.href}
@@ -92,13 +97,21 @@ export function Sidebar({
             title={item.label}
             aria-label={item.label}
             className={cn(
-              'flex h-11 w-11 flex-none items-center justify-center rounded-lg transition-colors',
+              'relative flex h-11 w-11 flex-none items-center justify-center rounded-lg transition-colors',
               active
                 ? 'bg-tenant-accent text-white'
                 : 'text-tenant-offwhite/70 hover:bg-white/10 hover:text-tenant-offwhite',
             )}
           >
             <Icon className="h-5 w-5" />
+            {badge > 0 && (
+              <span
+                aria-label={`${badge} unread`}
+                className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white"
+              >
+                {badge > 99 ? '99+' : badge}
+              </span>
+            )}
           </Link>
         );
       })}
