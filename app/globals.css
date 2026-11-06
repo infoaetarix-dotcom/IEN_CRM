@@ -146,3 +146,61 @@
 .email-content > div > :last-child {
   margin-bottom: 0;
 }
+
+/* ---- App opening splash (components/dashboard/app-splash.tsx) ---- */
+.app-splash {
+  transition: opacity 0.4s ease;
+  /* Safety net: if JavaScript never starts, still get out of the way. */
+  animation: splash-out 0.4s ease 10s forwards;
+}
+.app-splash[data-phase='fade'] {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes splash-out {
+  to { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+.app-splash-glow {
+  background: radial-gradient(circle, var(--splash-accent) 0%, transparent 65%);
+  opacity: 0.35;
+  animation: splash-glow 2.4s ease-in-out infinite;
+}
+.app-splash-logo {
+  animation: splash-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.app-splash-name {
+  animation: splash-rise 0.6s ease-out 0.25s both;
+}
+.app-splash-bar {
+  animation: splash-rise 0.5s ease-out 0.4s both;
+}
+.app-splash-bar-fill {
+  background: var(--splash-accent);
+  box-shadow: 0 0 12px var(--splash-accent);
+  animation: splash-slide 1.2s ease-in-out infinite;
+}
+@keyframes splash-pop {
+  from { opacity: 0; transform: scale(0.82); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes splash-glow {
+  0%, 100% { transform: scale(0.9); opacity: 0.25; }
+  50% { transform: scale(1.08); opacity: 0.45; }
+}
+@keyframes splash-slide {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-splash-glow,
+  .app-splash-logo,
+  .app-splash-name,
+  .app-splash-bar,
+  .app-splash-bar-fill {
+    animation: none;
+  }
+}

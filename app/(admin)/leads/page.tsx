@@ -15,7 +15,7 @@ import {
 import { PageHeader } from '@/components/dashboard/page-header';
 import { LeadsFilters } from '@/components/dashboard/leads-filters';
 import { CreateQueryDialog } from '@/components/dashboard/create-query-dialog';
-import { ExportLeadsDialog } from '@/components/dashboard/export-leads-dialog';
+import { ExportDialog } from '@/components/dashboard/export-dialog';
 import {
   RestoreLeadButton,
   LeadRowActions,
@@ -169,7 +169,14 @@ export default async function LeadsPage({
         action={
           <div className="flex flex-wrap items-center gap-3">
             <CreateQueryDialog consentName={brand.legalName} aiEnabled={aiEnabled} />
-            <ExportLeadsDialog todayKey={todayKey} archived={showArchived} />
+            <ExportDialog
+              endpoint="/api/leads/export"
+              noun="leads"
+              dateVerb="received"
+              filterKeys={['q', 'status', 'source', 'completeness', 'staff', 'followup', 'season', 'year']}
+              todayKey={todayKey}
+              extraParams={showArchived ? { archived: '1' } : {}}
+            />
             <Link
               href={showArchived ? '/leads' : '/leads?archived=1'}
               className="inline-flex items-center gap-2 rounded-md text-sm text-tenant-ink border border-tenant-ink/15 hover:bg-tenant-ink/5 h-9 px-3"

@@ -29,7 +29,10 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       : 'Study-abroad consultancy CRM.',
     start_url: '/dashboard',
     display: 'standalone',
-    background_color: theme.tokens.offwhite,
+    // The phone's own launch screen uses this colour; matching the in-app
+    // splash (AppSplash, brand navy) means opening flows from one into the
+    // other with no white or black flash.
+    background_color: theme.tokens.navy,
     theme_color: theme.tokens.navy,
     icons: [
       { src: '/icon-512.png', sizes: '192x192', type: 'image/png' },
