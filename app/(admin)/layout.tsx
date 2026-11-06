@@ -14,6 +14,7 @@ import { NotificationsBell } from '@/components/dashboard/notifications-bell';
 import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { FloatingChatButton } from '@/components/dashboard/chatbot/floating-button';
 import { ChatProvider } from '@/components/dashboard/chat/chat-provider';
+import { AppSplash } from '@/components/dashboard/app-splash';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -95,6 +96,12 @@ export default async function AdminLayout({
       style={themeStyleVars(theme.tokens)}
       className="bg-tenant-gray flex min-h-screen flex-col"
     >
+      {/* Opening animation — part of this HTML, so it's the first thing
+          painted, and it covers the page until React is ready. */}
+      <AppSplash
+        brand={{ name: brand.name, logoUrl: brand.logoUrl, bg: theme.tokens.navy, accent: theme.tokens.accent }}
+      />
+
       {/* Top navbar — full width: tenant logo left, account controls right */}
       <header className="bg-tenant-navy flex h-16 flex-none items-center justify-between border-b border-white/10 p-5 md:p-10">
         <Link

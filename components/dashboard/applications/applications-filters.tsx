@@ -3,7 +3,7 @@
 import { useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
@@ -15,6 +15,8 @@ import {
 import { INTAKE_SEASONS, INTAKE_YEARS } from '@/lib/form-options';
 import { NONE } from '@/lib/applications/list-filters';
 import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
+import { FilterPanel, FilterSearch } from '@/components/dashboard/filter-panel';
+import { cn } from '@/lib/utils';
 
 const FILTER_KEYS = ['q', 'statuses', 'university', 'country', 'season', 'year', 'staff', 'from', 'to', 'followup', 'label'];
 
@@ -57,24 +59,28 @@ export function ApplicationsFilters({
   const hasFilters = FILTER_KEYS.some((k) => params.get(k));
   const yearOptions = [...new Set([...INTAKE_YEARS, ...years])].sort((a, b) => a - b);
 
-  return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="relative min-w-[240px] flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          key={params.get('q') === null ? 'empty' : 'q'}
-          defaultValue={params.get('q') ?? ''}
-          placeholder="Search name, email, phone, application # or passport…"
-          aria-label="Search applications"
-          className="pl-9"
-          onChange={(e) => setParam('q', e.target.value)}
-        />
-      </div>
+  // The search box stays visible; the badge counts the rest ("label" is
+  // just a report's description, not a filter).
+  const activeCount = FILTER_KEYS.filter((k) => k !== 'q' && k !== 'label' && params.get(k)).length;
+  const cell = 'w-full sm:w-auto';
 
+  return (
+    <FilterPanel
+      activeCount={activeCount}
+      search={
+        <FilterSearch
+          key={params.get('q') === null ? 'empty' : 'q'}
+          value={params.get('q') ?? ''}
+          onSearch={(v) => setParam('q', v)}
+          label="Search applications"
+          placeholder="Search name, email, phone, application # or passport…"
+        />
+      }
+    >
       <Select
         aria-label="Status"
         value={multiStatus ? '__report' : statuses}
-        className="w-[200px]"
+        className={cn(cell, 'col-span-2 sm:w-[200px]')}
         onChange={(e) => setParam('statuses', e.target.value === '__report' ? statuses : e.target.value)}
       >
         <option value="">All statuses</option>
@@ -93,7 +99,7 @@ export function ApplicationsFilters({
       <Select
         aria-label="University"
         value={params.get('university') ?? ''}
-        className="w-[200px]"
+        className={cn(cell, 'sm:w-[200px]')}
         onChange={(e) => setParam('university', e.target.value)}
       >
         <option value="">All universities</option>
@@ -108,7 +114,7 @@ export function ApplicationsFilters({
       <Select
         aria-label="Country"
         value={params.get('country') ?? ''}
-        className="w-[160px]"
+        className={cn(cell, 'sm:w-[160px]')}
         onChange={(e) => setParam('country', e.target.value)}
       >
         <option value="">All countries</option>
@@ -119,41 +125,39 @@ export function ApplicationsFilters({
         ))}
       </Select>
 
-      <div className="flex gap-2">
-        <Select
-          aria-label="Intake"
-          value={params.get('season') ?? ''}
-          className="w-[140px]"
-          onChange={(e) => setParam('season', e.target.value)}
-        >
-          <option value="">Any intake</option>
-          {INTAKE_SEASONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-          <option value={NONE}>Intake not set</option>
-        </Select>
-        <Select
-          aria-label="Intake year"
-          value={params.get('year') ?? ''}
-          className="w-[110px]"
-          onChange={(e) => setParam('year', e.target.value)}
-        >
-          <option value="">Any year</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <Select
+        aria-label="Intake"
+        value={params.get('season') ?? ''}
+        className={cn(cell, 'sm:w-[140px]')}
+        onChange={(e) => setParam('season', e.target.value)}
+      >
+        <option value="">Any intake</option>
+        {INTAKE_SEASONS.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+        <option value={NONE}>Intake not set</option>
+      </Select>
+      <Select
+        aria-label="Intake year"
+        value={params.get('year') ?? ''}
+        className={cn(cell, 'sm:w-[110px]')}
+        onChange={(e) => setParam('year', e.target.value)}
+      >
+        <option value="">Any year</option>
+        {yearOptions.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </Select>
 
       {staff.length > 0 && (
         <Select
           aria-label="Created by"
           value={params.get('staff') ?? ''}
-          className="w-[170px]"
+          className={cn(cell, 'sm:w-[170px]')}
           onChange={(e) => setParam('staff', e.target.value)}
         >
           <option value="">Created by anyone</option>
@@ -165,15 +169,15 @@ export function ApplicationsFilters({
         </Select>
       )}
 
-      <FollowUpFilter className="w-[190px]" />
+      <FollowUpFilter className={cn(cell, 'sm:w-[190px]')} />
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        Created
+      <div className="col-span-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+        <span className="col-span-3 sm:col-span-1">Created</span>
         <Input
           type="date"
           aria-label="Created from"
           value={params.get('from') ?? ''}
-          className="w-[150px]"
+          className="min-w-0 sm:w-[150px]"
           onChange={(e) => setParam('from', e.target.value)}
         />
         to
@@ -181,7 +185,7 @@ export function ApplicationsFilters({
           type="date"
           aria-label="Created to"
           value={params.get('to') ?? ''}
-          className="w-[150px]"
+          className="min-w-0 sm:w-[150px]"
           onChange={(e) => setParam('to', e.target.value)}
         />
       </div>
@@ -189,13 +193,13 @@ export function ApplicationsFilters({
       {hasFilters && (
         <Link
           href={pathname}
-          className="inline-flex h-10 items-center gap-1 rounded-md px-2 text-sm text-tenant-accent hover:underline"
+          className="col-span-2 inline-flex h-10 items-center justify-center gap-1 rounded-md px-2 text-sm text-tenant-accent hover:underline sm:justify-start"
         >
           <X className="h-3.5 w-3.5" /> Clear filters
         </Link>
       )}
 
-      {isPending && <span className="text-xs text-muted-foreground">Updating…</span>}
-    </div>
+      {isPending && <span className="col-span-2 text-xs text-muted-foreground">Updating…</span>}
+    </FilterPanel>
   );
 }

@@ -16,32 +16,48 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
-const FILTER_KEYS = ['q', 'status', 'source', 'completeness', 'staff', 'followup', 'season', 'year'];
-
 /**
- * "Export" on /leads: pick a received-date range and a format, then download
- * every lead received in that range (dates are whole days in the org's
- * time zone — see applyLeadFilters). The list's other filters are only
- * applied if asked, so "all leads from 1 to 31 October" is the default.
+ * "Export" on /leads and /applications: pick a date range and a format,
+ * then download every record in that range (whole days in the org's time
+ * zone). The list's other filters are only applied if asked, so
+ * "everything from 1 to 31 October" is the default.
  */
-export function ExportLeadsDialog({ todayKey, archived }: { todayKey: string; archived: boolean }) {
+export function ExportDialog({
+  endpoint,
+  noun,
+  dateVerb,
+  filterKeys,
+  todayKey,
+  extraParams = {},
+}: {
+  /** e.g. /api/leads/export */
+  endpoint: string;
+  /** "leads" / "applications" — used in the wording. */
+  noun: string;
+  /** "received" / "created" — what the dates refer to. */
+  dateVerb: string;
+  /** The list page's own URL filter keys, offered as "match current filters". */
+  filterKeys: string[];
+  todayKey: string;
+  /** Always sent (e.g. archived=1 on the archived leads view). */
+  extraParams?: Record<string, string>;
+}) {
   const params = useSearchParams();
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [format, setFormat] = useState<'xlsx' | 'csv'>('xlsx');
   const [withFilters, setWithFilters] = useState(false);
-  const activeFilters = FILTER_KEYS.filter((k) => params.get(k));
+  const activeFilters = filterKeys.filter((k) => params.get(k));
 
   const invalid = !!from && !!to && from > to;
   const href = (() => {
-    const q = new URLSearchParams();
+    const q = new URLSearchParams(extraParams);
     if (from) q.set('from', from);
     if (to) q.set('to', to);
     if (format === 'csv') q.set('format', 'csv');
-    if (archived) q.set('archived', '1');
     if (withFilters) for (const k of activeFilters) q.set(k, params.get(k)!);
-    return `/api/leads/export?${q.toString()}`;
+    return `${endpoint}?${q.toString()}`;
   })();
 
   const quick = (label: string, f: string, t: string) => (
@@ -88,9 +104,9 @@ export function ExportLeadsDialog({ todayKey, archived }: { todayKey: string; ar
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-tenant-display text-tenant-ink">Export leads</DialogTitle>
+          <DialogTitle className="font-tenant-display text-tenant-ink">Export {noun}</DialogTitle>
           <DialogDescription>
-            Download every lead received between two dates. Leave a date empty for no limit on that side.
+            Download all {noun} {dateVerb} between two dates. Leave a date empty for no limit on that side.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -133,7 +149,7 @@ export function ExportLeadsDialog({ todayKey, archived }: { todayKey: string; ar
           {activeFilters.length > 0 && (
             <label className="flex items-start gap-2 text-sm text-tenant-ink">
               <Checkbox checked={withFilters} onChange={(e) => setWithFilters(e.target.checked)} className="mt-0.5" />
-              Only leads matching the list’s current filters too
+              Only {noun} matching the list’s current filters too
             </label>
           )}
 

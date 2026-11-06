@@ -35,6 +35,7 @@ import { isFollowUpFilter, matchesFollowUpFilter } from '@/lib/follow-ups/status
 import { getOpenFollowUps } from '@/lib/follow-ups/load';
 import { FollowUpTag } from '@/components/dashboard/follow-ups/follow-up-button';
 import { ApplicationsFilters } from '@/components/dashboard/applications/applications-filters';
+import { ExportDialog } from '@/components/dashboard/export-dialog';
 
 export const metadata = { title: 'Applications' };
 
@@ -165,7 +166,18 @@ export default async function ApplicationsPage({
         icon={FileText}
         title="Applications"
         subtitle="Every application across your leads — each one belongs to exactly one lead."
-        action={<CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />}
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            <CreateApplicationDialog leads={leads ?? []} universities={universities ?? []} />
+            <ExportDialog
+              endpoint="/api/applications/export"
+              noun="applications"
+              dateVerb="created"
+              filterKeys={['q', 'statuses', 'university', 'country', 'season', 'year', 'staff', 'followup']}
+              todayKey={todayKey}
+            />
+          </div>
+        }
       />
 
       <div className="rounded-xl border border-tenant-ink/10 bg-white p-4 shadow-sm">

@@ -3,12 +3,14 @@
 import { useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LEAD_STATUSES, STATUS_LABELS, LEAD_SOURCES, SOURCE_LABELS } from '@/lib/leads/display';
 import { FollowUpFilter } from '@/components/dashboard/follow-ups/follow-up-filter';
 import { INTAKE_SEASONS, INTAKE_YEARS } from '@/lib/form-options';
+import { FilterPanel, FilterSearch } from '@/components/dashboard/filter-panel';
+import { cn } from '@/lib/utils';
 
 /** Staff option for the "created by" filter. */
 export interface StaffOption {
@@ -43,26 +45,27 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
   const hasFilters = FILTER_KEYS.some((k) => params.get(k));
   const clearHref = params.get('archived') === '1' ? `${pathname}?archived=1` : pathname;
 
-  return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="relative min-w-[220px] flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          defaultValue={params.get('q') ?? ''}
-          placeholder="Search name, email, phone…"
-          className="pl-9"
-          onChange={(e) => {
-            const v = e.target.value;
-            // debounce-lite: push on each change; transitions keep it smooth
-            setParam('q', v);
-          }}
-        />
-      </div>
+  // "q" is the search box, which stays visible; the badge counts the rest.
+  const activeCount = FILTER_KEYS.filter((k) => k !== 'q' && params.get(k)).length;
+  const cell = 'w-full sm:w-auto';
 
+  return (
+    <FilterPanel
+      activeCount={activeCount}
+      search={
+        // debounce-lite: push on each change; transitions keep it smooth
+        <FilterSearch
+          value={params.get('q') ?? ''}
+          onSearch={(v) => setParam('q', v)}
+          label="Search leads"
+          placeholder="Search name, email, phone…"
+        />
+      }
+    >
       <Select
         value={params.get('status') ?? ''}
         aria-label="Status"
-        className="w-[160px]"
+        className={cn(cell, 'sm:w-[160px]')}
         onChange={(e) => setParam('status', e.target.value)}
       >
         <option value="">All statuses</option>
@@ -76,7 +79,7 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
       <Select
         value={params.get('source') ?? ''}
         aria-label="Source"
-        className="w-[150px]"
+        className={cn(cell, 'sm:w-[150px]')}
         onChange={(e) => setParam('source', e.target.value)}
       >
         <option value="">All sources</option>
@@ -90,7 +93,7 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
       <Select
         value={params.get('completeness') ?? ''}
         aria-label="Completeness"
-        className="w-[160px]"
+        className={cn(cell, 'sm:w-[160px]')}
         onChange={(e) => setParam('completeness', e.target.value)}
       >
         <option value="">All applications</option>
@@ -102,7 +105,7 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
         <Select
           value={params.get('staff') ?? ''}
           aria-label="Created by"
-          className="w-[170px]"
+          className={cn(cell, 'sm:w-[170px]')}
           onChange={(e) => setParam('staff', e.target.value)}
         >
           <option value="">Created by anyone</option>
@@ -115,47 +118,45 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
         </Select>
       )}
 
-      <FollowUpFilter className="w-[190px]" />
+      <FollowUpFilter className={cn(cell, 'sm:w-[190px]')} />
 
-      <div className="flex gap-2">
-        <Select
-          value={params.get('season') ?? ''}
-          aria-label="Intake"
-          className="w-[140px]"
-          onChange={(e) => setParam('season', e.target.value)}
-        >
-          <option value="">Any intake</option>
-          {INTAKE_SEASONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
+      <Select
+        value={params.get('season') ?? ''}
+        aria-label="Intake"
+        className={cn(cell, 'sm:w-[140px]')}
+        onChange={(e) => setParam('season', e.target.value)}
+      >
+        <option value="">Any intake</option>
+        {INTAKE_SEASONS.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+        <option value="__none">Intake not set</option>
+      </Select>
+      <Select
+        value={params.get('year') ?? ''}
+        aria-label="Intake year"
+        className={cn(cell, 'sm:w-[110px]')}
+        onChange={(e) => setParam('year', e.target.value)}
+      >
+        <option value="">Any year</option>
+        {[...new Set([...INTAKE_YEARS, ...(params.get('year') ? [Number(params.get('year'))] : [])])]
+          .sort((a, b) => a - b)
+          .map((y) => (
+            <option key={y} value={y}>
+              {y}
             </option>
           ))}
-          <option value="__none">Intake not set</option>
-        </Select>
-        <Select
-          value={params.get('year') ?? ''}
-          aria-label="Intake year"
-          className="w-[110px]"
-          onChange={(e) => setParam('year', e.target.value)}
-        >
-          <option value="">Any year</option>
-          {[...new Set([...INTAKE_YEARS, ...(params.get('year') ? [Number(params.get('year'))] : [])])]
-            .sort((a, b) => a - b)
-            .map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-        </Select>
-      </div>
+      </Select>
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        Received
+      <div className="col-span-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+        <span className="col-span-3 sm:col-span-1">Received</span>
         <Input
           type="date"
           aria-label="Received from"
           value={params.get('from') ?? ''}
-          className="w-[150px]"
+          className="min-w-0 sm:w-[150px]"
           onChange={(e) => setParam('from', e.target.value)}
         />
         to
@@ -163,7 +164,7 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
           type="date"
           aria-label="Received to"
           value={params.get('to') ?? ''}
-          className="w-[150px]"
+          className="min-w-0 sm:w-[150px]"
           onChange={(e) => setParam('to', e.target.value)}
         />
       </div>
@@ -171,15 +172,13 @@ export function LeadsFilters({ staff = [] }: { staff?: StaffOption[] }) {
       {hasFilters && (
         <Link
           href={clearHref}
-          className="inline-flex h-10 items-center gap-1 rounded-md px-2 text-sm text-tenant-accent hover:underline"
+          className="col-span-2 inline-flex h-10 items-center justify-center gap-1 rounded-md px-2 text-sm text-tenant-accent hover:underline sm:justify-start"
         >
           <X className="h-3.5 w-3.5" /> Clear filters
         </Link>
       )}
 
-      {isPending && (
-        <span className="text-xs text-muted-foreground">Updating…</span>
-      )}
-    </div>
+      {isPending && <span className="col-span-2 text-xs text-muted-foreground">Updating…</span>}
+    </FilterPanel>
   );
 }
