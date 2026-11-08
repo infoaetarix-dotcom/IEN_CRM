@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { runFollowUpReminders } from '@/lib/follow-ups/reminders';
+import { closeStaleSessions } from '@/lib/attendance/server';
 
 /**
  * Follow-up reminder cron — /api/cron/follow-up-reminders/morning and
@@ -26,6 +27,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (slot !== 'morning' && slot !== 'afternoon') {
     return NextResponse.json({ ok: false, error: 'Unknown slot' }, { status: 404 });
   }
+
+  // Attendance housekeeping: close sessions left open (CRM closed, nobody
+  // opened attendance since). Also done whenever attendance is read; this
+  // just makes sure nothing stays open for days. Never blocks the reminders.
+  await closeStaleSessions().catch((err) => console.error('[attendance] cron sweep failed', err));
 
   try {
     const results = await runFollowUpReminders(slot, new Date());
