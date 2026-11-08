@@ -15,6 +15,8 @@ import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { FloatingChatButton } from '@/components/dashboard/chatbot/floating-button';
 import { ChatProvider } from '@/components/dashboard/chat/chat-provider';
 import { AppSplash } from '@/components/dashboard/app-splash';
+import { AttendanceClock } from '@/components/dashboard/attendance/attendance-clock';
+import { getClockState } from '@/lib/attendance/server';
 
 /**
  * Browser-tab title and favicon for the whole tenant admin panel — the
@@ -90,6 +92,13 @@ export default async function AdminLayout({
     ((inbox ?? []) as { conversation_id: string; unread_count: number }[]).map((c) => [c.conversation_id, c.unread_count]),
   );
 
+  // Attendance (opt-in module): agents get Clock in / Clock out in the top
+  // bar. Admins don't clock in; they read everyone's records on /attendance.
+  const clockState =
+    enabledModules.includes('attendance') && profile.role === 'agent' && profile.organization_id
+      ? await getClockState({ ...profile, organization_id: profile.organization_id })
+      : null;
+
   const page = (
     <div
       id="tenant-theme-root"
@@ -133,6 +142,7 @@ export default async function AdminLayout({
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {clockState && <AttendanceClock initial={clockState} />}
           <RefreshButton />
           <NotificationsBell profileId={profile.id} initialNotifications={notifications ?? []} />
           <AccountMenu

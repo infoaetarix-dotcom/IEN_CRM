@@ -10,6 +10,7 @@ import { sendTransactionalEmail } from '@/lib/email/brevo';
 import { DEFAULT_TEMPLATES } from '@/lib/org/defaults';
 import { DEFAULT_THEME_KEY, THEME_LIST, type ThemeKey } from '@/lib/branding/themes';
 import { brandFromOrg } from '@/lib/branding';
+import { parseOfficeNetwork } from '@/lib/attendance/ip';
 
 export interface SuperResult {
   ok: boolean;
@@ -411,6 +412,59 @@ export async function toggleModule(
     entity: 'organization',
     entityId: orgId,
     metadata: { module: moduleKey, enabled },
+  });
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+/**
+ * Add an office network for a consultancy's Attendance module: clock-ins
+ * from an IP inside it count as "Office", anything else as "Remote".
+ * Super-admin only — a consultancy can never change its own (0052).
+ */
+export async function addOfficeNetwork(orgId: string, input: string): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const parsed = parseOfficeNetwork(input);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const network = parsed.network.canonical;
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from('attendance_office_networks')
+    .upsert({ organization_id: orgId, network }, { onConflict: 'organization_id,network', ignoreDuplicates: true });
+  if (error) return { ok: false, error: 'Could not save the office IP.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { office_network_added: network },
+  });
+  revalidatePath(`/super/orgs/${orgId}`);
+  return { ok: true };
+}
+
+export async function removeOfficeNetwork(orgId: string, networkId: string): Promise<SuperResult> {
+  const superAdmin = await requireSuperAdmin();
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from('attendance_office_networks')
+    .delete()
+    .eq('id', networkId)
+    .eq('organization_id', orgId)
+    .select('network')
+    .maybeSingle();
+  if (error) return { ok: false, error: 'Could not remove the office IP.' };
+
+  await writeAuditLog({
+    actorId: superAdmin.id,
+    organizationId: orgId,
+    action: 'org_change',
+    entity: 'organization',
+    entityId: orgId,
+    metadata: { office_network_removed: data?.network ?? networkId },
   });
   revalidatePath(`/super/orgs/${orgId}`);
   return { ok: true };

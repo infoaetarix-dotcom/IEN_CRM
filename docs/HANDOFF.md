@@ -57,6 +57,7 @@ run against the real Supabase project (they create and clean up their own data).
 | Activity Tracker module — Aetarix-authored, opt-in, read-only for the consultancy | live |
 | Applications — one lead → many applications, core feature (no module toggle, admin + agent) | live |
 | Keep-warm cron (stops free-tier idle pause) | live |
+| Attendance module (`0052`) — agents clock in/out from the top bar; office vs remote by IP against office networks set **only** in Super Admin (`/super/orgs/{id}` → Office network, with a "recent clock-in IPs → Mark as office" helper); 2-min background ping, auto clock-out at the last ping after 5 min of silence or at local midnight; admin `/attendance` page (today + history + Excel/CSV export; Sat/Sun off, weekday with no clock-in = Absent). Staff have read-only access; every write goes through server code with the service role, since only the server sees the IP. | on `revamp` |
 
 Migrations `0001`–`0007` are applied to production.
 

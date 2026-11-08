@@ -26,6 +26,9 @@ import { OrgSenderEmail } from '@/components/super/org-sender-email';
 import { OrgActivity } from '@/components/super/org-activity';
 import { SendResetButton } from '@/components/super/send-reset-button';
 import { brandFromOrg } from '@/lib/branding';
+import { OrgAttendance } from '@/components/super/org-attendance';
+import { summariseClockInIps } from '@/lib/attendance/ip';
+import { DEFAULT_TIMEZONE, isValidTimeZone } from '@/lib/reports/time';
 
 export default async function OrgDetail({
   params,
@@ -98,6 +101,30 @@ export default async function OrgDetail({
   const chatbotMaskedKey = chatbotSettings?.api_key
     ? chatbotSettings.api_key.slice(-4)
     : null;
+
+  // Attendance office network — super-admin only, so read via the service
+  // role (no RLS policy for `authenticated` on either table's IP data).
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [{ data: officeNetworks }, { data: recentClockIns }, { data: tzRow }] = await Promise.all([
+    service.from('attendance_office_networks').select('id, network').eq('organization_id', id).order('created_at'),
+    service
+      .from('attendance_sessions')
+      .select('clock_in_ip, profile_id, clock_in_at')
+      .eq('organization_id', id)
+      .gte('clock_in_at', since)
+      .limit(5000),
+    service.from('reporting_settings').select('timezone').eq('organization_id', id).maybeSingle(),
+  ]);
+  const orgTz = tzRow?.timezone && isValidTimeZone(tzRow.timezone) ? tzRow.timezone : DEFAULT_TIMEZONE;
+  const recentIps = summariseClockInIps(
+    recentClockIns ?? [],
+    (officeNetworks ?? []).map((n) => n.network),
+  )
+    .slice(0, 15)
+    .map((u) => ({
+      ...u,
+      lastUsedLabel: new Date(u.lastUsed).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: orgTz }),
+    }));
 
   return (
     <div className="space-y-6">
@@ -195,6 +222,20 @@ export default async function OrgDetail({
               />
             ),
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-marketing-ink/10 shadow-sm">
+        <CardHeader>
+          <CardTitle className="font-display">Office network — Attendance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrgAttendance
+            orgId={org.id}
+            moduleOn={enabled.get('attendance') === true}
+            networks={officeNetworks ?? []}
+            recentIps={recentIps}
+          />
         </CardContent>
       </Card>
 

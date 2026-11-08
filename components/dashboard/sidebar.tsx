@@ -14,6 +14,7 @@ import {
   FileText,
   Settings,
   MessageSquare,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ const NAV: NavItem[] = [
     moduleKey: 'activity_tracker',
   },
   { href: '/messages', label: 'Messages', icon: MessageSquare, moduleKey: 'team_chat' },
+  { href: '/attendance', label: 'Attendance', icon: Clock, adminOnly: true, moduleKey: 'attendance' },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
