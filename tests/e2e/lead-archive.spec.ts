@@ -14,6 +14,9 @@ async function login(page: Page, email: string) {
 test('admin can archive, restore, then permanently delete a lead', async ({
   page,
 }) => {
+  // Sign-in plus four round trips (archive, restore, delete) runs close to
+  // the default 30s against the real Supabase project.
+  test.setTimeout(90000);
   const svc = serviceClient();
   const { data: lead } = await svc
     .from('leads')
